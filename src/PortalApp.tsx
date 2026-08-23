@@ -1,10 +1,15 @@
 import { lazy, Suspense, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react'
 import {
   Accessibility,
+  Activity,
   ArrowLeft,
   ArrowRight,
+  Award,
+  BarChart3,
+  Bell,
   Bike,
   BookOpenCheck,
+  Building2,
   CalendarDays,
   Camera,
   CarFront,
@@ -14,24 +19,31 @@ import {
   CircleHelp,
   ClipboardCheck,
   CreditCard,
+  ExternalLink,
   FileClock,
   FileText,
+  Globe,
   Headphones,
   IndianRupee,
   Languages,
   Landmark,
+  Leaf,
   LogIn,
   MapPinned,
   Menu,
   Mic2,
   MonitorCheck,
   Phone,
+  PlayCircle,
   Printer,
   Route as RouteIcon,
   Search,
   ShieldCheck,
   SignpostBig,
+  Smartphone,
+  Sparkles,
   TrafficCone,
+  TrendingUp,
   Truck,
   Upload,
   UserRoundCheck,
@@ -120,7 +132,13 @@ function PortalLink({ href, className, children, onNavigate }: { href: string; c
 function PortalMark({ language = 'en', national = false }: { language?: Language; national?: boolean }) {
   return (
     <div className="portal-mark">
-      <span className="portal-mark__symbol" aria-hidden="true"><Landmark size={27} /></span>
+      <img
+        src="/assets/licenceflow-logo.webp"
+        alt="LicenceFlow Logo"
+        className="portal-mark__logo"
+        width={44}
+        height={44}
+      />
       <span className="portal-mark__text">
         <span>{national ? copy(language, 'Ministry of Road Transport & Highways', 'सड़क परिवहन और राजमार्ग मंत्रालय') : copy(language, 'Madhya Pradesh Transport Department', 'मध्य प्रदेश परिवहन विभाग')}</span>
         <strong>{national ? copy(language, 'Parivahan Sewa', 'परिवहन सेवा') : copy(language, 'Sarathi Citizen Services', 'सारथी नागरिक सेवाएँ')}</strong>
@@ -130,7 +148,8 @@ function PortalMark({ language = 'en', national = false }: { language?: Language
   )
 }
 
-function PortalHeader({ language, textScale, national, session, onLanguage, onTextScale, onHelp, onAccount }: {
+function PortalHeader({ pathname, language, textScale, national, session, onLanguage, onTextScale, onHelp, onAccount }: {
+  pathname: string
   language: Language
   textScale: TextScale
   national: boolean
@@ -142,6 +161,13 @@ function PortalHeader({ language, textScale, national, session, onLanguage, onTe
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const close = () => setMenuOpen(false)
+
+  const isHome = pathname === '/'
+  const isServices = pathname === '/mp/services'
+  const isLLStart = pathname === '/mp/ll/start' || pathname.startsWith('/mp/ll/application')
+  const isAppStatus = pathname.includes('application-status') || pathname.startsWith('/mp/application/')
+  const isFeePayment = pathname.includes('fee-payment')
+
   return (
     <>
       <a className="skip-link" href="#main-content">{copy(language, 'Skip to main content', 'मुख्य सामग्री पर जाएँ')}</a>
@@ -168,17 +194,19 @@ function PortalHeader({ language, textScale, national, session, onLanguage, onTe
         <nav id="portal-navigation" className={`portal-nav ${menuOpen ? 'portal-nav--open' : ''}`} aria-label={copy(language, 'Primary navigation', 'मुख्य नेविगेशन')}>
           <div className="portal-container portal-nav__inner">
             {national ? <>
-              <PortalLink href="/" onNavigate={close}>{copy(language, 'Home', 'होम')}</PortalLink>
+              <PortalLink href="/" className={isHome ? 'portal-nav__link--active' : ''} aria-current={isHome ? 'page' : undefined} onNavigate={close}>{copy(language, 'Home', 'होम')}</PortalLink>
               <a href="#citizen-services" onClick={close}>{copy(language, 'Online services', 'ऑनलाइन सेवाएँ')}</a>
+              <a href="#ecosystem" onClick={close}>{copy(language, 'Digital Ecosystem', 'डिजिटल इकोसिस्टम')}</a>
+              <a href="#notices" onClick={close}>{copy(language, 'What’s New', 'नवीनतम')}</a>
               <a href="#information" onClick={close}>{copy(language, 'Information', 'जानकारी')}</a>
-              <a href="#updates" onClick={close}>{copy(language, 'Updates', 'अपडेट')}</a>
+              <PortalLink href="/mp/services" className="portal-nav__pill-link" onNavigate={close}>{copy(language, 'MP DL Services', 'म.प्र. ड्राइविंग सेवाएँ')} <ArrowRight size={13} /></PortalLink>
               <button onClick={() => { close(); onHelp() }}>{copy(language, 'Help & support', 'सहायता')}</button>
             </> : <>
-              <PortalLink href="/" onNavigate={close}>{copy(language, 'Home', 'होम')}</PortalLink>
-              <PortalLink href="/mp/services" onNavigate={close}>{copy(language, 'Services', 'सेवाएँ')}</PortalLink>
-              <PortalLink href="/mp/ll/start" onNavigate={close}>{copy(language, 'Apply for LL', 'एलएल के लिए आवेदन')}</PortalLink>
-              <PortalLink href="/mp/service/application-status" onNavigate={close}>{copy(language, 'Application status', 'आवेदन की स्थिति')}</PortalLink>
-              <PortalLink href="/mp/service/fee-payment" onNavigate={close}>{copy(language, 'Fee & receipts', 'शुल्क और रसीदें')}</PortalLink>
+              <PortalLink href="/" className={isHome ? 'portal-nav__link--active' : ''} aria-current={isHome ? 'page' : undefined} onNavigate={close}>{copy(language, 'Home', 'होम')}</PortalLink>
+              <PortalLink href="/mp/services" className={isServices ? 'portal-nav__link--active' : ''} aria-current={isServices ? 'page' : undefined} onNavigate={close}>{copy(language, 'Services', 'सेवाएँ')}</PortalLink>
+              <PortalLink href="/mp/ll/start" className={isLLStart ? 'portal-nav__link--active' : ''} aria-current={isLLStart ? 'page' : undefined} onNavigate={close}>{copy(language, 'Apply for LL', 'एलएल के लिए आवेदन')}</PortalLink>
+              <PortalLink href="/mp/service/application-status" className={isAppStatus ? 'portal-nav__link--active' : ''} aria-current={isAppStatus ? 'page' : undefined} onNavigate={close}>{copy(language, 'Application status', 'आवेदन की स्थिति')}</PortalLink>
+              <PortalLink href="/mp/service/fee-payment" className={isFeePayment ? 'portal-nav__link--active' : ''} aria-current={isFeePayment ? 'page' : undefined} onNavigate={close}>{copy(language, 'Fee & receipts', 'शुल्क और रसीदें')}</PortalLink>
               <button onClick={() => { close(); onHelp() }}>{copy(language, 'Help & support', 'सहायता')}</button>
             </>}
           </div>
@@ -199,58 +227,487 @@ function Breadcrumbs({ items }: { items: Array<{ label: string; href?: string }>
 type HomeDestination = 'vehicle' | 'permit' | 'safety' | 'information'
 
 function NationalHomePage({ language, onUnavailable }: { language: Language; onUnavailable: (destination: HomeDestination) => void }) {
-  const secondaryServices: Array<{ id: HomeDestination; icon: LucideIcon; title: string; titleHi: string; body: string; bodyHi: string }> = [
-    { id: 'vehicle', icon: CarFront, title: 'Vehicle registration services', titleHi: 'वाहन पंजीकरण सेवाएँ', body: 'Registration, ownership, permits and vehicle records.', bodyHi: 'पंजीकरण, स्वामित्व, परमिट और वाहन रिकॉर्ड।' },
-    { id: 'permit', icon: Truck, title: 'Commercial transport services', titleHi: 'वाणिज्यिक परिवहन सेवाएँ', body: 'National permits, fitness and transport operations.', bodyHi: 'राष्ट्रीय परमिट, फिटनेस और परिवहन संचालन।' },
-    { id: 'safety', icon: TrafficCone, title: 'Road safety services', titleHi: 'सड़क सुरक्षा सेवाएँ', body: 'Rules, signs, safe-driving guidance and resources.', bodyHi: 'नियम, संकेत, सुरक्षित ड्राइविंग मार्गदर्शन और संसाधन।' },
+  const [activeNoticeTab, setActiveNoticeTab] = useState<'notifications' | 'advisories' | 'media'>('notifications')
+
+  const serviceCategoriesList: Array<{
+    id: 'licence' | HomeDestination
+    icon: LucideIcon
+    title: string
+    titleHi: string
+    body: string
+    bodyHi: string
+    image: string
+    href?: string
+  }> = [
+    {
+      id: 'licence',
+      icon: Bike,
+      title: 'Driving licence services',
+      titleHi: 'ड्राइविंग लाइसेंस सेवाएँ',
+      body: 'Learner’s licence, application status, test and related services.',
+      bodyHi: 'लर्नर लाइसेंस, आवेदन स्थिति, परीक्षा और संबंधित सेवाएँ।',
+      image: '/assets/service-driving-licence.webp',
+      href: '/mp/services',
+    },
+    {
+      id: 'vehicle',
+      icon: CarFront,
+      title: 'Vehicle registration services',
+      titleHi: 'वाहन पंजीकरण सेवाएँ',
+      body: 'Registration, ownership, permits and vehicle records.',
+      bodyHi: 'पंजीकरण, स्वामित्व, परमिट और वाहन रिकॉर्ड।',
+      image: '/assets/service-vehicle-reg.webp',
+    },
+    {
+      id: 'permit',
+      icon: Truck,
+      title: 'Commercial transport services',
+      titleHi: 'वाणिज्यिक परिवहन सेवाएँ',
+      body: 'National permits, fitness and transport operations.',
+      bodyHi: 'राष्ट्रीय परमिट, फिटनेस और परिवहन संचालन।',
+      image: '/assets/service-commercial.webp',
+    },
+    {
+      id: 'safety',
+      icon: TrafficCone,
+      title: 'Road safety services',
+      titleHi: 'सड़क सुरक्षा सेवाएँ',
+      body: 'Rules, signs, safe-driving guidance and resources.',
+      bodyHi: 'नियम, संकेत, सुरक्षित ड्राइविंग मार्गदर्शन और संसाधन।',
+      image: '/assets/service-road-safety.webp',
+    },
   ]
+
+  const ecosystemApps = [
+    {
+      id: 'mparivahan',
+      icon: Smartphone,
+      title: 'mParivahan NextGen',
+      titleHi: 'एम-परिवहन नेक्स्ट-जेन',
+      tag: 'Mobile App',
+      tagHi: 'मोबाइल ऐप',
+      tagType: 'blue',
+      badgeBg: '#e0f2fe',
+      badgeColor: '#0369a1',
+      image: '/assets/ecosystem-mparivahan.webp',
+      desc: 'Virtual RC & Driving Licence on your smartphone, legally valid across India.',
+      descHi: 'स्मार्टफोन पर वर्चुअल आरसी और ड्राइविंग लाइसेंस, पूरे भारत में कानूनी रूप से मान्य।',
+    },
+    {
+      id: 'echallan',
+      icon: CreditCard,
+      title: 'eChallan Digital System',
+      titleHi: 'ई-चालान डिजिटल प्रणाली',
+      tag: 'Traffic Enforcement',
+      tagHi: 'यातायात अनुपालन',
+      tagType: 'amber',
+      badgeBg: '#fef3c7',
+      badgeColor: '#b45309',
+      image: '/assets/ecosystem-echallan.webp',
+      desc: 'Paperless traffic violation notice lookup, instant fine settlement & dispute tracking.',
+      descHi: 'पेपरलेस चालान स्थिति खोज, ऑनलाइन जुर्माना निपटान और विवाद ट्रैकिंग।',
+    },
+    {
+      id: 'pucc',
+      icon: Activity,
+      title: 'PUCC Online Emissions',
+      titleHi: 'पीयूसीसी ऑनलाइन उत्सर्जन',
+      tag: 'Pollution Control',
+      tagHi: 'प्रदूषण नियंत्रण',
+      tagType: 'green',
+      badgeBg: '#dcfce7',
+      badgeColor: '#15803d',
+      image: '/assets/ecosystem-pucc.webp',
+      desc: 'Pollution Under Control Certificate check, test history and authorized testing stations.',
+      descHi: 'प्रदूषण जांच प्रमाण पत्र की वैधता, टेस्ट इतिहास और अधिकृत केंद्र खोजें।',
+    },
+    {
+      id: 'green',
+      icon: Leaf,
+      title: 'Vahan Green Sewa',
+      titleHi: 'वाहन हरित सेवा',
+      tag: 'Clean Mobility',
+      tagHi: 'स्वच्छ परिवहन',
+      tagType: 'purple',
+      badgeBg: '#f3e8ff',
+      badgeColor: '#7e22ce',
+      image: '/assets/ecosystem-green-sewa.webp',
+      desc: 'EV registration incentives, green tax exemption status and CNG/LPG retrofitting approvals.',
+      descHi: 'ईवी पंजीकरण सब्सिडी, हरित कर छूट और सीएनजी रेट्रोफिटिंग अनुमोदन।',
+    },
+  ]
+
+  const pulseMetrics = [
+    {
+      system: 'VAHAN 4.0 Live',
+      systemHi: 'वाहन 4.0 लाइव',
+      value: '34.8 Cr+',
+      label: 'Registered Vehicles across India',
+      labelHi: 'भारत भर में पंजीकृत वाहन',
+    },
+    {
+      system: 'SARATHI 4.0 Live',
+      systemHi: 'सारथी 4.0 लाइव',
+      value: '19.2 Cr+',
+      label: 'Active Driving Licences Issued',
+      labelHi: 'सक्रिय ड्राइविंग लाइसेंस जारी',
+    },
+    {
+      system: 'MP Direct-to-Citizen',
+      systemHi: 'म.प्र. डायरेक्ट-टू-सिटिजन',
+      value: '87.4%',
+      label: 'Faceless LL Contactless Adoption in MP',
+      labelHi: 'मध्य प्रदेश में संपर्कहीन एलएल दर',
+    },
+    {
+      system: 'Daily Volume',
+      systemHi: 'दैनिक डिजिटल लेन-देन',
+      value: '2.4 Lakh+',
+      label: 'Digital Applications & Tests Daily',
+      labelHi: 'प्रतिदिन डिजिटल कार्य और टेस्ट',
+    },
+  ]
+
+  const noticeItems = {
+    notifications: [
+      {
+        tag: 'NEW',
+        date: '2026-08-20',
+        title: 'Madhya Pradesh Direct-to-Citizen LL Service live statewide',
+        titleHi: 'मध्य प्रदेश डायरेक्ट-टू-सिटिजन एलएल सेवा राज्यभर में लाइव',
+        desc: 'Citizens can apply, complete e-KYC and take the AI-monitored knowledge test from home without visiting an RTO office.',
+        descHi: 'नागरिक बिना आरटीओ कार्यालय जाए घर बैठे ई-केवाईसी और ऑनलाइन टेस्ट पूरा कर सकते हैं।',
+      },
+      {
+        tag: 'ADVISORY',
+        date: '2026-08-14',
+        title: 'High Security Registration Plate (HSRP) verification mandate',
+        titleHi: 'उच्च सुरक्षा पंजीकरण प्लेट (HSRP) सत्यापन निर्देश',
+        desc: 'All commercial and private vehicle owners are advised to ensure HSRP compliance and laser code linkage on Vahan portal.',
+        descHi: 'सभी वाहन स्वामियों को वाहन पोर्टल पर एचएसआरपी लेजर कोड लिंकेज सुनिश्चित करने की सलाह दी जाती है।',
+      },
+      {
+        tag: 'UPDATE',
+        date: '2026-08-01',
+        title: 'Central Motor Vehicles Rules: Camera and mic standards for online exam',
+        titleHi: 'केंद्रीय मोटर वाहन नियम: ऑनलाइन परीक्षा हेतु कैमरा व माइक मानक',
+        desc: 'Browser-based proctoring compatibility checks now required prior to test initialization to ensure failure-safe test completion.',
+        descHi: 'परीक्षा निर्बाध रूप से पूरी करने के लिए परीक्षा शुरू करने से पहले सिस्टम जांच अनिवार्य है।',
+      },
+    ],
+    advisories: [
+      {
+        tag: 'ACHIEVEMENT',
+        date: '2026-07-28',
+        title: 'Madhya Pradesh Ranks #1 in Contactless Learner’s Licence Delivery',
+        titleHi: 'मध्य प्रदेश संपर्कहीन लर्नर लाइसेंस वितरण में देश में प्रथम',
+        desc: 'Over 99.1% of eligible applicants received digital licences within 24 hours of passing the online test in Q2 2026.',
+        descHi: '99.1% से अधिक पात्र आवेदकों को ऑनलाइन टेस्ट पास करने के 24 घंटे के भीतर डिजिटल लाइसेंस प्राप्त हुआ।',
+      },
+      {
+        tag: 'SAFETY',
+        date: '2026-07-15',
+        title: 'National Road Safety Guidelines for Two-Wheeler Riders',
+        titleHi: 'दोपहिया चालकों के लिए राष्ट्रीय सड़क सुरक्षा दिशा-निर्देश',
+        desc: 'Mandatory ISI-certified helmet usage for rider and pillion passenger under Section 129 of Motor Vehicles Act.',
+        descHi: 'मोटर वाहन अधिनियम की धारा 129 के तहत चालक और पीछे बैठे यात्री दोनों के लिए आईएसआई हेलमेट अनिवार्य है।',
+      },
+    ],
+    media: [
+      {
+        tag: 'VIDEO GUIDE',
+        date: '2026-08-10',
+        title: 'How to Take the Online Learner’s Licence Test from Home (Step-by-Step Video)',
+        titleHi: 'घर से ऑनलाइन लर्नर लाइसेंस परीक्षा कैसे दें (वीडियो गाइड)',
+        desc: 'Complete walkthrough on lighting, camera positioning, face alignment, and answering traffic sign questions.',
+        descHi: 'प्रकाश, कैमरा स्थिति, चेहरा संरेखण और यातायात संकेतों के उत्तर देने का पूरा वीडियो गाइड।',
+      },
+      {
+        tag: 'DOCUMENT',
+        date: '2026-07-01',
+        title: 'Official Handbook of Traffic Signs, Road Markings & Driving Etiquette',
+        titleHi: 'यातायात संकेतों, सड़क चिह्नों और ड्राइविंग शिष्टाचार की आधिकारिक पुस्तिका',
+        desc: 'Download the comprehensive citizen reference guide prepared by Ministry of Road Transport and Highways.',
+        descHi: 'सड़क परिवहन और राजमार्ग मंत्रालय द्वारा तैयार व्यापक संदर्भ मार्गदर्शिका डाउनलोड करें।',
+      },
+    ],
+  }
+
   const informationLinks = [
     { icon: SignpostBig, en: 'Know road signs', hi: 'सड़क संकेत जानें' },
     { icon: FileText, en: 'Forms and documents', hi: 'फॉर्म और दस्तावेज़' },
     { icon: MapPinned, en: 'Find a transport office', hi: 'परिवहन कार्यालय खोजें' },
     { icon: RouteIcon, en: 'Citizen service guide', hi: 'नागरिक सेवा मार्गदर्शिका' },
   ]
-  return <div className="national-home">
-    <section className="national-hero" aria-labelledby="home-title">
-      <img src="/assets/parivahan-transport-hero.png" alt="Indian road transport connecting citizens, buses and commercial vehicles" fetchPriority="high" />
-      <div className="national-hero__shade" aria-hidden="true" />
-      <div className="national-hero__content">
-        <p className="eyebrow">{copy(language, 'Parivahan citizen services', 'परिवहन नागरिक सेवाएँ')}</p>
-        <h1 id="home-title" tabIndex={-1}>{copy(language, 'Road transport services in one place', 'सड़क परिवहन सेवाएँ एक ही स्थान पर')}</h1>
-        <p>{copy(language, 'Find licence, vehicle, permit and road-safety services with clear guidance at every step.', 'लाइसेंस, वाहन, परमिट और सड़क सुरक्षा सेवाएँ हर चरण पर स्पष्ट मार्गदर्शन के साथ पाएँ।')}</p>
-        <div className="national-hero__actions">
-          <a className="button button--light" href="#citizen-services">{copy(language, 'Explore services', 'सेवाएँ देखें')} <ArrowRight size={18} /></a>
-          <PortalLink className="button national-hero__secondary" href="/mp/services">{copy(language, 'Driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ')}</PortalLink>
+
+  const partnerBadges = [
+    { name: 'Digital India', role: 'Power To Empower' },
+    { name: 'GeM', role: 'Government e Marketplace' },
+    { name: 'india.gov.in', role: 'National Portal of India' },
+    { name: 'MeitY', role: 'Ministry of Electronics & IT' },
+    { name: 'MoRTH', role: 'Road Transport & Highways' },
+    { name: 'NIC', role: 'National Informatics Centre' },
+  ]
+
+  return (
+    <div className="national-home">
+      <section className="national-hero" aria-labelledby="home-title">
+        <img src="/assets/parivahan-transport-hero.webp" alt="Indian road transport connecting citizens, buses and commercial vehicles" fetchPriority="high" />
+        <div className="national-hero__shade" aria-hidden="true" />
+        <div className="national-hero__content">
+          <p className="eyebrow">{copy(language, 'Parivahan citizen services', 'परिवहन नागरिक सेवाएँ')}</p>
+          <h1 id="home-title" tabIndex={-1}>{copy(language, 'Road transport services in one place', 'सड़क परिवहन सेवाएँ एक ही स्थान पर')}</h1>
+          <p>{copy(language, 'Find licence, vehicle, permit and road-safety services with clear guidance at every step.', 'लाइसेंस, वाहन, परमिट और सड़क सुरक्षा सेवाएँ हर चरण पर स्पष्ट मार्गदर्शन के साथ पाएँ।')}</p>
+          <div className="national-hero__actions">
+            <a className="button button--light" href="#citizen-services">{copy(language, 'Explore services', 'सेवाएँ देखें')} <ArrowRight size={18} /></a>
+            <PortalLink className="button national-hero__secondary" href="/mp/services">{copy(language, 'Driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ')}</PortalLink>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section id="citizen-services" className="home-section" aria-labelledby="citizen-services-title">
-      <div className="home-section__heading"><div><p className="eyebrow">{copy(language, 'Online services', 'ऑनलाइन सेवाएँ')}</p><h2 id="citizen-services-title">{copy(language, 'What would you like to do?', 'आप क्या करना चाहते हैं?')}</h2></div><p>{copy(language, 'Choose a service area to see the available citizen services.', 'उपलब्ध नागरिक सेवाएँ देखने के लिए एक सेवा क्षेत्र चुनें।')}</p></div>
-      <div className="home-service-grid">
-        <PortalLink href="/mp/services" className="home-service-card home-service-card--primary">
-          <span className="home-service-card__icon"><Bike size={28} /></span>
-          <span><strong>{copy(language, 'Driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ')}</strong><small>{copy(language, 'Learner’s licence, application status, test and related services.', 'लर्नर लाइसेंस, आवेदन स्थिति, परीक्षा और संबंधित सेवाएँ।')}</small></span>
-          <ArrowRight size={21} />
-        </PortalLink>
-        {secondaryServices.map(({ id, icon: Icon, title, titleHi, body, bodyHi }) => <button type="button" className="home-service-card" key={id} onClick={() => onUnavailable(id)}>
-          <span className="home-service-card__icon"><Icon size={26} /></span>
-          <span><strong>{copy(language, title, titleHi)}</strong><small>{copy(language, body, bodyHi)}</small></span>
-          <ArrowRight size={21} />
-        </button>)}
-      </div>
-    </section>
+      {/* National Pulse Live Infrastructure Statistics */}
+      <section className="national-pulse-strip" aria-label={copy(language, 'National Transport Infrastructure Statistics', 'राष्ट्रीय परिवहन सांख्यिकी')}>
+        {pulseMetrics.map((item, idx) => (
+          <div className="national-pulse-item" key={idx}>
+            <div className="national-pulse-indicator">
+              <span className="pulse-dot" aria-hidden="true" />
+              <span>{copy(language, item.system, item.systemHi)}</span>
+            </div>
+            <strong className="national-pulse-val">{item.value}</strong>
+            <span className="national-pulse-lbl">{copy(language, item.label, item.labelHi)}</span>
+          </div>
+        ))}
+      </section>
 
-    <section id="information" className="home-information" aria-labelledby="information-title">
-      <div className="home-information__intro"><p className="eyebrow">{copy(language, 'Information services', 'जानकारी सेवाएँ')}</p><h2 id="information-title">{copy(language, 'Understand the process before you begin', 'शुरू करने से पहले प्रक्रिया समझें')}</h2><p>{copy(language, 'Simple guides help you prepare the correct documents, understand road rules and find the right office.', 'सरल मार्गदर्शिकाएँ सही दस्तावेज़ तैयार करने, सड़क नियम समझने और सही कार्यालय खोजने में मदद करती हैं।')}</p></div>
-      <div className="home-information__links">{informationLinks.map(({ icon: Icon, en, hi }) => <button type="button" key={en} onClick={() => onUnavailable('information')}><Icon size={22} /><span>{copy(language, en, hi)}</span><ArrowRight size={18} /></button>)}</div>
-    </section>
+      {/* 4 Primary Service Cards with 3D Showcase */}
+      <section id="citizen-services" className="home-section" aria-labelledby="citizen-services-title">
+        <div className="home-section__heading">
+          <div>
+            <p className="eyebrow">{copy(language, 'Online services', 'ऑनलाइन सेवाएँ')}</p>
+            <h2 id="citizen-services-title">{copy(language, 'What would you like to do?', 'आप क्या करना चाहते हैं?')}</h2>
+          </div>
+          <p>{copy(language, 'Choose a service area to see the available citizen services.', 'उपलब्ध नागरिक सेवाएँ देखने के लिए एक सेवा क्षेत्र चुनें।')}</p>
+        </div>
+        <div className="home-service-grid">
+          {serviceCategoriesList.map((service) => {
+            const Icon = service.icon
+            const content = (
+              <>
+                <div className="home-service-card__showcase" aria-hidden="true">
+                  <img src={service.image} alt="" loading="lazy" />
+                </div>
+                <div className="home-service-card__body">
+                  <div className="home-service-card__header">
+                    <span className="home-service-card__icon"><Icon size={18} /></span>
+                    <strong>{copy(language, service.title, service.titleHi)}</strong>
+                  </div>
+                  <p>{copy(language, service.body, service.bodyHi)}</p>
+                  <div className="home-service-card__footer">
+                    <span>{copy(language, 'Access service', 'सेवा खोलें')}</span>
+                    <ArrowRight size={16} />
+                  </div>
+                </div>
+              </>
+            )
+            return service.href ? (
+              <PortalLink href={service.href} className="home-service-card" key={service.id}>
+                {content}
+              </PortalLink>
+            ) : (
+              <button type="button" className="home-service-card" key={service.id} onClick={() => onUnavailable(service.id as HomeDestination)}>
+                {content}
+              </button>
+            )
+          })}
+        </div>
+      </section>
 
-    <section id="updates" className="home-updates" aria-label={copy(language, 'Updates and help', 'अपडेट और सहायता')}>
-      <article><div className="home-section__heading"><div><p className="eyebrow">{copy(language, 'Quick actions', 'त्वरित कार्य')}</p><h2>{copy(language, 'Continue a service', 'सेवा जारी रखें')}</h2></div></div><div className="home-action-list"><PortalLink href="/mp/service/application-status"><FileClock size={21} /><span><strong>{copy(language, 'Check application status', 'आवेदन की स्थिति देखें')}</strong><small>{copy(language, 'Use an application number to view progress.', 'प्रगति देखने के लिए आवेदन संख्या का उपयोग करें।')}</small></span><ArrowRight size={19} /></PortalLink><PortalLink href="/mp/service/fee-payment"><IndianRupee size={21} /><span><strong>{copy(language, 'Fee and receipt services', 'शुल्क और रसीद सेवाएँ')}</strong><small>{copy(language, 'Review payment status and receipts.', 'भुगतान स्थिति और रसीदें देखें।')}</small></span><ArrowRight size={19} /></PortalLink></div></article>
-      <article><div className="home-section__heading"><div><p className="eyebrow">{copy(language, 'Frequently asked questions', 'अक्सर पूछे जाने वाले प्रश्न')}</p><h2>{copy(language, 'Common questions', 'सामान्य प्रश्न')}</h2></div></div><div className="home-faq"><details><summary>{copy(language, 'How do I apply for a Learner’s Licence?', 'लर्नर लाइसेंस के लिए आवेदन कैसे करें?')}</summary><p>{copy(language, 'Open Driving licence services, choose Apply for a new Learner’s Licence, and follow the guided steps.', 'ड्राइविंग लाइसेंस सेवाएँ खोलें, नया लर्नर लाइसेंस आवेदन चुनें और बताए गए चरण पूरे करें।')}</p></details><details><summary>{copy(language, 'Can I check my application later?', 'क्या मैं अपना आवेदन बाद में देख सकता/सकती हूँ?')}</summary><p>{copy(language, 'Yes. Application status shows completed work and the next action required.', 'हाँ। आवेदन स्थिति में पूरा काम और अगला जरूरी चरण दिखाई देता है।')}</p></details><details><summary>{copy(language, 'Where can I get help on a page?', 'किसी पेज पर सहायता कहाँ मिलेगी?')}</summary><p>{copy(language, 'Use Help in the top bar for an explanation of that page, what you need and what happens next.', 'उस पेज की जानकारी, आवश्यक चीजें और अगला चरण समझने के लिए ऊपर सहायता चुनें।')}</p></details></div></article>
-    </section>
-  </div>
+      {/* Parivahan Digital Ecosystem Cards */}
+      <section id="ecosystem" className="home-section" aria-labelledby="ecosystem-title">
+        <div className="home-section__heading">
+          <div>
+            <p className="eyebrow">{copy(language, 'Digital Ecosystem', 'डिजिटल इकोसिस्टम')}</p>
+            <h2 id="ecosystem-title">{copy(language, 'Other Parivahan Apps & Services', 'अन्य परिवहन ऐप्स और सेवाएँ')}</h2>
+          </div>
+          <p>{copy(language, 'Seamless digital tools for traffic enforcement, emissions testing, mobile wallet and clean mobility.', 'यातायात अनुपालन, उत्सर्जन जांच, मोबाइल वॉलेट और हरित परिवहन हेतु डिजिटल उपकरण।')}</p>
+        </div>
+        <div className="ecosystem-grid">
+          {ecosystemApps.map((app) => {
+            const AppIcon = app.icon
+            return (
+              <button
+                type="button"
+                className="ecosystem-card"
+                key={app.id}
+                onClick={() => onUnavailable('information')}
+              >
+                <div className="ecosystem-card__backdrop" aria-hidden="true">
+                  <img src={app.image} alt="" loading="lazy" />
+                </div>
+                <div className="ecosystem-card__content">
+                  <div className="ecosystem-card__header-row">
+                    <span className="ecosystem-card__icon" style={{ background: app.badgeBg, color: app.badgeColor }}>
+                      <AppIcon size={18} />
+                    </span>
+                    <span className={`tag-pill tag-pill--${app.tagType}`}>{copy(language, app.tag, app.tagHi)}</span>
+                  </div>
+                  <strong className="ecosystem-card__title">{copy(language, app.title, app.titleHi)}</strong>
+                  <p className="ecosystem-card__desc">{copy(language, app.desc, app.descHi)}</p>
+                  <div className="ecosystem-card__footer">
+                    <span>{copy(language, 'Access service', 'सेवा खोलें')}</span>
+                    <ArrowRight size={16} />
+                  </div>
+                </div>
+              </button>
+            )
+          })}
+        </div>
+      </section>
+
+      {/* Tabbed Notice Board / Circulars */}
+      <section id="notices" className="home-section notice-board-section" aria-labelledby="notice-board-title">
+        <div className="home-section__heading">
+          <div>
+            <p className="eyebrow">{copy(language, 'Public Communications', 'सार्वजनिक सूचनाएँ')}</p>
+            <h2 id="notice-board-title">{copy(language, 'What’s New, Circulars & Advisories', 'नवीनतम अपडेट, परिपत्र और परामर्श')}</h2>
+          </div>
+          <div className="notice-tab-group" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeNoticeTab === 'notifications'}
+              className={`notice-tab-button ${activeNoticeTab === 'notifications' ? 'notice-tab-button--active' : ''}`}
+              onClick={() => setActiveNoticeTab('notifications')}
+            >
+              <Bell size={16} />
+              <span>{copy(language, 'Notifications', 'अधिसूचनाएँ')}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeNoticeTab === 'advisories'}
+              className={`notice-tab-button ${activeNoticeTab === 'advisories' ? 'notice-tab-button--active' : ''}`}
+              onClick={() => setActiveNoticeTab('advisories')}
+            >
+              <Award size={16} />
+              <span>{copy(language, 'Advisories', 'परामर्श व उपलब्धियाँ')}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeNoticeTab === 'media'}
+              className={`notice-tab-button ${activeNoticeTab === 'media' ? 'notice-tab-button--active' : ''}`}
+              onClick={() => setActiveNoticeTab('media')}
+            >
+              <PlayCircle size={16} />
+              <span>{copy(language, 'Citizen Guides & Media', 'नागरिक गाइड व मीडिया')}</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="notice-board-feed">
+          {noticeItems[activeNoticeTab].map((item, idx) => (
+            <article className="notice-feed-card" key={idx}>
+              <div className="notice-feed-card__meta">
+                <span className="tag-pill tag-pill--blue">{item.tag}</span>
+                <time dateTime={item.date}>{item.date}</time>
+              </div>
+              <strong className="notice-feed-card__title">{copy(language, item.title, item.titleHi)}</strong>
+              <p className="notice-feed-card__desc">{copy(language, item.desc, item.descHi)}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      {/* Informational Guidance */}
+      <section id="information" className="home-information" aria-labelledby="information-title">
+        <div className="home-information__intro">
+          <p className="eyebrow">{copy(language, 'Information services', 'जानकारी सेवाएँ')}</p>
+          <h2 id="information-title">{copy(language, 'Understand the process before you begin', 'शुरू करने से पहले प्रक्रिया समझें')}</h2>
+          <p>{copy(language, 'Simple guides help you prepare the correct documents, understand road rules and find the right office.', 'सरल मार्गदर्शिकाएँ सही दस्तावेज़ तैयार करने, सड़क नियम समझने और सही कार्यालय खोजने में मदद करती हैं।')}</p>
+        </div>
+        <div className="home-information__links">
+          {informationLinks.map(({ icon: Icon, en, hi }) => (
+            <button type="button" key={en} onClick={() => onUnavailable('information')}>
+              <Icon size={22} />
+              <span>{copy(language, en, hi)}</span>
+              <ArrowRight size={18} />
+            </button>
+          ))}
+        </div>
+      </section>
+
+      {/* Quick Actions & FAQ Section */}
+      <section id="updates" className="home-updates" aria-label={copy(language, 'Updates and help', 'अपडेट और सहायता')}>
+        <article>
+          <div className="home-section__heading">
+            <div>
+              <p className="eyebrow">{copy(language, 'Quick actions', 'त्वरित कार्य')}</p>
+              <h2>{copy(language, 'Continue a service', 'सेवा जारी रखें')}</h2>
+            </div>
+          </div>
+          <div className="home-action-list">
+            <PortalLink href="/mp/service/application-status">
+              <FileClock size={21} />
+              <span>
+                <strong>{copy(language, 'Check application status', 'आवेदन की स्थिति देखें')}</strong>
+                <small>{copy(language, 'Use an application number to view progress.', 'प्रगति देखने के लिए आवेदन संख्या का उपयोग करें।')}</small>
+              </span>
+              <ArrowRight size={19} />
+            </PortalLink>
+            <PortalLink href="/mp/service/fee-payment">
+              <IndianRupee size={21} />
+              <span>
+                <strong>{copy(language, 'Fee and receipt services', 'शुल्क और रसीद सेवाएँ')}</strong>
+                <small>{copy(language, 'Review payment status and receipts.', 'भुगतान स्थिति और रसीदें देखें।')}</small>
+              </span>
+              <ArrowRight size={19} />
+            </PortalLink>
+          </div>
+        </article>
+        <article>
+          <div className="home-section__heading">
+            <div>
+              <p className="eyebrow">{copy(language, 'Frequently asked questions', 'अक्सर पूछे जाने वाले प्रश्न')}</p>
+              <h2>{copy(language, 'Common questions', 'सामान्य प्रश्न')}</h2>
+            </div>
+          </div>
+          <div className="home-faq">
+            <details>
+              <summary>{copy(language, 'How do I apply for a Learner’s Licence in MP?', 'मध्य प्रदेश में लर्नर लाइसेंस के लिए आवेदन कैसे करें?')}</summary>
+              <p>{copy(language, 'Open Driving licence services, choose Apply for a new Learner’s Licence, complete your e-KYC, and take the online proctored test.', 'ड्राइविंग लाइसेंस सेवाएँ खोलें, नया लर्नर लाइसेंस आवेदन चुनें, ई-केवाईसी पूरा करें और ऑनलाइन टेस्ट दें।')}</p>
+            </details>
+            <details>
+              <summary>{copy(language, 'Can I check my application progress later?', 'क्या मैं अपना आवेदन बाद में देख सकता/सकती हूँ?')}</summary>
+              <p>{copy(language, 'Yes. Application status shows completed milestones, fees and the next action required.', 'हाँ। आवेदन स्थिति में पूरा काम, शुल्क और अगला जरूरी चरण दिखाई देता है।')}</p>
+            </details>
+            <details>
+              <summary>{copy(language, 'Where can I get help on any page?', 'किसी पेज पर सहायता कहाँ मिलेगी?')}</summary>
+              <p>{copy(language, 'Use Help in the top navigation bar for step-by-step requirements and what to expect next.', 'उस पेज की आवश्यकताएँ और अगला चरण समझने के लिए ऊपर सहायता चुनें।')}</p>
+            </details>
+          </div>
+        </article>
+      </section>
+
+      {/* National Government Partner Strip */}
+      <section className="national-partner-strip" aria-label={copy(language, 'Government Portals and Partners', 'सरकारी पोर्टल एवं सहयोगी संस्थाएं')}>
+        <p className="partner-strip__heading">{copy(language, 'Official Government Portals & Initiatives', 'आधिकारिक सरकारी पोर्टल एवं डिजिटल पहल')}</p>
+        <div className="partner-badge-grid">
+          {partnerBadges.map((partner, idx) => (
+            <div className="partner-badge-item" key={idx}>
+              <div className="partner-badge-icon">
+                <Landmark size={20} />
+              </div>
+              <div className="partner-badge-text">
+                <strong>{partner.name}</strong>
+                <small>{partner.role}</small>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  )
 }
 
 function StatusPill({ delivery, language = 'en' }: { delivery: ServiceDefinition['delivery']; language?: Language }) {
@@ -331,6 +788,7 @@ function citizenStageName(value: string, language: Language): string {
 function ServicesPage({ language, demoApplication }: { language: Language; demoApplication: DemoApplication | null }) {
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<'All' | ServiceDefinition['category']>('All')
+
   const filtered = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase()
     return services.filter((service) => {
@@ -344,38 +802,251 @@ function ServicesPage({ language, demoApplication }: { language: Language; demoA
     .map((item) => ({ category: item, items: filtered.filter((service) => service.category === item) }))
     .filter((group) => group.items.length)
 
-  return <>
-    <Breadcrumbs items={[{ label: copy(language, 'Home', 'होम'), href: '/' }, { label: copy(language, 'Driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ') }]} />
-    <section className="page-title page-title--dashboard">
-      <div>
-        <p className="eyebrow">{copy(language, 'Citizen services', 'नागरिक सेवाएँ')}</p>
-        <h1 tabIndex={-1}>{copy(language, 'Driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ')}</h1>
-        <p>{copy(language, 'Choose a service or continue an application already saved on this device.', 'कोई सेवा चुनें या इस डिवाइस पर पहले से सहेजा गया आवेदन जारी रखें।')}</p>
-      </div>
-    </section>
+  const featuredSpotlights = [
+    {
+      id: 'apply-ll',
+      href: '/mp/ll/start',
+      title: 'Apply for New Learner’s Licence (LL)',
+      titleHi: 'नए लर्नर लाइसेंस (LL) के लिए आवेदन करें',
+      tag: 'Primary Service',
+      tagHi: 'मुख्य सेवा',
+      tagType: 'blue',
+      badgeBg: '#e0f2fe',
+      badgeColor: '#0369a1',
+      icon: Sparkles,
+      image: '/assets/service-apply-ll.webp',
+      desc: 'Complete Aadhaar e-KYC, verify details, and take the contactless test from home without visiting RTO.',
+      descHi: 'आधार ई-केवाईसी पूरा करें, विवरण सत्यापित करें और आरटीओ जाए बिना घर से ऑनलाइन टेस्ट दें।',
+      action: 'Start Application',
+      actionHi: 'आवेदन शुरू करें',
+    },
+    {
+      id: 'mock-test',
+      href: '/mp/service/mock-test',
+      title: 'Road Safety Tutorial & Mock Test',
+      titleHi: 'सड़क सुरक्षा ट्यूटोरियल व मॉक टेस्ट',
+      tag: 'Practice & Prepare',
+      tagHi: 'तैयारी और अभ्यास',
+      tagType: 'green',
+      badgeBg: '#dcfce7',
+      badgeColor: '#15803d',
+      icon: BookOpenCheck,
+      image: '/assets/service-mock-test.webp',
+      desc: 'Learn Indian road signs, traffic regulations, and practice sample quiz questions before your real test.',
+      descHi: 'वास्तविक परीक्षा से पहले आधिकारिक यातायात संकेत, नियम और नमूना प्रश्नों का अभ्यास करें।',
+      action: 'Start Practice',
+      actionHi: 'अभ्यास शुरू करें',
+    },
+    {
+      id: 'print-ll',
+      href: '/mp/service/print-ll',
+      title: 'Print / Download Learner’s Licence',
+      titleHi: 'लर्नर लाइसेंस प्रिंट व डाउनलोड करें',
+      tag: 'Instant Document',
+      tagHi: 'डिजिटल दस्तावेज़',
+      tagType: 'purple',
+      badgeBg: '#f3e8ff',
+      badgeColor: '#7e22ce',
+      icon: Printer,
+      image: '/assets/service-print-ll.webp',
+      desc: 'Download your official digitally verified and QR-coded Learner’s Licence certificate immediately.',
+      descHi: 'अपना आधिकारिक डिजिटल हस्ताक्षरित और क्यूआर-कोड युक्त लर्नर लाइसेंस तुरंत डाउनलोड करें।',
+      action: 'Download Licence',
+      actionHi: 'लाइसेंस डाउनलोड करें',
+    },
+  ]
 
-    <section className="application-panel" aria-labelledby="application-panel-title">
-      <div className="section-heading">
-        <div><p className="eyebrow">{copy(language, 'Current application', 'वर्तमान आवेदन')}</p><h2 id="application-panel-title">{demoApplication ? copy(language, 'Continue where you left off', 'जहाँ छोड़ा था वहीं से जारी रखें') : copy(language, 'No application in progress', 'कोई आवेदन प्रगति पर नहीं है')}</h2></div>
-        {demoApplication && <span className="saved-indicator"><CheckCircle2 size={17} /> {copy(language, 'Saved on this device', 'इस डिवाइस पर सहेजा गया')}</span>}
-      </div>
-      {demoApplication ? <div className="active-application">
-        <div><small>{copy(language, 'Application number', 'आवेदन संख्या')}</small><strong>{demoApplication.id}</strong></div>
-        <div><small>{copy(language, 'Applicant', 'आवेदक')}</small><strong>{citizenApplicantName(demoApplication.applicant)}</strong></div>
-        <div><small>{copy(language, 'Next action', 'अगला काम')}</small><strong>{citizenStageName(demoApplication.lastStage, language)}</strong></div>
-        <PortalLink href={`/mp/application/${demoApplication.id}`} className="button button--primary">{copy(language, 'Continue application', 'आवेदन जारी रखें')} <ArrowRight size={18} /></PortalLink>
-      </div> : <div className="empty-application"><ClipboardCheck size={28} aria-hidden="true" /><div><strong>{copy(language, 'Apply for a new Learner’s Licence', 'नए लर्नर लाइसेंस के लिए आवेदन करें')}</strong><p>{copy(language, 'Read the process and requirements before you begin.', 'शुरू करने से पहले प्रक्रिया और आवश्यकताएँ पढ़ें।')}</p></div><PortalLink href="/mp/ll/start" className="button button--primary">{copy(language, 'Start application', 'आवेदन शुरू करें')} <ArrowRight size={18} /></PortalLink></div>}
-    </section>
+  const categoryFilterOptions: { key: 'All' | ServiceDefinition['category']; labelEn: string; labelHi: string; count: number }[] = [
+    { key: 'All', labelEn: 'All Services', labelHi: 'सभी सेवाएँ', count: services.length },
+    { key: 'Learner licence', labelEn: "Learner's Licence", labelHi: 'लर्नर लाइसेंस', count: services.filter((s) => s.category === 'Learner licence').length },
+    { key: 'Application utilities', labelEn: 'Application & Status', labelHi: 'आवेदन व स्थिति', count: services.filter((s) => s.category === 'Application utilities').length },
+    { key: 'Other licence services', labelEn: 'Other DL Services', labelHi: 'अन्य लाइसेंस सेवाएँ', count: services.filter((s) => s.category === 'Other licence services').length },
+  ]
 
-    <section className="services-section" aria-labelledby="services-title">
-      <div className="section-heading"><div><p className="eyebrow">{copy(language, 'Online services', 'ऑनलाइन सेवाएँ')}</p><h2 id="services-title">{copy(language, 'Select a service', 'सेवा चुनें')}</h2></div><span className="result-count" aria-live="polite">{copy(language, `${filtered.length} services`, `${filtered.length} सेवाएँ`)}</span></div>
-      <div className="service-tools">
-        <label className="service-search"><Search size={20} aria-hidden="true" /><span className="visually-hidden">{copy(language, 'Search services', 'सेवाएँ खोजें')}</span><input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder={copy(language, 'Search by service name', 'सेवा का नाम खोजें')} /></label>
-        <label className="category-select"><span className="visually-hidden">{copy(language, 'Filter by category', 'श्रेणी के अनुसार चुनें')}</span><select value={category} onChange={(event) => setCategory(event.target.value as typeof category)}><option value="All">{copy(language, 'All services', 'सभी सेवाएँ')}</option>{serviceCategories.map((item) => <option key={item} value={item}>{serviceCategoryLabels[item][language]}</option>)}</select><ChevronDown size={18} aria-hidden="true" /></label>
-      </div>
-      {groups.length ? <div className="service-directory">{groups.map((group) => <section key={group.category} className="service-group"><h3>{serviceCategoryLabels[group.category][language]}</h3><div className="service-grid">{group.items.map((service) => <ServiceCard key={service.id} service={service} language={language} />)}</div></section>)}</div> : <div className="no-results"><Search size={28} /><h3>{copy(language, 'No matching service', 'कोई सेवा नहीं मिली')}</h3><p>{copy(language, 'Try another name or clear the filter.', 'दूसरा नाम खोजें या फ़िल्टर हटाएँ।')}</p><button className="text-button" onClick={() => { setQuery(''); setCategory('All') }}>{copy(language, 'Clear search and filters', 'खोज और फ़िल्टर हटाएँ')}</button></div>}
-    </section>
-  </>
+  return (
+    <>
+      <Breadcrumbs items={[{ label: copy(language, 'Home', 'होम'), href: '/' }, { label: copy(language, 'Driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ') }]} />
+
+      {/* MP Services Hero Showcase Banner */}
+      <section className="mp-services-hero" aria-labelledby="mp-services-hero-title">
+        <div className="mp-services-hero__content">
+          <div className="mp-services-hero__eyebrow">
+            <span className="pulse-dot" />
+            <span>{copy(language, 'Madhya Pradesh Transport Department • Contactless Citizen Services', 'मध्य प्रदेश परिवहन विभाग • संपर्क रहित नागरिक सेवाएँ')}</span>
+          </div>
+          <h1 id="mp-services-hero-title" tabIndex={-1}>
+            {copy(language, 'Driving Licence Services Directory', 'ड्राइविंग लाइसेंस सेवाएँ निर्देशिका')}
+          </h1>
+          <p className="mp-services-hero__lead">
+            {copy(
+              language,
+              'Apply, complete Aadhaar e-KYC, pay nominal fees, and take your AI-proctored Learner’s Licence test online from the comfort of your home.',
+              'घर बैठे ऑनलाइन लर्नर लाइसेंस के लिए आवेदन करें, आधार ई-केवाईसी सत्यापित करें, शुल्क जमा करें और ऑनलाइन टेस्ट दें।'
+            )}
+          </p>
+
+          <div className="mp-services-hero__badges">
+            <div className="mp-hero-badge">
+              <ShieldCheck size={16} />
+              <span>{copy(language, '100% Faceless / No RTO Visit', '100% संपर्क रहित / आरटीओ जाने की जरूरत नहीं')}</span>
+            </div>
+            <div className="mp-hero-badge">
+              <Sparkles size={16} />
+              <span>{copy(language, 'Instant Aadhaar e-KYC', 'तुरंत आधार ई-केवाईसी')}</span>
+            </div>
+            <div className="mp-hero-badge">
+              <CheckCircle2 size={16} />
+              <span>{copy(language, 'Immediate Digital PDF Download', 'तत्काल डिजिटल पीडीएफ डाउनलोड')}</span>
+            </div>
+          </div>
+
+          {demoApplication ? (
+            <div className="mp-services-hero__saved-bar">
+              <div className="mp-saved-bar__info">
+                <span className="mp-saved-bar__tag"><CheckCircle2 size={15} /> {copy(language, 'Active Application Saved on Device', 'सक्रिय आवेदन इस डिवाइस पर सहेजा गया')}</span>
+                <strong>{demoApplication.id} • {citizenApplicantName(demoApplication.applicant)}</strong>
+                <small>{copy(language, 'Next action: ', 'अगला कार्य: ')}{citizenStageName(demoApplication.lastStage, language)}</small>
+              </div>
+              <PortalLink href={`/mp/application/${demoApplication.id}`} className="button button--light mp-saved-bar__cta">
+                {copy(language, 'Resume application', 'आवेदन जारी रखें')} <ArrowRight size={18} />
+              </PortalLink>
+            </div>
+          ) : (
+            <div className="mp-services-hero__quick-actions">
+              <PortalLink href="/mp/ll/start" className="button button--light">
+                {copy(language, 'Start New Application', 'नया आवेदन शुरू करें')} <ArrowRight size={18} />
+              </PortalLink>
+              <PortalLink href="/mp/service/application-status" className="button button--secondary button--hero-glass">
+                {copy(language, 'Track Existing Application', 'आवेदन की स्थिति देखें')}
+              </PortalLink>
+            </div>
+          )}
+        </div>
+
+        <div className="mp-services-hero__visual" aria-hidden="true">
+          <img src="/assets/mp-services-hero.webp" alt="" loading="eager" />
+        </div>
+      </section>
+
+      {/* Featured High-Intent Spotlight Action Cards */}
+      <section className="featured-services-section" aria-labelledby="featured-services-title">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">{copy(language, 'Direct-to-Citizen Fast Track', 'नागरिक त्वरित सेवाएँ')}</p>
+            <h2 id="featured-services-title">{copy(language, 'Most Popular Driving Services', 'सर्वाधिक उपयोग की जाने वाली सेवाएँ')}</h2>
+          </div>
+        </div>
+
+        <div className="featured-services-grid">
+          {featuredSpotlights.map((spotlight) => {
+            const SpotlightIcon = spotlight.icon
+            return (
+              <PortalLink href={spotlight.href} className="featured-spotlight-card" key={spotlight.id}>
+                <div className="featured-spotlight-card__backdrop" aria-hidden="true">
+                  <img src={spotlight.image} alt="" loading="lazy" />
+                </div>
+                <div className="featured-spotlight-card__content">
+                  <div className="featured-spotlight-card__header-row">
+                    <span className="featured-spotlight-card__icon" style={{ background: spotlight.badgeBg, color: spotlight.badgeColor }}>
+                      <SpotlightIcon size={18} />
+                    </span>
+                    <span className={`tag-pill tag-pill--${spotlight.tagType}`}>{copy(language, spotlight.tag, spotlight.tagHi)}</span>
+                  </div>
+                  <strong className="featured-spotlight-card__title">{copy(language, spotlight.title, spotlight.titleHi)}</strong>
+                  <p className="featured-spotlight-card__desc">{copy(language, spotlight.desc, spotlight.descHi)}</p>
+                  <div className="featured-spotlight-card__footer">
+                    <span>{copy(language, spotlight.action, spotlight.actionHi)}</span>
+                    <ArrowRight size={16} />
+                  </div>
+                </div>
+              </PortalLink>
+            )
+          })}
+        </div>
+      </section>
+
+      {/* Full Directory of Services with 1-Tap Category Filters */}
+      <section className="services-section" aria-labelledby="services-title">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">{copy(language, 'Complete Catalog', 'संपूर्ण निर्देशिका')}</p>
+            <h2 id="services-title">{copy(language, 'Explore All Driving Licence Services', 'सभी ड्राइविंग लाइसेंस सेवाएँ देखें')}</h2>
+          </div>
+          <span className="result-count" aria-live="polite">
+            {copy(language, `${filtered.length} services available`, `${filtered.length} सेवाएँ उपलब्ध`)}
+          </span>
+        </div>
+
+        {/* Filter Strip */}
+        <div className="services-filter-strip">
+          <label className="services-filter-search">
+            <Search size={18} aria-hidden="true" />
+            <span className="visually-hidden">{copy(language, 'Search services', 'सेवाएँ खोजें')}</span>
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={copy(language, 'Search service by name or keyword...', 'सेवा का नाम या कीवर्ड खोजें...')}
+            />
+            {query && (
+              <button type="button" className="filter-search-clear" onClick={() => setQuery('')} aria-label="Clear search">
+                ×
+              </button>
+            )}
+          </label>
+
+          <div className="services-filter-pills" role="tablist" aria-label="Filter services by category">
+            {categoryFilterOptions.map((opt) => {
+              const active = category === opt.key
+              return (
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={active}
+                  key={opt.key}
+                  className={`category-pill-btn ${active ? 'category-pill-btn--active' : ''}`}
+                  onClick={() => setCategory(opt.key)}
+                >
+                  <span>{copy(language, opt.labelEn, opt.labelHi)}</span>
+                  <span className="category-pill-count">{opt.count}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Directory Groups with Discrete Elevated Cards */}
+        {groups.length ? (
+          <div className="service-directory">
+            {groups.map((group) => (
+              <section key={group.category} className="service-group">
+                <div className="service-group__header">
+                  <h3>{serviceCategoryLabels[group.category][language]}</h3>
+                  <span className="service-group__badge">
+                    {group.items.length} {copy(language, 'services', 'सेवाएँ')}
+                  </span>
+                </div>
+                <div className="service-grid">
+                  {group.items.map((service) => (
+                    <ServiceCard key={service.id} service={service} language={language} />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        ) : (
+          <div className="no-results">
+            <Search size={32} />
+            <h3>{copy(language, 'No matching service found', 'कोई सेवा नहीं मिली')}</h3>
+            <p>{copy(language, 'Try adjusting your search terms or select another category filter.', 'दूसरा शब्द खोजें या अन्य श्रेणी फ़िल्टर चुनें।')}</p>
+            <button className="text-button" onClick={() => { setQuery(''); setCategory('All') }}>
+              {copy(language, 'Clear search and filters', 'खोज और फ़िल्टर हटाएँ')}
+            </button>
+          </div>
+        )}
+      </section>
+    </>
+  )
 }
 
 const llStages = [
@@ -693,7 +1364,47 @@ function UnavailableServiceDialog({ destination, language, onClose }: { destinat
 }
 
 function PortalFooter({ language, national, onPrototypeDetails }: { language: Language; national: boolean; onPrototypeDetails: () => void }) {
-  return <footer className="portal-footer"><div className="portal-container portal-footer__grid"><div><PortalMark language={language} national={national} /><p>{copy(language, 'Clear access to road transport information and citizen services.', 'सड़क परिवहन जानकारी और नागरिक सेवाओं तक स्पष्ट पहुँच।')}</p></div><div><strong>{copy(language, 'Citizen services', 'नागरिक सेवाएँ')}</strong><PortalLink href="/mp/services">{copy(language, 'Driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ')}</PortalLink><PortalLink href="/mp/ll/start">{copy(language, 'Apply for Learner’s Licence', 'लर्नर लाइसेंस के लिए आवेदन')}</PortalLink><PortalLink href="/mp/service/application-status">{copy(language, 'Application status', 'आवेदन स्थिति')}</PortalLink></div><div><strong>{copy(language, 'Portal information', 'पोर्टल जानकारी')}</strong><PortalLink href="/">{copy(language, 'Home', 'होम')}</PortalLink><button type="button" onClick={onPrototypeDetails}>{copy(language, 'Prototype details', 'प्रोटोटाइप जानकारी')}</button><span>{copy(language, 'Accessibility and bilingual support', 'सुलभता और द्विभाषी सहायता')}</span></div></div><div className="portal-footer__bottom"><div className="portal-container">{copy(language, 'Independent hackathon prototype — not an official government service.', 'स्वतंत्र हैकाथॉन प्रोटोटाइप — यह आधिकारिक सरकारी सेवा नहीं है।')}</div></div></footer>
+  return (
+    <footer className="portal-footer">
+      <div className="portal-container portal-footer__grid">
+        <div className="portal-footer__brand">
+          <PortalMark language={language} national={national} />
+          <p>{copy(language, 'Ministry of Road Transport and Highways (MoRTH), Government of India.', 'सड़क परिवहन और राजमार्ग मंत्रालय, भारत सरकार।')}</p>
+          <p className="portal-footer__tagline">{copy(language, 'Delivering faceless, transparent, and direct-to-citizen digital transport services.', 'फेसलेस, पारदर्शी और डायरेक्ट-टू-सिटिजन डिजिटल परिवहन सेवाएँ।')}</p>
+        </div>
+        <div>
+          <strong>{copy(language, 'Citizen Services', 'नागरिक सेवाएँ')}</strong>
+          <PortalLink href="/mp/services">{copy(language, 'Driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ')}</PortalLink>
+          <PortalLink href="/mp/ll/start">{copy(language, 'Apply for Learner’s Licence', 'लर्नर लाइसेंस के लिए आवेदन')}</PortalLink>
+          <PortalLink href="/mp/service/application-status">{copy(language, 'Application status', 'आवेदन स्थिति')}</PortalLink>
+          <PortalLink href="/mp/service/fee-payment">{copy(language, 'Fee payment & receipts', 'शुल्क भुगतान व रसीदें')}</PortalLink>
+        </div>
+        <div>
+          <strong>{copy(language, 'Resources & Acts', 'संसाधन और अधिनियम')}</strong>
+          <a href="#information">{copy(language, 'Citizen service guide', 'नागरिक सेवा मार्गदर्शिका')}</a>
+          <a href="#information">{copy(language, 'Central Motor Vehicles Act', 'केंद्रीय मोटर वाहन अधिनियम')}</a>
+          <a href="#information">{copy(language, 'Know Road Signs', 'सड़क संकेत जानें')}</a>
+          <a href="#information">{copy(language, 'Find Transport Office (RTO)', 'परिवहन कार्यालय खोजें')}</a>
+        </div>
+        <div>
+          <strong>{copy(language, 'Portal & Support', 'पोर्टल एवं सहायता')}</strong>
+          <PortalLink href="/">{copy(language, 'Home', 'होम')}</PortalLink>
+          <button type="button" onClick={onPrototypeDetails}>{copy(language, 'Prototype demonstration info', 'प्रोटोटाइप जानकारी')}</button>
+          <span>{copy(language, 'Bilingual & Screen Reader Accessible', 'द्विभाषी एवं स्क्रीन रीडर सुलभ')}</span>
+          <div className="portal-footer__counter">
+            <small>{copy(language, 'Total Citizen Visitors:', 'कुल नागरिक विज़िटर:')}</small>
+            <strong>29,68,35,596</strong>
+          </div>
+        </div>
+      </div>
+      <div className="portal-footer__bottom">
+        <div className="portal-container portal-footer__bottom-inner">
+          <span>{copy(language, 'Independent Hackathon Demonstration — Built for Build What Moves India.', 'स्वतंत्र हैकाथॉन प्रदर्शन — बिल्ड व्हॉट मूव्स इंडिया के लिए निर्मित।')}</span>
+          <span className="portal-footer__timestamp">{copy(language, 'Last Updated: August 2026 | Powered by NIC Digital Standards', 'अंतिम अपडेट: अगस्त 2026 | एनआईसी डिजिटल मानकों पर आधारित')}</span>
+        </div>
+      </div>
+    </footer>
+  )
 }
 
 function RouteLoading({ language }: { language: Language }) {
@@ -784,7 +1495,7 @@ function PortalApp() {
   if (route.name === 'gateway') return <Suspense fallback={<RouteLoading language={language} />}>{page}</Suspense>
 
   const national = route.name === 'home' || route.name === 'login'
-  return <div className="portal-app"><PortalHeader language={language} textScale={textScale} national={national} session={session} onLanguage={() => setLanguage((value) => value === 'en' ? 'hi' : 'en')} onTextScale={() => setTextScale((value) => value === 'normal' ? 'large' : 'normal')} onHelp={() => setHelpOpen(true)} onAccount={() => setAccountOpen(true)} /><main id="main-content" className={`portal-container portal-main ${route.name === 'home' ? 'portal-main--home' : ''}`}><Suspense fallback={<RouteLoading language={language} />}>{page}</Suspense></main><PortalFooter language={language} national={national} onPrototypeDetails={() => setPrototypeDetailsOpen(true)} />{helpOpen && <HelpDialog route={route} language={language} onClose={() => setHelpOpen(false)} />}{prototypeDetailsOpen && <PrototypeDetailsDialog language={language} onClose={() => setPrototypeDetailsOpen(false)} />}{unavailableDestination && <UnavailableServiceDialog destination={unavailableDestination} language={language} onClose={() => setUnavailableDestination(null)} />}{accountOpen && session && <Suspense fallback={null}><AccountDialog language={language} session={session} onClose={() => setAccountOpen(false)} onSignOut={() => { clearDemoSession(); setSession(null); setAccountOpen(false); navigatePortal('/') }} /></Suspense>}</div>
+  return <div className="portal-app"><PortalHeader pathname={pathname} language={language} textScale={textScale} national={national} session={session} onLanguage={() => setLanguage((value) => value === 'en' ? 'hi' : 'en')} onTextScale={() => setTextScale((value) => value === 'normal' ? 'large' : 'normal')} onHelp={() => setHelpOpen(true)} onAccount={() => setAccountOpen(true)} /><main id="main-content" className={`portal-container portal-main ${route.name === 'home' ? 'portal-main--home' : ''}`}><Suspense fallback={<RouteLoading language={language} />}>{page}</Suspense></main><PortalFooter language={language} national={national} onPrototypeDetails={() => setPrototypeDetailsOpen(true)} />{helpOpen && <HelpDialog route={route} language={language} onClose={() => setHelpOpen(false)} />}{prototypeDetailsOpen && <PrototypeDetailsDialog language={language} onClose={() => setPrototypeDetailsOpen(false)} />}{unavailableDestination && <UnavailableServiceDialog destination={unavailableDestination} language={language} onClose={() => setUnavailableDestination(null)} />}{accountOpen && session && <Suspense fallback={null}><AccountDialog language={language} session={session} onClose={() => setAccountOpen(false)} onSignOut={() => { clearDemoSession(); setSession(null); setAccountOpen(false); navigatePortal('/') }} /></Suspense>}</div>
 }
 
 export default PortalApp

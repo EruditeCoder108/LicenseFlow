@@ -71,10 +71,16 @@ const sitesWorkerEntry: Plugin = {
       readFileSync(`${outputDirectory}/index.html`, 'utf8'),
     )
 
-    for (const publicAssetPath of ['/og.png', '/assets/parivahan-transport-hero.png']) {
-      embeddedAssets[publicAssetPath] = encodeOutput(
-        readFileSync(`${outputDirectory}${publicAssetPath}`),
-      )
+    for (const publicAssetPath of ['/og.png', '/assets/parivahan-transport-hero.webp', '/assets/parivahan-transport-hero.png']) {
+      try {
+        if (readFileSync(`${outputDirectory}${publicAssetPath}`)) {
+          embeddedAssets[publicAssetPath] = encodeOutput(
+            readFileSync(`${outputDirectory}${publicAssetPath}`),
+          )
+        }
+      } catch {
+        // Optional asset fallback
+      }
     }
 
     const workerSource = `const assets = ${JSON.stringify(embeddedAssets)};
@@ -134,6 +140,11 @@ export default {
 
 export default defineConfig({
   plugins: [react(), sites(), sitesWorkerEntry],
+  server: {
+    watch: {
+      ignored: ['**/*.tmp', '**/*~tmp', '**/*.png.~tmp', '**/ChatGPT Image*'],
+    },
+  },
   build: {
     target: 'es2022',
   },
