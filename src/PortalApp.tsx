@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react'
 import {
   Accessibility,
   ArrowLeft,
@@ -41,17 +41,32 @@ import {
 } from 'lucide-react'
 import { getService, serviceCategories, serviceCategoryLabels, services, type ServiceDefinition } from './portal/config'
 import { navigatePortal, parsePortalRoute, type PortalRoute } from './portal/router'
-import { ApplicationFlow, SubmittedPage, UploadsPage } from './portal/ApplicationFlow'
 import { createEmptyDraft, createPreparedDraft, loadApplicationDraft, saveApplicationDraft, type LLApplicationDraft } from './portal/application'
-import { DeviceReadinessPage, RehearsalPage } from './portal/ReadinessJourney'
-import { GatewayPage, PaymentPage, PaymentRedirectPage, PaymentReturnPage } from './portal/PaymentJourney'
 import { isPaymentConfirmed, paymentNeedsReconciliation } from './portal/payment'
 import { loadJourneyProgress } from './portal/progress'
-import { InterruptionPage, ResultPage, TestEntryPage, TestPage, TutorialPage } from './portal/TestJourney'
 import { loadExamSession } from './portal/examSession'
-import { AccountDialog, LoginPage } from './portal/AuthPages'
 import { clearDemoSession, loadDemoSession, saveDemoSession, type DemoSession } from './portal/auth'
-import { ApplicationLookupPage, FeeAndReceiptHub, PaymentReceiptPage, PaymentStatusPage } from './portal/StatusUtilities'
+
+const ApplicationFlow = lazy(() => import('./portal/ApplicationFlow').then((module) => ({ default: module.ApplicationFlow })))
+const SubmittedPage = lazy(() => import('./portal/ApplicationFlow').then((module) => ({ default: module.SubmittedPage })))
+const UploadsPage = lazy(() => import('./portal/ApplicationFlow').then((module) => ({ default: module.UploadsPage })))
+const DeviceReadinessPage = lazy(() => import('./portal/ReadinessJourney').then((module) => ({ default: module.DeviceReadinessPage })))
+const RehearsalPage = lazy(() => import('./portal/ReadinessJourney').then((module) => ({ default: module.RehearsalPage })))
+const GatewayPage = lazy(() => import('./portal/PaymentJourney').then((module) => ({ default: module.GatewayPage })))
+const PaymentPage = lazy(() => import('./portal/PaymentJourney').then((module) => ({ default: module.PaymentPage })))
+const PaymentRedirectPage = lazy(() => import('./portal/PaymentJourney').then((module) => ({ default: module.PaymentRedirectPage })))
+const PaymentReturnPage = lazy(() => import('./portal/PaymentJourney').then((module) => ({ default: module.PaymentReturnPage })))
+const TutorialPage = lazy(() => import('./portal/TestJourney').then((module) => ({ default: module.TutorialPage })))
+const TestEntryPage = lazy(() => import('./portal/TestJourney').then((module) => ({ default: module.TestEntryPage })))
+const TestPage = lazy(() => import('./portal/TestJourney').then((module) => ({ default: module.TestPage })))
+const InterruptionPage = lazy(() => import('./portal/TestJourney').then((module) => ({ default: module.InterruptionPage })))
+const ResultPage = lazy(() => import('./portal/TestJourney').then((module) => ({ default: module.ResultPage })))
+const AccountDialog = lazy(() => import('./portal/AuthPages').then((module) => ({ default: module.AccountDialog })))
+const LoginPage = lazy(() => import('./portal/AuthPages').then((module) => ({ default: module.LoginPage })))
+const ApplicationLookupPage = lazy(() => import('./portal/StatusUtilities').then((module) => ({ default: module.ApplicationLookupPage })))
+const FeeAndReceiptHub = lazy(() => import('./portal/StatusUtilities').then((module) => ({ default: module.FeeAndReceiptHub })))
+const PaymentReceiptPage = lazy(() => import('./portal/StatusUtilities').then((module) => ({ default: module.PaymentReceiptPage })))
+const PaymentStatusPage = lazy(() => import('./portal/StatusUtilities').then((module) => ({ default: module.PaymentStatusPage })))
 
 type Language = 'en' | 'hi'
 type TextScale = 'normal' | 'large'
@@ -59,6 +74,7 @@ type TextScale = 'normal' | 'large'
 const copy = (language: Language, en: string, hi: string) => language === 'en' ? en : hi
 
 type DemoApplication = {
+  version: 1
   id: string
   applicant: string
   lastStage: string
@@ -263,10 +279,34 @@ function ServiceCard({ service, language }: { service: ServiceDefinition; langua
 function loadDemoApplication(): DemoApplication | null {
   try {
     const value = localStorage.getItem(APP_STORAGE_KEY)
-    return value ? JSON.parse(value) as DemoApplication : null
+    if (!value) return null
+    const parsed = JSON.parse(value) as Partial<DemoApplication>
+    if (parsed.version !== undefined && parsed.version !== 1) return null
+    if (typeof parsed.id !== 'string' || !/^MP-LL-[A-Z0-9-]{4,24}$/i.test(parsed.id)) return null
+    if (typeof parsed.applicant !== 'string' || parsed.applicant.length > 100) return null
+    if (typeof parsed.lastStage !== 'string' || parsed.lastStage.length > 100) return null
+    if (typeof parsed.savedAt !== 'string' || Number.isNaN(Date.parse(parsed.savedAt))) return null
+    return { version: 1, id: parsed.id, applicant: parsed.applicant, lastStage: parsed.lastStage, savedAt: parsed.savedAt }
   } catch {
     return null
   }
+}
+
+function saveDemoApplicationRecord(application: DemoApplication): boolean {
+  try {
+    localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(application))
+    return true
+  } catch {
+    return false
+  }
+}
+
+function readPreference(key: string): string | null {
+  try { return localStorage.getItem(key) } catch { return null }
+}
+
+function savePreference(key: string, value: string): void {
+  try { localStorage.setItem(key, value) } catch { /* Preferences may remain in memory when storage is unavailable. */ }
 }
 
 const stageLabelsHi: Record<string, string> = {
@@ -656,11 +696,15 @@ function PortalFooter({ language, national, onPrototypeDetails }: { language: La
   return <footer className="portal-footer"><div className="portal-container portal-footer__grid"><div><PortalMark language={language} national={national} /><p>{copy(language, 'Clear access to road transport information and citizen services.', 'सड़क परिवहन जानकारी और नागरिक सेवाओं तक स्पष्ट पहुँच।')}</p></div><div><strong>{copy(language, 'Citizen services', 'नागरिक सेवाएँ')}</strong><PortalLink href="/mp/services">{copy(language, 'Driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ')}</PortalLink><PortalLink href="/mp/ll/start">{copy(language, 'Apply for Learner’s Licence', 'लर्नर लाइसेंस के लिए आवेदन')}</PortalLink><PortalLink href="/mp/service/application-status">{copy(language, 'Application status', 'आवेदन स्थिति')}</PortalLink></div><div><strong>{copy(language, 'Portal information', 'पोर्टल जानकारी')}</strong><PortalLink href="/">{copy(language, 'Home', 'होम')}</PortalLink><button type="button" onClick={onPrototypeDetails}>{copy(language, 'Prototype details', 'प्रोटोटाइप जानकारी')}</button><span>{copy(language, 'Accessibility and bilingual support', 'सुलभता और द्विभाषी सहायता')}</span></div></div><div className="portal-footer__bottom"><div className="portal-container">{copy(language, 'Independent hackathon prototype — not an official government service.', 'स्वतंत्र हैकाथॉन प्रोटोटाइप — यह आधिकारिक सरकारी सेवा नहीं है।')}</div></div></footer>
 }
 
+function RouteLoading({ language }: { language: Language }) {
+  return <section className="route-guard" role="status" aria-live="polite"><FileClock size={30} /><p className="eyebrow">{copy(language, 'Loading service', 'सेवा लोड हो रही है')}</p><h1>{copy(language, 'Opening the saved page…', 'सहेजा पेज खोला जा रहा है…')}</h1><p>{copy(language, 'Your application remains saved on this device.', 'आपका आवेदन इस डिवाइस पर सुरक्षित है।')}</p></section>
+}
+
 function PortalApp() {
   const pathname = usePathname()
   const route = parsePortalRoute(pathname)
-  const [language, setLanguage] = useState<Language>(() => localStorage.getItem('mp-portal-language') === 'hi' ? 'hi' : 'en')
-  const [textScale, setTextScale] = useState<TextScale>(() => localStorage.getItem('mp-portal-text-scale') === 'large' ? 'large' : 'normal')
+  const [language, setLanguage] = useState<Language>(() => readPreference('mp-portal-language') === 'hi' ? 'hi' : 'en')
+  const [textScale, setTextScale] = useState<TextScale>(() => readPreference('mp-portal-text-scale') === 'large' ? 'large' : 'normal')
   const [helpOpen, setHelpOpen] = useState(false)
   const [prototypeDetailsOpen, setPrototypeDetailsOpen] = useState(false)
   const [unavailableDestination, setUnavailableDestination] = useState<HomeDestination | null>(null)
@@ -670,11 +714,11 @@ function PortalApp() {
 
   useEffect(() => {
     document.documentElement.lang = language === 'hi' ? 'hi' : 'en-IN'
-    localStorage.setItem('mp-portal-language', language)
+    savePreference('mp-portal-language', language)
   }, [language])
   useEffect(() => {
     document.documentElement.dataset.textScale = textScale
-    localStorage.setItem('mp-portal-text-scale', textScale)
+    savePreference('mp-portal-text-scale', textScale)
   }, [textScale])
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'instant' })
@@ -684,16 +728,16 @@ function PortalApp() {
   const createApplication = (kind: 'full' | 'judge') => {
     const draft = kind === 'judge' ? createPreparedDraft() : createEmptyDraft()
     saveApplicationDraft(draft)
-    const application: DemoApplication = { id: draft.applicationId, applicant: kind === 'judge' ? 'Aarav Verma' : 'New applicant', lastStage: kind === 'judge' ? 'Device readiness' : 'Applicant category', savedAt: new Date().toISOString() }
-    localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(application))
+    const application: DemoApplication = { version: 1, id: draft.applicationId, applicant: kind === 'judge' ? 'Aarav Verma' : 'New applicant', lastStage: kind === 'judge' ? 'Device readiness' : 'Applicant category', savedAt: new Date().toISOString() }
+    saveDemoApplicationRecord(application)
     setDemoApplication(application)
     navigatePortal(kind === 'judge' ? `/mp/application/${application.id}` : '/mp/ll/application/category')
   }
 
   const syncApplication = (draft: LLApplicationDraft, lastStage: string) => {
     const name = [draft.firstName, draft.lastName].filter(Boolean).join(' ') || 'Applicant'
-    const application: DemoApplication = { id: draft.applicationId, applicant: name, lastStage, savedAt: new Date().toISOString() }
-    localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(application))
+    const application: DemoApplication = { version: 1, id: draft.applicationId, applicant: name, lastStage, savedAt: new Date().toISOString() }
+    saveDemoApplicationRecord(application)
     setDemoApplication(application)
   }
 
@@ -701,7 +745,7 @@ function PortalApp() {
     setDemoApplication((current) => {
       if (!current) return current
       const updated = { ...current, lastStage, savedAt: new Date().toISOString() }
-      localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(updated))
+      saveDemoApplicationRecord(updated)
       return updated
     })
   }
@@ -727,7 +771,7 @@ function PortalApp() {
   else if (route.name === 'test') page = <TestPage applicationId={route.applicationId} onStageChange={updateApplicationStage} language={language} />
   else if (route.name === 'test-interruption') page = <InterruptionPage applicationId={route.applicationId} onStageChange={updateApplicationStage} language={language} />
   else if (route.name === 'result') page = <ResultPage applicationId={route.applicationId} onStageChange={updateApplicationStage} language={language} />
-  else if (route.name === 'application') page = <ApplicationPage language={language} application={demoApplication ?? { id: route.applicationId, applicant: copy(language, 'Sample applicant', 'नमूना आवेदक'), lastStage: copy(language, 'Device compatibility', 'डिवाइस अनुकूलता'), savedAt: new Date().toISOString() }} />
+  else if (route.name === 'application') page = <ApplicationPage language={language} application={demoApplication ?? { version: 1, id: route.applicationId, applicant: copy(language, 'Sample applicant', 'नमूना आवेदक'), lastStage: copy(language, 'Device compatibility', 'डिवाइस अनुकूलता'), savedAt: new Date().toISOString() }} />
   else if (route.name === 'service') {
     const service = getService(route.serviceId)
     page = route.serviceId === 'application-status'
@@ -737,10 +781,10 @@ function PortalApp() {
         : service ? <ServicePage service={service} language={language} /> : <NotFoundPage language={language} />
   } else page = <NotFoundPage language={language} />
 
-  if (route.name === 'gateway') return page
+  if (route.name === 'gateway') return <Suspense fallback={<RouteLoading language={language} />}>{page}</Suspense>
 
   const national = route.name === 'home' || route.name === 'login'
-  return <div className="portal-app"><PortalHeader language={language} textScale={textScale} national={national} session={session} onLanguage={() => setLanguage((value) => value === 'en' ? 'hi' : 'en')} onTextScale={() => setTextScale((value) => value === 'normal' ? 'large' : 'normal')} onHelp={() => setHelpOpen(true)} onAccount={() => setAccountOpen(true)} /><main id="main-content" className={`portal-container portal-main ${route.name === 'home' ? 'portal-main--home' : ''}`}>{page}</main><PortalFooter language={language} national={national} onPrototypeDetails={() => setPrototypeDetailsOpen(true)} />{helpOpen && <HelpDialog route={route} language={language} onClose={() => setHelpOpen(false)} />}{prototypeDetailsOpen && <PrototypeDetailsDialog language={language} onClose={() => setPrototypeDetailsOpen(false)} />}{unavailableDestination && <UnavailableServiceDialog destination={unavailableDestination} language={language} onClose={() => setUnavailableDestination(null)} />}{accountOpen && session && <AccountDialog language={language} session={session} onClose={() => setAccountOpen(false)} onSignOut={() => { clearDemoSession(); setSession(null); setAccountOpen(false); navigatePortal('/') }} />}</div>
+  return <div className="portal-app"><PortalHeader language={language} textScale={textScale} national={national} session={session} onLanguage={() => setLanguage((value) => value === 'en' ? 'hi' : 'en')} onTextScale={() => setTextScale((value) => value === 'normal' ? 'large' : 'normal')} onHelp={() => setHelpOpen(true)} onAccount={() => setAccountOpen(true)} /><main id="main-content" className={`portal-container portal-main ${route.name === 'home' ? 'portal-main--home' : ''}`}><Suspense fallback={<RouteLoading language={language} />}>{page}</Suspense></main><PortalFooter language={language} national={national} onPrototypeDetails={() => setPrototypeDetailsOpen(true)} />{helpOpen && <HelpDialog route={route} language={language} onClose={() => setHelpOpen(false)} />}{prototypeDetailsOpen && <PrototypeDetailsDialog language={language} onClose={() => setPrototypeDetailsOpen(false)} />}{unavailableDestination && <UnavailableServiceDialog destination={unavailableDestination} language={language} onClose={() => setUnavailableDestination(null)} />}{accountOpen && session && <Suspense fallback={null}><AccountDialog language={language} session={session} onClose={() => setAccountOpen(false)} onSignOut={() => { clearDemoSession(); setSession(null); setAccountOpen(false); navigatePortal('/') }} /></Suspense>}</div>
 }
 
 export default PortalApp

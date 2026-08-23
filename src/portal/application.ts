@@ -221,6 +221,11 @@ export function loadApplicationDraft(): LLApplicationDraft | null {
   }
 }
 
-export function saveApplicationDraft(draft: LLApplicationDraft): void {
-  localStorage.setItem(APPLICATION_DRAFT_KEY, JSON.stringify({ ...draft, lastSavedAt: new Date().toISOString() }))
+export function saveApplicationDraft(draft: LLApplicationDraft): boolean {
+  try {
+    localStorage.setItem(APPLICATION_DRAFT_KEY, JSON.stringify({ ...draft, lastSavedAt: new Date().toISOString() }))
+    return true
+  } catch {
+    return false
+  }
 }

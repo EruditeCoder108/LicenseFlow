@@ -342,6 +342,8 @@ Make the portal feel complete and researched without expanding the working produ
 
 This work happens before external visual polish so the polishing model receives stable code.
 
+**Status (2026-08-23): complete.** Citizen routes are split into independently loaded bundles, MediaPipe remains isolated from the homepage/forms, browser persistence now fails safely and validates the locally displayed application record, model failure retains retry and guided-fallback paths, and the production trust boundary is recorded in `docs/production-security-boundary.md`. The current UI was deliberately left unchanged for the owner's polish pass.
+
 ### Code structure
 
 - Keep routing and shell composition in `src/PortalApp.tsx`, but extract any oversized page groups before they become difficult to review.

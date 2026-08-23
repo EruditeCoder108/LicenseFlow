@@ -128,7 +128,7 @@ Remaining measured QA:
 
 ## Milestone 5 — full product QA and final polish
 
-**Content-completeness status (2026-08-23): G3 passed.** Screenshot evidence, route-aware Help, secure-test Hindi coverage and shared-computer cleanup are complete. Architecture hardening, constrained external polish review and the final G5 release matrix remain separate gates.
+**Content-completeness status (2026-08-23): G3 passed. Architecture hardening is complete.** Screenshot evidence, route-aware Help, secure-test Hindi coverage and shared-computer cleanup are complete. Citizen routes now load independently, vision code remains off ordinary portal routes, local persistence fails safely and the production security boundary is documented. Constrained external polish review and the final G5 release matrix remain separate gates.
 
 **Goal:** Make the entire journey consistent and presentation-ready without changing its logic during visual polish.
 
@@ -149,4 +149,4 @@ Deliverables:
 
 ## Immediate decision
 
-Milestones 1–4 now have a tested submission path. Continue with **Milestone 5A content completeness**, then perform the constrained polish and final QA gates without changing the proven transaction or recovery logic.
+Milestones 1–5B now have a tested submission path and a hardened browser architecture. Continue with the constrained polish and final QA gates without changing the proven transaction or recovery logic.

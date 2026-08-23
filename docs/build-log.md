@@ -1,5 +1,13 @@
 # LicenceFlow build log
 
+## 2026-08-23 — Milestone 5B architecture and performance hardening completed
+
+- Split application, readiness, payment, secure-test, sign-in and status utilities into route-loaded production chunks while preserving the existing interface.
+- Kept the MediaPipe vision bundle behind the readiness route so the homepage and ordinary forms do not pay its download/parse cost.
+- Added safe browser-preference and autosave writes, versioned and validated the locally displayed application record, and safely reset incompatible or malformed state.
+- Confirmed the readiness model has explicit loading, retry and clearly labelled guided-fallback behavior.
+- Added a regression test for blocked/quota-exhausted browser storage and documented the real deployment's server, payment, privacy and native-lockdown boundaries.
+
 ## 2026-08-23 — Milestone 5A content completeness completed
 
 - Accounted for all 68 supplied reference screenshots in a route-level registry with implemented, information, reference and exclusion evidence labels.

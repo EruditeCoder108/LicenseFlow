@@ -1,5 +1,9 @@
-import { describe, expect, it } from 'vitest'
-import { applicationSteps, completedStepCount, createEmptyDraft, createPreparedDraft, validateApplicationStep } from './application'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { applicationSteps, completedStepCount, createEmptyDraft, createPreparedDraft, saveApplicationDraft, validateApplicationStep } from './application'
+
+afterEach(() => {
+  vi.unstubAllGlobals()
+})
 
 describe('MP LL application validation', () => {
   it('requires a category and a licence number only for an existing-licence route', () => {
@@ -36,5 +40,13 @@ describe('MP LL application validation', () => {
   it('marks a complete prepared application ready for all seven steps', () => {
     expect(applicationSteps).toHaveLength(7)
     expect(completedStepCount(createPreparedDraft())).toBe(7)
+  })
+
+  it('keeps the form usable when browser storage rejects an autosave', () => {
+    vi.stubGlobal('localStorage', {
+      setItem: vi.fn(() => { throw new DOMException('Storage blocked', 'QuotaExceededError') }),
+    })
+
+    expect(saveApplicationDraft(createEmptyDraft('TEST'))).toBe(false)
   })
 })
