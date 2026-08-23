@@ -140,6 +140,17 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
   const progress = loadJourneyProgress(applicationId)
   const [accepted, setAccepted] = useState(false)
   const [session, setSession] = useState(() => loadExamSession(applicationId, progress))
+  const media = useDeviceReadiness()
+  const guided = progress.readiness.mode === 'guided-signals'
+
+  useEffect(() => {
+    if (guided) {
+      if (!media.snapshot.started) media.useGuidedSignals()
+    } else if (!media.snapshot.started) {
+      void media.start()
+    }
+  }, [guided, media])
+
   if (progress.tutorial.status !== 'completed') return <Guard applicationId={applicationId} language={language} title={local(language, 'Complete the tutorial first', 'पहले सीखने का भाग पूरा करें')} body={local(language, 'The test starts only after the learning check is completed.', 'सीखने की जाँच पूरी होने के बाद ही परीक्षा शुरू होती है।')} route={`/mp/application/${applicationId}/tutorial`} action={local(language, 'Open road-safety tutorial', 'सड़क सुरक्षा सीख खोलें')} />
   const fresh = session.stage === 'exam-intro'
   const start = () => {
@@ -178,7 +189,7 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
         <article>
           <span><Camera size={21} /></span>
           <div>
-            <strong>{progress.readiness.mode === 'guided-signals' ? local(language, 'Demo camera simulation', 'डेमो कैमरा सिमुलेशन') : local(language, 'Camera monitoring', 'कैमरा निगरानी')}</strong>
+            <strong>{guided ? local(language, 'Demo camera simulation', 'डेमो कैमरा सिमुलेशन') : local(language, 'Camera monitoring', 'कैमरा निगरानी')}</strong>
             <small>{local(language, 'Checks you are visible during the test', 'जाँचता है कि आप परीक्षा के दौरान सामने हैं')}</small>
           </div>
         </article>
@@ -190,6 +201,24 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
           </div>
         </article>
       </section>
+      <div className="test-entry-camera-card">
+        <div className="test-entry-camera-preview">
+          <MiniCamera guided={guided} stream={media.stream} language={language} />
+        </div>
+        <div className="test-entry-camera-status">
+          <div className="test-entry-camera-status__header">
+            <Camera size={18} />
+            <strong>{guided ? local(language, 'Demo camera simulation active', 'डेमो कैमरा सिमुलेशन तैयार') : media.snapshot.camera === 'ready' ? local(language, 'Camera check active and verified', 'कैमरा सत्यापित और तैयार') : local(language, 'Connecting camera...', 'कैमरा कनेक्ट हो रहा है...')}</strong>
+          </div>
+          <p>
+            {guided
+              ? local(language, 'Simulated camera monitoring will run during the 5 test questions.', 'परीक्षा के 5 प्रश्नों के दौरान सिम्युलेटेड कैमरा निगरानी चलेगी।')
+              : media.snapshot.faceCount === 1
+              ? local(language, 'Face framing verified. Camera monitoring will continue during the test.', 'चेहरा सही फ्रेम में है। परीक्षा के दौरान कैमरा निगरानी जारी रहेगी।')
+              : local(language, 'Live camera stream is ready for test monitoring.', 'लाइव कैमरा स्ट्रीम परीक्षा निगरानी के लिए तैयार है।')}
+          </p>
+        </div>
+      </div>
       <div className="test-declaration">
         <Info size={20} />
         <p>{local(language, 'This prototype demonstrates a clean test flow with honest recovery. It does not provide full proctoring lockdown.', 'यह प्रोटोटाइप स्पष्ट टेस्ट और रिकवरी दिखाता है। इसमें पूरा प्रॉक्टरिंग लॉकडाउन नहीं है।')}</p>
@@ -254,7 +283,13 @@ export function TestPage({ applicationId, onStageChange, language }: { applicati
   const media = useDeviceReadiness()
   const guided = progress.readiness.mode === 'guided-signals'
   const question = demoQuestions[state.exam.currentQuestion]
-  useEffect(() => { if (guided && !media.snapshot.started) media.useGuidedSignals() }, [guided, media])
+  useEffect(() => {
+    if (guided) {
+      if (!media.snapshot.started) media.useGuidedSignals()
+    } else if (!media.snapshot.started) {
+      void media.start()
+    }
+  }, [guided, media])
   useEffect(() => {
     const pauseForVisibility = () => {
       if (!document.hidden || state.stage !== 'exam' || state.exam.status !== 'active') return

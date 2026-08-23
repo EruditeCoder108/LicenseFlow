@@ -461,8 +461,8 @@ export function getRouteAccess(input: {
     if (uploadsStage?.status !== 'completed') {
       return {
         allowed: false,
-        redirectHref: `/mp/application/${journey.applicationId}/uploads`,
-        reason: { en: 'Please complete photo and document verification first.', hi: 'कृपया पहले फोटो और दस्तावेज़ सत्यापन पूरा करें।' },
+        redirectHref: journey.resumeHref,
+        reason: { en: 'Please complete earlier application and upload steps first.', hi: 'कृपया पहले आवेदन और अपलोड चरण पूरे करें।' },
       }
     }
     return { allowed: true }
@@ -487,7 +487,7 @@ export function getRouteAccess(input: {
     if (paymentStage?.status !== 'completed') {
       return {
         allowed: false,
-        redirectHref: `/mp/application/${journey.applicationId}/payment`,
+        redirectHref: journey.resumeHref,
         reason: { en: 'Please complete fee payment first.', hi: 'कृपया पहले शुल्क भुगतान पूरा करें।' },
       }
     }
@@ -500,7 +500,7 @@ export function getRouteAccess(input: {
     if (tutorialStage?.status !== 'completed') {
       return {
         allowed: false,
-        redirectHref: `/mp/application/${journey.applicationId}/tutorial`,
+        redirectHref: journey.resumeHref,
         reason: { en: 'Please complete the road safety tutorial first.', hi: 'कृपया पहले सड़क सुरक्षा ट्यूटोरियल पूरा करें।' },
       }
     }

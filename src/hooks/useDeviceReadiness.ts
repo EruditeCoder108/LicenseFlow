@@ -11,6 +11,8 @@ export type FramingStatus = 'idle' | 'good' | 'adjust'
 export type LightingStatus = 'idle' | 'good' | 'dim' | 'bright'
 export type MediaBlockingReason = 'no-face' | 'multiple-faces' | 'camera-stopped' | null
 export type MediaCoachingReason = 'no-face' | 'multiple-faces' | 'framing' | 'lighting' | null
+export type HeadTurnStep = 'center_waiting' | 'turn_requested' | 'turning' | 'passed'
+export type HeadTurnDirection = 'left' | 'right'
 
 export interface DeviceReadinessSnapshot {
   started: boolean
@@ -23,6 +25,9 @@ export interface DeviceReadinessSnapshot {
   lighting: LightingStatus
   brightness: number | null
   headTurnComplete: boolean
+  headTurnStep: HeadTurnStep
+  headTurnDirection: HeadTurnDirection
+  headTurnProgress: number
   audioLevel: number
   online: boolean
   storage: boolean
@@ -43,6 +48,9 @@ const initialSnapshot: DeviceReadinessSnapshot = {
   lighting: 'idle',
   brightness: null,
   headTurnComplete: false,
+  headTurnStep: 'center_waiting',
+  headTurnDirection: 'left',
+  headTurnProgress: 0,
   audioLevel: 0,
   online: typeof navigator === 'undefined' ? true : navigator.onLine,
   storage: false,
@@ -81,18 +89,21 @@ function getFaceMetrics(landmarks: NormalizedLandmark[]) {
   const leftSpan = nose && leftCheek ? Math.abs(nose.x - leftCheek.x) : 0
   const rightSpan = nose && rightCheek ? Math.abs(rightCheek.x - nose.x) : 0
   const spanTotal = leftSpan + rightSpan
-  const yawSignal = spanTotal > 0 ? Math.abs(leftSpan - rightSpan) / spanTotal : 0
+  const signedYaw = spanTotal > 0 ? (rightSpan - leftSpan) / spanTotal : 0
+  const isCentered = spanTotal > 0 && Math.abs(signedYaw) < 0.12
 
   return {
     framing:
-      width >= 0.24 &&
-      width <= 0.78 &&
-      height >= 0.3 &&
-      centerX >= 0.27 &&
-      centerX <= 0.73 &&
-      centerY >= 0.25 &&
-      centerY <= 0.72,
-    turned: yawSignal >= 0.18,
+      width >= 0.16 &&
+      width <= 0.88 &&
+      height >= 0.18 &&
+      centerX >= 0.18 &&
+      centerX <= 0.82 &&
+      centerY >= 0.15 &&
+      centerY <= 0.85,
+    isCentered,
+    signedYaw,
+    magnitude: spanTotal > 0 ? Math.abs(signedYaw) : 0,
   }
 }
 
@@ -135,6 +146,10 @@ export function useDeviceReadiness() {
   const multipleFaceSinceRef = useRef<number | null>(null)
   const framingIssueSinceRef = useRef<number | null>(null)
   const lightingIssueSinceRef = useRef<number | null>(null)
+  const headTurnStepRef = useRef<HeadTurnStep>('center_waiting')
+  const headTurnDirectionRef = useRef<HeadTurnDirection>('left')
+  const centeredFramesRef = useRef<number>(0)
+  const turnFramesRef = useRef<number>(0)
 
   const releaseResources = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop())
@@ -151,6 +166,10 @@ export function useDeviceReadiness() {
     multipleFaceSinceRef.current = null
     framingIssueSinceRef.current = null
     lightingIssueSinceRef.current = null
+    headTurnStepRef.current = 'center_waiting'
+    headTurnDirectionRef.current = Math.random() < 0.5 ? 'left' : 'right'
+    centeredFramesRef.current = 0
+    turnFramesRef.current = 0
   }, [])
 
   const start = useCallback(async () => {
@@ -259,6 +278,9 @@ export function useDeviceReadiness() {
 
   const useGuidedSignals = useCallback(() => {
     releaseResources()
+    headTurnStepRef.current = 'passed'
+    centeredFramesRef.current = 3
+    turnFramesRef.current = 3
     setSnapshot({
       ...initialSnapshot,
       started: true,
@@ -271,6 +293,9 @@ export function useDeviceReadiness() {
       lighting: 'good',
       brightness: 128,
       headTurnComplete: true,
+      headTurnStep: 'passed',
+      headTurnDirection: 'left',
+      headTurnProgress: 1,
       audioLevel: 0.12,
       online: navigator.onLine,
       storage: testLocalStorage(),
@@ -314,7 +339,7 @@ export function useDeviceReadiness() {
         const faceCount = result.faceLandmarks.length
         const brightness = measureBrightness(video, canvas)
         const lighting: LightingStatus =
-          brightness === null ? 'idle' : brightness < 55 ? 'dim' : brightness > 220 ? 'bright' : 'good'
+          brightness === null ? 'idle' : brightness < 40 ? 'dim' : brightness > 235 ? 'bright' : 'good'
         const onlyFace = result.faceLandmarks[0]
         const metrics = faceCount === 1 && onlyFace ? getFaceMetrics(onlyFace) : null
         const now = performance.now()
@@ -343,21 +368,69 @@ export function useDeviceReadiness() {
           lightingIssueSinceRef.current = null
         }
 
+        // Multi-frame head turn challenge
+        let currentTurnStep = headTurnStepRef.current
+        let currentTurnDirection = headTurnDirectionRef.current
+        let headTurnProgress = 0
+
+        if (currentTurnStep === 'center_waiting') {
+          if (metrics && metrics.isCentered && metrics.framing && faceCount === 1) {
+            centeredFramesRef.current++
+            headTurnProgress = Math.min(0.5, (centeredFramesRef.current / 3) * 0.5)
+            if (centeredFramesRef.current >= 3) {
+              currentTurnStep = 'turn_requested'
+              headTurnStepRef.current = 'turn_requested'
+              currentTurnDirection = Math.random() < 0.5 ? 'left' : 'right'
+              headTurnDirectionRef.current = currentTurnDirection
+              turnFramesRef.current = 0
+            }
+          } else {
+            centeredFramesRef.current = Math.max(0, centeredFramesRef.current - 1)
+            headTurnProgress = 0
+          }
+        } else if (currentTurnStep === 'turn_requested' || currentTurnStep === 'turning') {
+          headTurnProgress = 0.5
+          if (metrics && metrics.framing && faceCount === 1) {
+            const isTargetTurn =
+              currentTurnDirection === 'left'
+                ? metrics.signedYaw > 0.13 || metrics.magnitude > 0.16
+                : metrics.signedYaw < -0.13 || metrics.magnitude > 0.16
+
+            if (isTargetTurn) {
+              turnFramesRef.current++
+              currentTurnStep = 'turning'
+              headTurnStepRef.current = 'turning'
+              headTurnProgress = 0.5 + (turnFramesRef.current / 3) * 0.5
+              if (turnFramesRef.current >= 3) {
+                currentTurnStep = 'passed'
+                headTurnStepRef.current = 'passed'
+                headTurnProgress = 1
+              }
+            } else {
+              turnFramesRef.current = Math.max(0, turnFramesRef.current - 1)
+            }
+          }
+        } else if (currentTurnStep === 'passed') {
+          headTurnProgress = 1
+        }
+
+        const isHeadTurnPassed = currentTurnStep === 'passed'
+
         const coachingReason: MediaCoachingReason =
-          multipleFaceSinceRef.current && now - multipleFaceSinceRef.current > 500
+          multipleFaceSinceRef.current && now - multipleFaceSinceRef.current > 1000
             ? 'multiple-faces'
-            : noFaceSinceRef.current && now - noFaceSinceRef.current > 900
+            : noFaceSinceRef.current && now - noFaceSinceRef.current > 1500
               ? 'no-face'
-              : framingIssueSinceRef.current && now - framingIssueSinceRef.current > 1000
+              : framingIssueSinceRef.current && now - framingIssueSinceRef.current > 2000
                 ? 'framing'
-                : lightingIssueSinceRef.current && now - lightingIssueSinceRef.current > 1200
+                : lightingIssueSinceRef.current && now - lightingIssueSinceRef.current > 2500
                   ? 'lighting'
                   : null
 
         const blockingReason: MediaBlockingReason =
-          multipleFaceSinceRef.current && now - multipleFaceSinceRef.current > 1400
+          multipleFaceSinceRef.current && now - multipleFaceSinceRef.current > 2500
             ? 'multiple-faces'
-            : noFaceSinceRef.current && now - noFaceSinceRef.current > 3000
+            : noFaceSinceRef.current && now - noFaceSinceRef.current > 4000
               ? 'no-face'
               : null
 
@@ -367,7 +440,10 @@ export function useDeviceReadiness() {
           framing: metrics ? (metrics.framing ? 'good' : 'adjust') : 'idle',
           lighting,
           brightness,
-          headTurnComplete: current.headTurnComplete || Boolean(metrics?.turned),
+          headTurnComplete: current.headTurnComplete || isHeadTurnPassed,
+          headTurnStep: currentTurnStep,
+          headTurnDirection: currentTurnDirection,
+          headTurnProgress,
           audioLevel: measureAudio(analyserRef.current, audioBufferRef.current),
           coachingReason,
           blockingReason,

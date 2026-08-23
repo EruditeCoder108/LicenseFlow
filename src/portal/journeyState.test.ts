@@ -242,13 +242,33 @@ describe('deriveJourneyState canonical engine', () => {
     expect(getRouteAccess({ route: { name: 'home' }, journey }).allowed).toBe(true)
     expect(getRouteAccess({ route: { name: 'application', applicationId: 'MP-LL-1003' }, journey }).allowed).toBe(true)
 
-    // Downstream routes blocked without prerequisites
+    // Downstream routes blocked without prerequisites redirect immediately to the exact missing step (resumeHref)
     const paymentCheck = getRouteAccess({ route: { name: 'payment', applicationId: 'MP-LL-1003' }, journey })
     expect(paymentCheck.allowed).toBe(false)
     expect(paymentCheck.redirectHref).toBe('/mp/ll/application/category')
 
     const testCheck = getRouteAccess({ route: { name: 'test', applicationId: 'MP-LL-1003' }, journey })
     expect(testCheck.allowed).toBe(false)
-    expect(testCheck.redirectHref).toBe('/mp/application/MP-LL-1003/tutorial')
+    expect(testCheck.redirectHref).toBe('/mp/ll/application/category')
+  })
+
+  it('regression: active citizen application pointer is not clobbered when prepared demo is saved', () => {
+    const citizenDraft = createEmptyDraft('MP-LL-CITIZEN-101')
+    citizenDraft.firstName = 'Ravi'
+    saveApplicationDraft(citizenDraft)
+
+    // Initially, loadApplicationDraft() without args loads the active citizen draft
+    expect(loadApplicationDraft()?.applicationId).toBe('MP-LL-CITIZEN-101')
+
+    // Save prepared demo
+    const demoDraft = createPreparedDraft()
+    saveApplicationDraft(demoDraft)
+
+    // loadApplicationDraft() without args still loads the citizen draft because citizen takes precedence
+    expect(loadApplicationDraft()?.applicationId).toBe('MP-LL-CITIZEN-101')
+    expect(loadApplicationDraft()?.mode).toBe('citizen-journey')
+
+    // Specific loading still retrieves exact drafts
+    expect(loadApplicationDraft('MP-LL-DEMO-2408')?.mode).toBe('prepared-demo')
   })
 })

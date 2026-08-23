@@ -250,15 +250,21 @@ export function DeviceReadinessPage({ language, applicationId, onStageChange }: 
                     {snapshot.guided
                       ? local(language, 'Demo head turn signal ready', 'डेमो सिर घुमाने का संकेत तैयार')
                       : snapshot.headTurnComplete
-                      ? local(language, 'Head turn complete', 'सिर घुमाना पूरा हुआ')
-                      : local(language, 'Turn your face gently to one side', 'चेहरा धीरे से एक तरफ घुमाएँ')}
+                      ? local(language, 'Liveness check passed', 'सक्रियता जाँच पूरी हुई')
+                      : snapshot.headTurnStep === 'center_waiting'
+                      ? local(language, 'Look straight at the camera', 'कैमरे के सीधे सामने देखें')
+                      : snapshot.headTurnDirection === 'left'
+                      ? local(language, 'Turn your face gently to the LEFT', 'चेहरा धीरे से बाईं ओर घुमाएँ')
+                      : local(language, 'Turn your face gently to the RIGHT', 'चेहरा धीरे से दाईं ओर घुमाएँ')}
                   </strong>
                   <small>
                     {snapshot.guided
                       ? local(language, 'Movement is simulated in this mode.', 'इस मोड में हरकत सिम्युलेटेड है।')
                       : snapshot.headTurnComplete
-                      ? local(language, 'Movement detected.', 'हरकत दर्ज हुई।')
-                      : local(language, 'This checks movement — not your identity.', 'यह केवल हरकत जाँचता है — आपकी पहचान नहीं।')}
+                      ? local(language, 'Movement verified across frames.', 'हरकत सफलता पूर्वक जाँची गई।')
+                      : snapshot.headTurnStep === 'center_waiting'
+                      ? local(language, 'Hold your head centered for a moment...', 'कुछ क्षण के लिए चेहरा सीधा रखें...')
+                      : local(language, 'Hold the turn for a brief moment.', 'थोड़ी देर के लिए सिर इसी स्थिति में रखें।')}
                   </small>
                 </div>
               </div>
@@ -335,7 +341,15 @@ export function DeviceReadinessPage({ language, applicationId, onStageChange }: 
                 <CheckRow
                   icon={<RotateCw size={19} />}
                   label={local(language, 'Head turn', 'सिर घुमाना')}
-                  detail={snapshot.guided ? local(language, 'Turn completed', 'सिर घुमाना पूरा हुआ') : snapshot.headTurnComplete ? local(language, 'Turn completed', 'सिर घुमाना पूरा हुआ') : local(language, 'Turn face gently to one side', 'चेहरा धीरे से एक तरफ घुमाएँ')}
+                  detail={
+                    snapshot.guided
+                      ? local(language, 'Turn completed', 'सिर घुमाना पूरा हुआ')
+                      : snapshot.headTurnComplete
+                      ? local(language, 'Turn completed', 'सिर घुमाना पूरा हुआ')
+                      : snapshot.headTurnStep === 'center_waiting'
+                      ? local(language, 'Keep face centered', 'चेहरा केंद्र में रखें')
+                      : local(language, `Turn ${snapshot.headTurnDirection.toUpperCase()}`, `${snapshot.headTurnDirection === 'left' ? 'बाईं' : 'दाईं'} ओर घुमाएँ`)
+                  }
                   tone={statusFor(snapshot.headTurnComplete)}
                 />
               </ul>

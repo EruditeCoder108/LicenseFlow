@@ -96,7 +96,9 @@ type DemoApplication = {
   savedAt: string
 }
 
-const APP_STORAGE_KEY = 'mp-ll-demo-application-v1'
+const CITIZEN_APP_STORAGE_KEY = 'mp-ll-citizen-application-v2'
+const DEMO_APP_STORAGE_KEY = 'mp-ll-demo-application-v2'
+const LEGACY_APP_STORAGE_KEY = 'mp-ll-demo-application-v1'
 
 const iconByName: Record<ServiceDefinition['icon'], LucideIcon> = {
   learner: UserRoundCheck,
@@ -738,11 +740,10 @@ function ServiceCard({ service, language }: { service: ServiceDefinition; langua
   )
 }
 
-function loadDemoApplication(): DemoApplication | null {
+function parseApplicationRecord(raw: string | null): DemoApplication | null {
+  if (!raw) return null
   try {
-    const value = localStorage.getItem(APP_STORAGE_KEY)
-    if (!value) return null
-    const parsed = JSON.parse(value) as Partial<DemoApplication>
+    const parsed = JSON.parse(raw) as Partial<DemoApplication>
     if (parsed.version !== undefined && parsed.version !== 1) return null
     if (typeof parsed.id !== 'string' || !/^MP-LL-[A-Z0-9-]{4,24}$/i.test(parsed.id)) return null
     if (typeof parsed.applicant !== 'string' || parsed.applicant.length > 100) return null
@@ -754,9 +755,24 @@ function loadDemoApplication(): DemoApplication | null {
   }
 }
 
+function loadDemoApplication(): DemoApplication | null {
+  try {
+    // Prioritize active citizen application record so demo doesn't overwrite it
+    const citizen = parseApplicationRecord(localStorage.getItem(CITIZEN_APP_STORAGE_KEY))
+    if (citizen) return citizen
+    const demo = parseApplicationRecord(localStorage.getItem(DEMO_APP_STORAGE_KEY))
+    if (demo) return demo
+    return parseApplicationRecord(localStorage.getItem(LEGACY_APP_STORAGE_KEY))
+  } catch {
+    return null
+  }
+}
+
 function saveDemoApplicationRecord(application: DemoApplication): boolean {
   try {
-    localStorage.setItem(APP_STORAGE_KEY, JSON.stringify(application))
+    const isDemo = application.id === 'MP-LL-DEMO-2408'
+    const targetKey = isDemo ? DEMO_APP_STORAGE_KEY : CITIZEN_APP_STORAGE_KEY
+    localStorage.setItem(targetKey, JSON.stringify(application))
     return true
   } catch {
     return false

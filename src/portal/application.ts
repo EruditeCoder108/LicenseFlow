@@ -209,6 +209,8 @@ export function completedStepCount(draft: LLApplicationDraft): number {
   return applicationSteps.filter((step) => Object.keys(validateApplicationStep(draft, step)).length === 0).length
 }
 
+export const ACTIVE_CITIZEN_APP_STORAGE_KEY = 'mp-ll-active-citizen-id'
+export const ACTIVE_DEMO_APP_STORAGE_KEY = 'mp-ll-active-demo-id'
 export const ACTIVE_APP_STORAGE_KEY = 'mp-ll-active-application-id'
 export const DRAFT_STORAGE_PREFIX = 'mp-ll-application-draft-v2:'
 const LEGACY_DRAFT_KEY = 'mp-ll-application-draft-v1'
@@ -228,17 +230,38 @@ function migrateV1Draft(parsed: any): LLApplicationDraft {
   }
 }
 
-export function getActiveApplicationId(): string | null {
+export function getActiveCitizenApplicationId(): string | null {
   try {
-    return localStorage.getItem(ACTIVE_APP_STORAGE_KEY)
+    return localStorage.getItem(ACTIVE_CITIZEN_APP_STORAGE_KEY)
   } catch {
     return null
   }
 }
 
-export function setActiveApplicationId(applicationId: string): void {
+export function getActiveDemoApplicationId(): string | null {
   try {
-    localStorage.setItem(ACTIVE_APP_STORAGE_KEY, applicationId)
+    return localStorage.getItem(ACTIVE_DEMO_APP_STORAGE_KEY)
+  } catch {
+    return null
+  }
+}
+
+export function getActiveApplicationId(): string | null {
+  try {
+    return localStorage.getItem(ACTIVE_CITIZEN_APP_STORAGE_KEY) || localStorage.getItem(ACTIVE_APP_STORAGE_KEY) || localStorage.getItem(ACTIVE_DEMO_APP_STORAGE_KEY)
+  } catch {
+    return null
+  }
+}
+
+export function setActiveApplicationId(applicationId: string, mode: ApplicationMode = 'citizen-journey'): void {
+  try {
+    if (mode === 'prepared-demo') {
+      localStorage.setItem(ACTIVE_DEMO_APP_STORAGE_KEY, applicationId)
+    } else {
+      localStorage.setItem(ACTIVE_CITIZEN_APP_STORAGE_KEY, applicationId)
+      localStorage.setItem(ACTIVE_APP_STORAGE_KEY, applicationId)
+    }
   } catch {
     // Ignore storage errors
   }
@@ -282,7 +305,12 @@ export function saveApplicationDraft(draft: LLApplicationDraft): boolean {
       lastSavedAt: new Date().toISOString(),
     }
     localStorage.setItem(`${DRAFT_STORAGE_PREFIX}${draft.applicationId}`, JSON.stringify(toSave))
-    localStorage.setItem(ACTIVE_APP_STORAGE_KEY, draft.applicationId)
+    if (draft.mode === 'prepared-demo') {
+      localStorage.setItem(ACTIVE_DEMO_APP_STORAGE_KEY, draft.applicationId)
+    } else {
+      localStorage.setItem(ACTIVE_CITIZEN_APP_STORAGE_KEY, draft.applicationId)
+      localStorage.setItem(ACTIVE_APP_STORAGE_KEY, draft.applicationId)
+    }
     return true
   } catch {
     return false
