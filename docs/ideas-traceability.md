@@ -100,16 +100,16 @@
 
 | Idea | Decision | Implementation decision |
 |---|---|---|
-| Calm three-zone exam interface | `M4` | Strip ordinary portal chrome during active test |
-| Select → confirm → checkpoint → advance | `BUILT` + `M4` | Rename/refine current save action and add visible saved acknowledgement |
-| Stable controls/layout | `M4` | Keep primary controls fixed across image/text lengths and phone sizes |
-| Hide healthy proctoring UI | `M4` | Camera preview and raw diagnostics appear only for correction |
+| Calm three-zone exam interface | `BUILT` | Quiet status, question area and technical-only assistance remain visually distinct |
+| Select → confirm → checkpoint → advance | `BUILT` | Every confirmed choice is persisted before navigation |
+| Stable controls/layout | `BUILT` | Verified at 375 px, phone landscape and desktop widths |
+| Hide healthy proctoring UI | `BUILT` | Camera status is collapsed while healthy; one coaching panel appears only when action is needed |
 | Compact question map | `M4` | Configuration-driven and only if review/navigation is enabled |
 | Calm timer | `M4` | Configuration-driven; no alarmist animation |
 | Listen/read-aloud | `M4` | Approved accessibility feature using selected-language browser speech where stable |
 | Graceful offline degradation | `M4` | Continue locally only while safe; pause when submission/dependency requires it |
-| Proportional camera/integrity response | `M4` | Temporal ignore → coach → pause policy |
-| Exact checkpoint recovery | `BUILT` + `M4` | Improve recovery presentation without changing the invariant |
+| Proportional camera/integrity response | `BUILT` | Temporal ignore → coach → pause policy |
+| Exact checkpoint recovery | `BUILT` | Reload and the prepared interruption return to the exact next question |
 | Final review and “test received” confirmation | `M4` | Configuration-driven review, then receipt acknowledgement before result |
 
 ## Pre-exam readiness and integrity
@@ -123,8 +123,8 @@
 | Randomized active liveness | `M4` | Random left/right turn after a live session begins |
 | Adaptive assurance ladder | `M4` | Clear → one extra check → coached retry/review; deterministic rather than black-box risk scoring |
 | Identity vs ongoing presence | `M4` | Make the conceptual and copy distinction explicit |
-| Never hard-fail one uncertain result | `M4` | Require temporal evidence and provide alternative/review paths |
-| Multiple-person guidance, not accusation | `M4` | Coach, persistently pause if necessary, then allow recovery |
+| Never hard-fail one uncertain result | `BUILT` | Temporal evidence coaches first and keeps knowledge outcome separate |
+| Multiple-person guidance, not accusation | `BUILT` | Coach, persistently pause if necessary, then allow recovery |
 | Ready Room | `M4` | Final applicant-only transition before timer starts |
 
 ## Microphone, camera and privacy decisions
@@ -134,16 +134,16 @@
 | Web Audio stream health/RMS | `BUILT` | Treat as technical readiness, not cheating detection |
 | Local voice-activity detection | `DEFER` | Add only after the core build is frozen and ordinary-phone testing proves it stable |
 | Camera/microphone signal correlation | `M4` | Deterministic observation rules only; no automatic verdict |
-| Duration/repetition thresholds | `M4` | Ignore transient noise; coach/pause only persistent combined conditions |
-| Neutral event vocabulary | `M4` | Use technical/observation codes, never `CHEATING_DETECTED` |
+| Duration/repetition thresholds | `BUILT` | Ignore transient noise; coach/pause only persistent conditions |
+| Neutral event vocabulary | `BUILT` | Uses technical/observation language, never `CHEATING_DETECTED` |
 | Local ephemeral media analysis | `BUILT` + `M4` | Structured signals only; no continuous recording/upload |
 | Extend existing MediaPipe stack | `M4` | Prefer current face landmarks/count/pose before adding libraries |
-| Temporal camera evidence | `M4` | Rolling windows prevent single-frame blocking decisions |
+| Temporal camera evidence | `BUILT` | Sustained-time windows prevent single-frame blocking decisions |
 | Passive presentation-attack detection | `DEFER` | Experimental only after release candidate; remove if slow or biased |
 | Layered replay resistance | `M4` | Random active liveness + temporal continuity; no “deepfake-proof” claim |
 | Gaze-based guilt | `REJECT` | Too ambiguous and unfair for misconduct decisions |
 | Heavy object/phone detection | `DEFER` | Low Round 1 value and high false-positive/performance risk |
-| Page visibility observation | `BUILT` + `M4` | Contextual observation, never proof of cheating |
+| Page visibility observation | `BUILT` | Contextual observation, never proof of cheating |
 | SmartLock-equivalent browser claim | `REJECT` | Screenshot/app/overlay/device integrity controls require native/managed tooling |
 
 ## Accessibility, Indian context, demo and stretch ideas
@@ -151,8 +151,8 @@
 | Idea | Decision | Implementation decision |
 |---|---|---|
 | Helper mode | `M4` | Acknowledge application assistance and clearly end it before the test |
-| Shared-computer/kiosk finish | `M4` + `M5` | Clear local data and return to the welcome page |
-| Natural English/Hindi | `BUILT` + `M5` | Complete the remaining route audit; Hinglish search is optional, not core |
+| Shared-computer/kiosk finish | `BUILT` | Confirmed removal of LicenceFlow-only local data, then return to welcome page |
+| Natural English/Hindi | `BUILT` | Core journey, questions, recovery, result and Journey Receipt are bilingual; Hinglish remains optional |
 | Large targets/low-digital-literacy design | `BUILT` + `M5` | Maintain 44 px minimum targets, clear progress and one primary action |
 | One-click prepared judge path | `BUILT` + `M3` | Keep deterministic while extending it through payment outcomes |
 | Full journey behind prepared path | `BUILT` | Retain empty and prepared application journeys |

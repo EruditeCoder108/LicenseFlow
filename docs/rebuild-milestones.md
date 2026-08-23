@@ -128,6 +128,8 @@ Remaining measured QA:
 
 ## Milestone 5 — full product QA and final polish
 
+**Content-completeness status (2026-08-23): G3 passed.** Screenshot evidence, route-aware Help, secure-test Hindi coverage and shared-computer cleanup are complete. Architecture hardening, constrained external polish review and the final G5 release matrix remain separate gates.
+
 **Goal:** Make the entire journey consistent and presentation-ready without changing its logic during visual polish.
 
 Deliverables:

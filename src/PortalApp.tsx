@@ -561,6 +561,30 @@ function getHelpContent(route: PortalRoute, language: Language): HelpContent {
     next: copy(language, 'The exact pending stage will open.', 'सही लंबित प्रक्रिया खुलेगी।'),
     issue: copy(language, 'A grey stage is not an error; it becomes available after earlier stages are complete.', 'धूसर प्रक्रिया गलती नहीं है; पिछली प्रक्रियाएँ पूरी होने के बाद वह उपलब्ध होगी।'),
   }
+  if (route.name === 'uploads') return {
+    title: copy(language, 'Help with uploads', 'अपलोड की सहायता'),
+    intro: copy(language, 'This page reviews the photograph, signature and supporting-document evidence attached to the saved application.', 'यह पेज सहेजे आवेदन से जुड़ी फोटो, हस्ताक्षर और सहायक दस्तावेज की जाँच करता है।'),
+    action: copy(language, 'Open each item, review the preview and confirm it only when the sample is readable.', 'हर वस्तु खोलें, उसका पूर्वावलोकन देखें और नमूना साफ होने पर ही पुष्टि करें।'),
+    need: copy(language, 'For this prototype, use only the prepared synthetic files. Do not upload real identity documents.', 'इस प्रोटोटाइप में केवल तैयार सिंथेटिक फाइलें उपयोग करें। वास्तविक पहचान दस्तावेज अपलोड न करें।'),
+    next: copy(language, 'After all required items are confirmed, the application tracker unlocks the device-readiness stage.', 'सभी जरूरी वस्तुएँ पुष्ट होने के बाद आवेदन स्थिति पेज डिवाइस जाँच चरण खोलेगा।'),
+    issue: copy(language, 'If a preview is unclear, remove that sample and add the prepared file again.', 'पूर्वावलोकन साफ न हो तो नमूना हटाकर तैयार फाइल फिर जोड़ें।'),
+  }
+  if (route.name === 'tutorial') return {
+    title: copy(language, 'Help with road-safety preparation', 'सड़क सुरक्षा तैयारी की सहायता'),
+    intro: copy(language, 'This page teaches the safety ideas used by the synthetic learning check.', 'यह पेज सिंथेटिक सीखने की जाँच में उपयोग होने वाले सुरक्षा विचार समझाता है।'),
+    action: copy(language, 'Read the three short topics, answer the learning question and check your answer.', 'तीन छोटे विषय पढ़ें, सीखने के प्रश्न का उत्तर दें और उत्तर जाँचें।'),
+    need: copy(language, 'No camera or official test attempt is used on this page.', 'इस पेज पर कैमरा या आधिकारिक परीक्षा प्रयास उपयोग नहीं होता।'),
+    next: copy(language, 'A correct learning answer opens the secure-test instructions.', 'सही उत्तर सुरक्षित परीक्षा के निर्देश खोलेगा।'),
+    issue: copy(language, 'If the answer is incorrect, read the explanation and choose again.', 'उत्तर गलत हो तो समझाइश पढ़ें और फिर चुनें।'),
+  }
+  if (route.name === 'result') return {
+    title: copy(language, 'Help with the result and Journey Receipt', 'परिणाम और यात्रा रसीद की सहायता'),
+    intro: copy(language, 'This page separates the synthetic knowledge score, technical recovery and integrity observations.', 'यह पेज सिंथेटिक ज्ञान अंक, तकनीकी वापसी और अखंडता अवलोकन अलग-अलग दिखाता है।'),
+    action: copy(language, 'Review or print the demonstration result. On a shared computer, use Clear this device when finished.', 'प्रदर्शन परिणाम देखें या प्रिंट करें। साझा कंप्यूटर पर काम पूरा होने के बाद “इस डिवाइस का डेटा हटाएँ” चुनें।'),
+    need: copy(language, 'Remember that the displayed document is marked invalid and creates no government record.', 'ध्यान रखें कि दिखाया दस्तावेज अमान्य चिह्नित है और कोई सरकारी रिकॉर्ड नहीं बनाता।'),
+    next: copy(language, 'You may return to application status, restart the simulation or safely clear the browser data.', 'आप आवेदन स्थिति पर लौट सकते हैं, सिमुलेशन फिर शुरू कर सकते हैं या ब्राउज़र डेटा सुरक्षित हटा सकते हैं।'),
+    issue: copy(language, 'If printing is unavailable, use the browser print menu. Do not treat the output as a licence.', 'प्रिंट बटन काम न करे तो ब्राउज़र का प्रिंट मेनू उपयोग करें। आउटपुट को लाइसेंस न मानें।'),
+  }
   if (route.name === 'readiness' || route.name === 'rehearsal' || route.name === 'test-entry' || route.name === 'test' || route.name === 'test-interruption') return {
     title: copy(language, 'Technical help for the online test', 'ऑनलाइन परीक्षा की तकनीकी सहायता'),
     intro: copy(language, 'Help can explain the device check, saving, pause and recovery. It cannot help answer a test question.', 'सहायता डिवाइस जाँच, उत्तर सहेजने, रुकने और फिर शुरू करने की प्रक्रिया समझा सकती है। यह प्रश्न का उत्तर नहीं बताती।'),
@@ -569,7 +593,7 @@ function getHelpContent(route: PortalRoute, language: Language): HelpContent {
     next: copy(language, 'A successful check continues the test journey; a problem pauses it with a fix.', 'सफल जाँच के बाद परीक्षा आगे बढ़ेगी; समस्या होने पर सुधार के निर्देश के साथ रुक जाएगी।'),
     issue: copy(language, 'Close other apps using the camera, check browser permission, then run the check again.', 'कैमरा उपयोग कर रहे दूसरे ऐप बंद करें, ब्राउज़र अनुमति जाँचें और फिर से जाँच चलाएँ।'),
   }
-  if (route.name === 'payment' || route.name === 'payment-redirect' || route.name === 'payment-return' || route.name === 'payment-status') return {
+  if (route.name === 'payment' || route.name === 'payment-redirect' || route.name === 'payment-return' || route.name === 'payment-status' || route.name === 'receipt') return {
     title: copy(language, 'Help with fee payment', 'शुल्क भुगतान की सहायता'),
     intro: copy(language, 'This page shows the fee and payment status for the application.', 'यह पेज आवेदन का शुल्क और भुगतान स्थिति दिखाता है।'),
     action: copy(language, 'Check the amount and application number before continuing.', 'आगे बढ़ने से पहले राशि और आवेदन संख्या जाँचें।'),
@@ -698,11 +722,11 @@ function PortalApp() {
   else if (route.name === 'payment-return') page = <PaymentReturnPage language={language} applicationId={route.applicationId} onStageChange={updateApplicationStage} />
   else if (route.name === 'payment-status') page = <PaymentStatusPage language={language} applicationId={route.applicationId} />
   else if (route.name === 'receipt') page = <PaymentReceiptPage language={language} applicationId={route.applicationId} />
-  else if (route.name === 'tutorial') page = <TutorialPage applicationId={route.applicationId} onStageChange={updateApplicationStage} />
-  else if (route.name === 'test-entry') page = <TestEntryPage applicationId={route.applicationId} onStageChange={updateApplicationStage} />
-  else if (route.name === 'test') page = <TestPage applicationId={route.applicationId} onStageChange={updateApplicationStage} />
-  else if (route.name === 'test-interruption') page = <InterruptionPage applicationId={route.applicationId} onStageChange={updateApplicationStage} />
-  else if (route.name === 'result') page = <ResultPage applicationId={route.applicationId} onStageChange={updateApplicationStage} />
+  else if (route.name === 'tutorial') page = <TutorialPage applicationId={route.applicationId} onStageChange={updateApplicationStage} language={language} />
+  else if (route.name === 'test-entry') page = <TestEntryPage applicationId={route.applicationId} onStageChange={updateApplicationStage} language={language} />
+  else if (route.name === 'test') page = <TestPage applicationId={route.applicationId} onStageChange={updateApplicationStage} language={language} />
+  else if (route.name === 'test-interruption') page = <InterruptionPage applicationId={route.applicationId} onStageChange={updateApplicationStage} language={language} />
+  else if (route.name === 'result') page = <ResultPage applicationId={route.applicationId} onStageChange={updateApplicationStage} language={language} />
   else if (route.name === 'application') page = <ApplicationPage language={language} application={demoApplication ?? { id: route.applicationId, applicant: copy(language, 'Sample applicant', 'नमूना आवेदक'), lastStage: copy(language, 'Device compatibility', 'डिवाइस अनुकूलता'), savedAt: new Date().toISOString() }} />
   else if (route.name === 'service') {
     const service = getService(route.serviceId)

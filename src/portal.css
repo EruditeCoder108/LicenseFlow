@@ -326,6 +326,8 @@ main h1:focus { outline: none; }
 .button { display: inline-flex; min-height: 48px; align-items: center; justify-content: center; gap: 8px; padding: 10px 17px; border: 1px solid transparent; border-radius: 7px; font-weight: 700; text-decoration: none; transition: background 180ms ease, border-color 180ms ease, color 180ms ease; }
 .button--primary { color: white; background: var(--blue-700); border-color: var(--blue-700); }
 .button--primary:hover { background: #064e8d; }
+.button--danger { color: white; background: #b42318; border-color: #b42318; }
+.button--danger:hover { background: #8f1b13; }
 .button--secondary { color: var(--navy-900); background: white; border-color: #91a0b5; }
 .button--secondary:hover { background: var(--slate-100); border-color: var(--navy-800); }
 .button--light { color: var(--navy-950); background: white; }
@@ -751,6 +753,10 @@ main h1:focus { outline: none; }
 .test-camera-details summary { min-height: 44px; padding: 11px 12px; color: var(--navy-900); font-weight: 750; cursor: pointer; }
 .test-camera-details[open] summary { border-bottom: 1px solid var(--slate-200); }
 .test-camera-details .test-mini-camera { margin: 10px; }
+.clear-device-confirm { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 20px; align-items: end; margin-top: 22px; padding: 18px; color: var(--navy-950); background: #fff3f2; border: 1px solid #f1b7b2; border-radius: 8px; }
+.clear-device-confirm h2 { margin: 0; font-size: 1.2rem; }
+.clear-device-confirm p:last-child { max-width: 760px; margin: 7px 0 0; color: var(--slate-700); line-height: 1.45; }
+.clear-device-confirm .lf-actions { margin: 0; }
 .test-mini-camera { position: relative; overflow: hidden; aspect-ratio: 1 / 1; color: white; background: var(--navy-950); border-radius: 9px; }
 .test-mini-camera video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 .test-mini-camera > div { display: grid; height: 100%; place-items: center; align-content: center; gap: 8px; color: #abc8e6; }
@@ -985,6 +991,7 @@ main h1:focus { outline: none; }
   .test-answer-fieldset label { grid-template-columns: auto auto minmax(0, 1fr); padding: 11px; }
   .test-mini-camera { max-width: none; }
   .recovery-facts { grid-template-columns: 1fr; }
+  .clear-device-confirm { grid-template-columns: 1fr; align-items: stretch; padding: 16px; }
   .result-hero { align-items: flex-start; flex-direction: column; }
   .national-home { gap: 36px; }
   .national-hero { min-height: 520px; border-radius: 10px; }

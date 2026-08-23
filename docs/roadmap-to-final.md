@@ -327,6 +327,8 @@ Make the portal feel complete and researched without expanding the working produ
 
 ### G3 acceptance
 
+**Status (2026-08-23): passed for the submission scope.** `screen-registry.md` accounts for all 68 references with evidence labels and defensible exclusions. The complete tutorial/test/recovery/result journey, including questions and event history, is bilingual. Route Help now covers uploads, tutorial, test, result, payment and receipt accurately. The national homepage and secondary information services remain intentionally broader than the working MP LL transaction.
+
 - Every screenshot-relevant core step is implemented or has a recorded reason for exclusion.
 - No important button is dead.
 - No core page contains mixed English/Hindi in Hindi mode, except unavoidable proper names/codes.
