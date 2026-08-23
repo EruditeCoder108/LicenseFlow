@@ -284,6 +284,8 @@ Optional local voice-activity detection will only ship if it is fast, stable and
 
 ### G2 acceptance
 
+**Browser acceptance status (2026-08-23): passed for the submission path.** At 375 px and 1440 px, healthy monitoring stays quiet, every confirmed answer survives the deterministic Question 3 interruption and a full reload, resume returns to Question 4, payment remains confirmed once, and the final page separates knowledge, technical and integrity outcomes. Physical Android/iOS camera testing remains a Milestone 5 device-matrix item.
+
 - The citizen can complete the test on a supported phone without layout failure.
 - Healthy conditions do not display a distracting diagnostics dashboard.
 - Short signal noise does not pause the exam.
@@ -565,13 +567,11 @@ Never cut honesty, recovery behavior, the mobile core journey or basic accessibi
 
 ## 14. Immediate next action
 
-The next implementation is **Milestone 3**:
+G1 and the browser portion of G2 are complete. The next implementation is **Milestone 5A**:
 
-1. freeze the current green baseline;
-2. design the payment transaction state machine and configuration;
-3. convert the existing readiness engine into the pre-payment compatibility rehearsal;
-4. build redirect, gateway and reconciliation routes;
-5. test all transaction outcomes;
-6. review the complete flow together in desktop and mobile browsers.
-
-No Secure Test Mode redesign or external UI-polish pass starts until G1 is approved.
+1. re-audit the supplied screenshot inventory against the route registry;
+2. make secondary portal options intentionally complete-looking without inventing unsupported transactions;
+3. close English/Hindi content gaps in the tutorial, secure test and result journey;
+4. add the shared-computer reset and final privacy controls;
+5. run the full accessibility, device and failure-state matrix;
+6. freeze logic before the separate constrained visual-polish pass.

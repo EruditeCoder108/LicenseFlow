@@ -743,6 +743,14 @@ main h1:focus { outline: none; }
 .test-answer-fieldset label > span { display: grid; width: 30px; height: 30px; place-items: center; color: var(--blue-700); background: var(--blue-100); border-radius: 50%; font-weight: 700; }
 .test-save-note { display: flex; align-items: center; gap: 7px; margin: 15px 0; color: var(--slate-500); font-size: .84rem; }
 .test-observation-panel { position: sticky; top: 16px; }
+.test-monitoring-state { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; align-items: start; padding: 12px; color: var(--green-700); background: var(--green-50); border: 1px solid #b8dfc8; border-radius: 8px; }
+.test-monitoring-state h2 { margin: 0 0 3px; color: inherit; }
+.test-monitoring-state p { margin: 0; color: inherit; }
+.test-observation-panel--coach .test-monitoring-state { color: var(--amber-800); background: var(--amber-50); border-color: #e8ca8a; }
+.test-camera-details { margin: 12px 0; border: 1px solid var(--slate-200); border-radius: 8px; }
+.test-camera-details summary { min-height: 44px; padding: 11px 12px; color: var(--navy-900); font-weight: 750; cursor: pointer; }
+.test-camera-details[open] summary { border-bottom: 1px solid var(--slate-200); }
+.test-camera-details .test-mini-camera { margin: 10px; }
 .test-mini-camera { position: relative; overflow: hidden; aspect-ratio: 1 / 1; color: white; background: var(--navy-950); border-radius: 9px; }
 .test-mini-camera video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
 .test-mini-camera > div { display: grid; height: 100%; place-items: center; align-content: center; gap: 8px; color: #abc8e6; }

@@ -10,6 +10,7 @@ export type ModelStatus = 'idle' | 'loading' | 'ready' | 'error'
 export type FramingStatus = 'idle' | 'good' | 'adjust'
 export type LightingStatus = 'idle' | 'good' | 'dim' | 'bright'
 export type MediaBlockingReason = 'no-face' | 'multiple-faces' | 'camera-stopped' | null
+export type MediaCoachingReason = 'no-face' | 'multiple-faces' | 'framing' | 'lighting' | null
 
 export interface DeviceReadinessSnapshot {
   started: boolean
@@ -26,6 +27,7 @@ export interface DeviceReadinessSnapshot {
   online: boolean
   storage: boolean
   secureContext: boolean
+  coachingReason: MediaCoachingReason
   blockingReason: MediaBlockingReason
   error?: string
 }
@@ -45,6 +47,7 @@ const initialSnapshot: DeviceReadinessSnapshot = {
   online: typeof navigator === 'undefined' ? true : navigator.onLine,
   storage: false,
   secureContext: typeof window === 'undefined' ? true : window.isSecureContext,
+  coachingReason: null,
   blockingReason: null,
 }
 
@@ -130,6 +133,8 @@ export function useDeviceReadiness() {
   const audioBufferRef = useRef<Float32Array<ArrayBuffer> | null>(null)
   const noFaceSinceRef = useRef<number | null>(null)
   const multipleFaceSinceRef = useRef<number | null>(null)
+  const framingIssueSinceRef = useRef<number | null>(null)
+  const lightingIssueSinceRef = useRef<number | null>(null)
 
   const releaseResources = useCallback(() => {
     streamRef.current?.getTracks().forEach((track) => track.stop())
@@ -142,6 +147,10 @@ export function useDeviceReadiness() {
     audioContextRef.current = null
     analyserRef.current = null
     audioBufferRef.current = null
+    noFaceSinceRef.current = null
+    multipleFaceSinceRef.current = null
+    framingIssueSinceRef.current = null
+    lightingIssueSinceRef.current = null
   }, [])
 
   const start = useCallback(async () => {
@@ -197,6 +206,7 @@ export function useDeviceReadiness() {
         setSnapshot((current) => ({
           ...current,
           camera: 'error',
+          coachingReason: 'no-face',
           blockingReason: 'camera-stopped',
           error: 'The camera stream stopped. Reconnect the camera before continuing.',
         }))
@@ -265,6 +275,7 @@ export function useDeviceReadiness() {
       online: navigator.onLine,
       storage: testLocalStorage(),
       secureContext: window.isSecureContext,
+      coachingReason: null,
       blockingReason: null,
     })
   }, [releaseResources])
@@ -320,6 +331,29 @@ export function useDeviceReadiness() {
           multipleFaceSinceRef.current = null
         }
 
+        if (metrics && !metrics.framing) {
+          framingIssueSinceRef.current ??= now
+        } else {
+          framingIssueSinceRef.current = null
+        }
+
+        if (lighting === 'dim' || lighting === 'bright') {
+          lightingIssueSinceRef.current ??= now
+        } else {
+          lightingIssueSinceRef.current = null
+        }
+
+        const coachingReason: MediaCoachingReason =
+          multipleFaceSinceRef.current && now - multipleFaceSinceRef.current > 500
+            ? 'multiple-faces'
+            : noFaceSinceRef.current && now - noFaceSinceRef.current > 900
+              ? 'no-face'
+              : framingIssueSinceRef.current && now - framingIssueSinceRef.current > 1000
+                ? 'framing'
+                : lightingIssueSinceRef.current && now - lightingIssueSinceRef.current > 1200
+                  ? 'lighting'
+                  : null
+
         const blockingReason: MediaBlockingReason =
           multipleFaceSinceRef.current && now - multipleFaceSinceRef.current > 1400
             ? 'multiple-faces'
@@ -335,6 +369,7 @@ export function useDeviceReadiness() {
           brightness,
           headTurnComplete: current.headTurnComplete || Boolean(metrics?.turned),
           audioLevel: measureAudio(analyserRef.current, audioBufferRef.current),
+          coachingReason,
           blockingReason,
         }))
       } catch {

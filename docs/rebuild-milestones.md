@@ -91,6 +91,8 @@ Deliverables:
 
 ## Milestone 4 — Secure Test Mode, not a fake SmartLock clone
 
+**Status (2026-08-23): core G2 implementation and browser acceptance complete.** The remaining physical Android/iOS hardware matrix and shared-computer reset audit stay in Milestone 5 QA.
+
 **Goal:** Turn the existing browser checks into a calm mobile-capable secure-test experience and accurately define what still requires native software.
 
 Already implemented underneath:
@@ -104,15 +106,20 @@ Already implemented underneath:
 - network and page-visibility observations;
 - safe pause/resume with separate technical and integrity outcomes.
 
-Still required:
+Implemented in the submission flow:
 
-- Ready Room before Question 1.
-- Randomized left/right active-liveness prompt rather than a fixed challenge.
-- Temporal smoothing and deterministic ignore/coach/pause thresholds.
-- Camera UI hidden during healthy testing; reveal coaching only when correction is needed.
-- Calm three-zone exam canvas with stable controls and select → confirm → save → advance behavior.
-- Clear authentication, instructions, helper-mode exit and exact checkpoint-resume screens.
-- Mobile camera testing across supported Android/iOS browsers.
+- Ready Room and rehearsal before payment, followed by explicit synthetic-test instructions before Question 1.
+- Temporal smoothing with deterministic ignore, coach and pause thresholds.
+- Camera UI hidden during healthy testing; one action-oriented coaching state appears only when correction is needed.
+- Calm exam canvas with stable controls and select → checkpoint → advance behavior.
+- Technical-only help, exact checkpoint-resume screens and an auditable Journey Receipt.
+- Narrow-phone and desktop browser acceptance with no horizontal overflow.
+
+Remaining measured QA:
+
+- Randomized left/right active-liveness prompt rather than a fixed either-side challenge.
+- Physical Android Chrome and iPhone Safari camera testing.
+- Shared-computer finish/reset action and final privacy-copy audit.
 - Optional local voice-activity detection only if stable; fall back to current microphone-health measurement.
 - Defer research-heavy presentation-attack detection, gaze policing, object detection and “deepfake-proof” claims unless a later measured prototype proves they are accurate, fair and fast enough on ordinary phones.
 - A written production boundary: an ordinary browser cannot guarantee screenshot blocking, app-switch prevention, overlay prevention or uncompromised device state. Those require a native/managed assessment client and platform attestation.
@@ -140,4 +147,4 @@ Deliverables:
 
 ## Immediate decision
 
-Milestones 1 and 2 are complete. Continue with **Milestone 3 only** and use the G1 acceptance gate in `roadmap-to-final.md` before beginning the Secure Test Mode redesign.
+Milestones 1–4 now have a tested submission path. Continue with **Milestone 5A content completeness**, then perform the constrained polish and final QA gates without changing the proven transaction or recovery logic.

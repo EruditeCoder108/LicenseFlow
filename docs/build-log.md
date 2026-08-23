@@ -1,5 +1,13 @@
 # LicenceFlow build log
 
+## 2026-08-23 — Milestone 4 secure-test browser acceptance completed
+
+- Replaced the always-visible camera diagnostics with quiet healthy monitoring, an expandable camera status view and action-specific coaching only when correction is needed.
+- Added sustained-signal thresholds that ignore brief noise, coach correctable face/framing/lighting conditions, and pause only persistent no-face, multiple-face, camera, network or visibility failures.
+- Verified the real five-question flow through tutorial acknowledgement, per-answer checkpointing, the prepared Question 3 interruption, reload persistence, exact Question 4 resume and completion.
+- Confirmed the final result keeps knowledge, technical recovery and integrity observations separate and records the full sequence in the Journey Receipt.
+- Verified the result and secure-test path at 375 px and 1440 px with no horizontal overflow; all 28 automated tests and the production build pass.
+
 ## 2026-08-23 — Milestone 3 G1 completed
 
 - Verified the complete pre-payment failure, guided recovery, answer-checkpoint rehearsal, fee review, redirect, isolated gateway, authorization return and persisted receipt journey in the deployed browser.
