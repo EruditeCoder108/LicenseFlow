@@ -13,7 +13,7 @@ export function createExamSession(applicationId: string, progress: LLJourneyProg
     seedEvent(applicationId, 'READINESS_PASSED', 'Device readiness passed', progress.readiness.mode === 'guided-signals' ? 'Guided camera-derived signals; browser storage, connection and secure-context checks remained real' : 'Real browser camera, microphone and device checks passed', progress.readiness.completedAt ?? now, progress.readiness.mode === 'guided-signals'),
     seedEvent(applicationId, 'REHEARSAL_COMPLETED', 'Secure-test rehearsal completed', 'Sample answer checkpoint and recovery behavior completed', progress.rehearsal.completedAt ?? now, true),
     seedEvent(applicationId, 'PAYMENT_SUCCESS', 'Synthetic payment recorded', `${progress.payment.reference ?? 'Sandbox reference'} · no bank or treasury connected`, progress.payment.confirmedAt ?? now, true),
-    seedEvent(applicationId, 'PREPARATION_COMPLETED', 'Road-safety tutorial completed', 'Prototype learning pack and practice question completed', progress.tutorial.completedAt ?? now, true),
+    seedEvent(applicationId, 'PREPARATION_COMPLETED', 'Road-safety tutorial completed', `Required learning video completed · revision ${progress.tutorial.revision || 'legacy'}`, progress.tutorial.completedAt ?? now, true),
   ]
   return {
     ...initialJourneyState,

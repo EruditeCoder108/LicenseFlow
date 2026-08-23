@@ -7,6 +7,8 @@ import {
   createJourneyProgress,
   finishSyntheticPayment,
   startSyntheticPayment,
+  startTutorial,
+  updateTutorialWatch,
 } from './progress'
 
 describe('MP LL journey progress', () => {
@@ -36,6 +38,18 @@ describe('MP LL journey progress', () => {
 
   it('does not complete learning before payment', () => {
     const initial = createJourneyProgress('MP-LL-DEMO-1')
-    expect(completeTutorial(initial)).toBe(initial)
+    expect(completeTutorial(initial, 'video-v1', 120)).toBe(initial)
+  })
+
+  it('requires the current video to be watched before completing learning', () => {
+    let progress = createJourneyProgress('MP-LL-DEMO-1')
+    progress = completeReadiness(progress, 'guided-signals')
+    progress = completeRehearsal(progress, 0)
+    progress = finishSyntheticPayment(startSyntheticPayment(progress, 'upi', 'ATTEMPT-1'), 'confirmed')
+    progress = startTutorial(progress, 'video-v1', 120)
+    const partial = updateTutorialWatch(progress, { revision: 'video-v1', position: 70, maxWatched: 70, duration: 120 })
+    expect(completeTutorial(partial, 'video-v1', 120)).toBe(partial)
+    const watched = updateTutorialWatch(partial, { revision: 'video-v1', position: 120, maxWatched: 120, duration: 120 })
+    expect(completeTutorial(watched, 'video-v1', 120).tutorial.status).toBe('completed')
   })
 })

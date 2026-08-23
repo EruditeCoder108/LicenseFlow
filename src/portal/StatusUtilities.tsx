@@ -224,18 +224,18 @@ export function PaymentStatusPage({ language, applicationId }: { language: Langu
         </details>
       )}
       <div className="form-actions">
-        <FlowLink href="/mp/service/fee-payment" className="button button--secondary">
-          <ArrowLeft size={18} /> {local(language, 'Back to payment services', 'भुगतान सेवाओं पर लौटें')}
-        </FlowLink>
         {paid ? (
-          <FlowLink href={`/mp/application/${applicationId}/receipt`} className="button button--primary">
-            <ReceiptText size={18} /> {local(language, 'View receipt', 'रसीद देखें')}
-          </FlowLink>
+          <><FlowLink href={`/mp/application/${applicationId}/tutorial`} className="button button--primary">
+            {local(language, 'Continue to road-safety learning', 'सड़क सुरक्षा सीख पर आगे बढ़ें')} <ArrowRight size={18} />
+          </FlowLink><FlowLink href={`/mp/application/${applicationId}/receipt`} className="button button--secondary"><ReceiptText size={18} /> {local(language, 'View receipt', 'रसीद देखें')}</FlowLink></>
         ) : !uncertain ? (
           <FlowLink href={`/mp/application/${applicationId}/payment`} className="button button--primary">
             <CreditCard size={18} /> {local(language, 'Go to fee payment', 'शुल्क भुगतान पर जाएँ')}
           </FlowLink>
         ) : null}
+        <FlowLink href="/mp/service/fee-payment" className="text-button">
+          <ArrowLeft size={18} /> {local(language, 'Payment services', 'भुगतान सेवाएँ')}
+        </FlowLink>
       </div>
     </>
   )
@@ -286,12 +286,15 @@ export function PaymentReceiptPage({ language, applicationId }: { language: Lang
         <p className="receipt-sheet__note">{local(language, 'Demo receipt: No real money was charged. This is not an official government receipt.', 'डेमो रसीद: कोई वास्तविक शुल्क नहीं लिया गया। यह आधिकारिक सरकारी रसीद नहीं है।')}</p>
       </section>
       <div className="form-actions">
-        <FlowLink href={`/mp/application/${applicationId}/payment-status`} className="button button--secondary">
-          <ArrowLeft size={18} /> {local(language, 'Back to payment status', 'भुगतान स्थिति पर लौटें')}
+        <FlowLink href={`/mp/application/${applicationId}/tutorial`} className="button button--primary">
+          {local(language, 'Continue to road-safety learning', 'सड़क सुरक्षा सीख पर आगे बढ़ें')} <ArrowRight size={18} />
         </FlowLink>
-        <button className="button button--primary" onClick={() => window.print()}>
+        <button className="button button--secondary" onClick={() => window.print()}>
           <Printer size={18} /> {local(language, 'Print receipt', 'रसीद प्रिंट करें')}
         </button>
+        <FlowLink href={`/mp/application/${applicationId}/payment-status`} className="text-button">
+          <ArrowLeft size={18} /> {local(language, 'Payment status', 'भुगतान स्थिति')}
+        </FlowLink>
       </div>
     </>
   )

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createJourneyProgress, completeReadiness, completeRehearsal, startSyntheticPayment, finishSyntheticPayment, completeTutorial } from './progress'
+import { createJourneyProgress, completeReadiness, completeRehearsal, startSyntheticPayment, finishSyntheticPayment, completeTutorial, startTutorial, updateTutorialWatch } from './progress'
 import { createExamSession } from './examSession'
 
 describe('portal exam session', () => {
@@ -9,7 +9,9 @@ describe('portal exam session', () => {
     progress = completeRehearsal(progress, 0)
     progress = startSyntheticPayment(progress, 'upi', 'ATTEMPT-1')
     progress = finishSyntheticPayment(progress, 'confirmed')
-    progress = completeTutorial(progress)
+    progress = startTutorial(progress, 'test-video', 60)
+    progress = updateTutorialWatch(progress, { revision: 'test-video', position: 60, maxWatched: 60, duration: 60 })
+    progress = completeTutorial(progress, 'test-video', 60)
     const session = createExamSession(progress.applicationId, progress)
     expect(session.stage).toBe('exam-intro')
     expect(session.paymentStatus).toBe('paid')

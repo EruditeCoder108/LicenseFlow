@@ -11,7 +11,9 @@ import {
   completeTutorial,
   createJourneyProgress,
   finishSyntheticPayment,
+  startTutorial,
   startSyntheticPayment,
+  updateTutorialWatch,
 } from './progress'
 import { createExamSession } from './examSession'
 import { deriveJourneyState, getRouteAccess } from './journeyState'
@@ -200,7 +202,9 @@ describe('deriveJourneyState canonical engine', () => {
     expect(state.resumeHref).toBe('/mp/application/MP-LL-DEMO-2408/tutorial')
 
     // Complete tutorial
-    progress = completeTutorial(progress)
+    progress = startTutorial(progress, 'test-video', 60)
+    progress = updateTutorialWatch(progress, { revision: 'test-video', position: 60, maxWatched: 60, duration: 60 })
+    progress = completeTutorial(progress, 'test-video', 60)
     state = deriveJourneyState({
       applicationId: 'MP-LL-DEMO-2408',
       draft,

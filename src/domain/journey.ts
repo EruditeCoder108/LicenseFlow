@@ -1,3 +1,5 @@
+import { LL_TEST_CONFIG } from '../content/testConfig'
+
 export type JourneyStage =
   | 'welcome'
   | 'application'
@@ -73,6 +75,9 @@ export interface ExamState {
   interruptionDetail?: string
   knowledgeResult?: 'passed' | 'not-passed'
   integrityStatus: 'clear' | 'technical-event-recovered' | 'observation-recorded'
+  questionStartedAt?: string
+  questionDeadlineAt?: string
+  secondsRemaining?: number
 }
 
 export interface JourneyState {
@@ -340,12 +345,18 @@ export function journeyReducer(
       return {
         ...state,
         stage: 'exam',
-        exam: { ...state.exam, status: 'active' },
+        exam: {
+          ...state.exam,
+          status: 'active',
+          questionStartedAt: new Date().toISOString(),
+          questionDeadlineAt: new Date(Date.now() + LL_TEST_CONFIG.secondsPerQuestion * 1000).toISOString(),
+          secondsRemaining: LL_TEST_CONFIG.secondsPerQuestion,
+        },
         events: appendEvent(
           state,
           'EXAM_STARTED',
           'Synthetic learner test started',
-          `${state.mode === 'guided-demo' ? '5-question judge demo' : '15-question LicenceFlow simulation'} · not an official MP configuration`,
+          `${LL_TEST_CONFIG.questionCount}-question LicenceFlow simulation · not an official MP configuration`,
           true,
         ),
       }
@@ -381,6 +392,8 @@ export function journeyReducer(
             ...withAnswer.exam,
             status: 'completed',
             knowledgeResult: passed ? 'passed' : 'not-passed',
+            questionDeadlineAt: undefined,
+            secondsRemaining: undefined,
           },
         }
         const completedEvents = appendEvent(
@@ -411,6 +424,9 @@ export function journeyReducer(
         exam: {
           ...withAnswer.exam,
           currentQuestion: questionIndex + 1,
+          questionStartedAt: new Date().toISOString(),
+          questionDeadlineAt: new Date(Date.now() + LL_TEST_CONFIG.secondsPerQuestion * 1000).toISOString(),
+          secondsRemaining: LL_TEST_CONFIG.secondsPerQuestion,
         },
       }
 
@@ -428,6 +444,10 @@ export function journeyReducer(
 
     case 'PAUSE_EXAM':
       if (state.stage !== 'exam' || state.exam.status !== 'active') return state
+      {
+        const secondsRemaining = state.exam.questionDeadlineAt
+          ? Math.max(1, Math.ceil((new Date(state.exam.questionDeadlineAt).getTime() - Date.now()) / 1000))
+          : LL_TEST_CONFIG.secondsPerQuestion
       return {
         ...state,
         stage: 'interruption',
@@ -437,6 +457,8 @@ export function journeyReducer(
           interruptionSeen: true,
           interruptionKind: action.kind,
           interruptionDetail: action.detail,
+          secondsRemaining,
+          questionDeadlineAt: undefined,
           integrityStatus:
             action.kind === 'multiple-faces'
               ? 'observation-recorded'
@@ -450,9 +472,12 @@ export function journeyReducer(
           action.synthetic,
         ),
       }
+      }
 
     case 'RESUME_EXAM':
       if (state.stage !== 'interruption' || state.exam.status !== 'paused') return state
+      {
+        const secondsRemaining = state.exam.secondsRemaining ?? LL_TEST_CONFIG.secondsPerQuestion
       return {
         ...state,
         stage: 'exam',
@@ -461,6 +486,8 @@ export function journeyReducer(
           status: 'active',
           interruptionKind: undefined,
           interruptionDetail: undefined,
+          questionStartedAt: new Date().toISOString(),
+          questionDeadlineAt: new Date(Date.now() + secondsRemaining * 1000).toISOString(),
         },
         events: appendEvent(
           state,
@@ -469,6 +496,7 @@ export function journeyReducer(
           `${Object.keys(state.exam.answers).length} answer(s) preserved · no repeat payment`,
           false,
         ),
+      }
       }
 
     case 'RESET':

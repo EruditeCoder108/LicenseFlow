@@ -25,6 +25,7 @@ import {
   Globe,
   Headphones,
   IndianRupee,
+  Info,
   Languages,
   Landmark,
   Leaf,
@@ -242,7 +243,7 @@ function Breadcrumbs({ items }: { items: Array<{ label: string; href?: string }>
   )
 }
 
-function NationalHomePage({ onUnavailable, language }: { onUnavailable: (destination: HomeDestination) => void; language: Language }) {
+function NationalHomePage({ onUnavailable, onDrivingServices, language }: { onUnavailable: (destination: HomeDestination) => void; onDrivingServices: () => void; language: Language }) {
   const [activeNoticeTab, setActiveNoticeTab] = useState<'notifications' | 'advisories' | 'media'>('notifications')
 
   const serviceCategoriesList = [
@@ -467,7 +468,7 @@ function NationalHomePage({ onUnavailable, language }: { onUnavailable: (destina
           <p>{copy(language, 'Find licence, vehicle, permit and road-safety services with clear guidance at every step.', 'लाइसेंस, वाहन, परमिट और सड़क सुरक्षा सेवाएँ हर चरण पर स्पष्ट मार्गदर्शन के साथ पाएँ।')}</p>
           <div className="national-hero__actions">
             <a className="button button--light" href="#citizen-services">{copy(language, 'Explore services', 'सेवाएँ देखें')} <ArrowRight size={18} /></a>
-            <PortalLink className="button national-hero__secondary" href="/mp/services">{copy(language, 'Driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ')}</PortalLink>
+            <button className="button national-hero__secondary" type="button" onClick={onDrivingServices}>{copy(language, 'Driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ')}</button>
           </div>
         </div>
       </section>
@@ -517,9 +518,9 @@ function NationalHomePage({ onUnavailable, language }: { onUnavailable: (destina
               </>
             )
             return service.href ? (
-              <PortalLink href={service.href} className="home-service-card" key={service.id}>
+              <button type="button" onClick={onDrivingServices} className="home-service-card" key={service.id}>
                 {content}
-              </PortalLink>
+              </button>
             ) : (
               <button type="button" className="home-service-card" key={service.id} onClick={() => onUnavailable(service.id as HomeDestination)}>
                 {content}
@@ -1616,6 +1617,30 @@ function UnavailableServiceDialog({ destination, language, onClose }: { destinat
   )
 }
 
+function StateSelectionDialog({ language, onClose }: { language: Language; onClose: () => void }) {
+  const [selectedState, setSelectedState] = useState('Madhya Pradesh')
+  const configured = selectedState === 'Madhya Pradesh'
+  const states = [
+    'Madhya Pradesh', 'Andaman and Nicobar Islands', 'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar',
+    'Chandigarh', 'Chhattisgarh', 'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Goa', 'Gujarat',
+    'Haryana', 'Himachal Pradesh', 'Jammu and Kashmir', 'Jharkhand', 'Karnataka', 'Kerala', 'Ladakh',
+    'Lakshadweep', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Puducherry',
+    'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
+  ]
+  useEffect(() => {
+    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
+    window.addEventListener('keydown', closeOnEscape)
+    return () => window.removeEventListener('keydown', closeOnEscape)
+  }, [onClose])
+  const proceed = () => { if (configured) { onClose(); navigatePortal('/mp/services') } }
+  return <div className="dialog-layer" onMouseDown={onClose}><section className="help-dialog state-selection-dialog" role="dialog" aria-modal="true" aria-labelledby="state-selection-title" onMouseDown={(event) => event.stopPropagation()}>
+    <div className="dialog-heading"><div><p className="eyebrow">{copy(language, 'Driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ')}</p><h2 id="state-selection-title">{copy(language, 'Select your state', 'अपना राज्य चुनें')}</h2></div><button className="icon-button" onClick={onClose} aria-label={copy(language, 'Close state selection', 'राज्य चयन बंद करें')}><X size={21} /></button></div>
+    <label className="field" htmlFor="portal-state"><span>{copy(language, 'State or Union Territory', 'राज्य या केंद्र शासित प्रदेश')}</span><select id="portal-state" value={selectedState} onChange={(event) => setSelectedState(event.target.value)} autoFocus>{states.map((state) => <option key={state}>{state}</option>)}</select></label>
+    <div className={configured ? 'state-availability state-availability--ready' : 'state-availability'}><Info size={20} /><div><strong>{configured ? copy(language, 'Complete prototype journey available', 'पूरा प्रोटोटाइप सफर उपलब्ध') : copy(language, 'Official service only for this state', 'इस राज्य के लिए केवल आधिकारिक सेवा')}</strong><p>{configured ? copy(language, 'The complete prototype journey is currently configured for Madhya Pradesh. Fees, appointments, test rules and screens may differ in other states.', 'पूरा प्रोटोटाइप सफर अभी मध्य प्रदेश के अनुसार कॉन्फ़िगर किया गया है। अन्य राज्यों में शुल्क, अपॉइंटमेंट, टेस्ट नियम और स्क्रीन अलग हो सकते हैं।') : copy(language, 'We will not run the Madhya Pradesh process under another state label. Use the official Parivahan service for this state.', 'हम दूसरे राज्य के नाम पर मध्य प्रदेश की प्रक्रिया नहीं दिखाएँगे। इस राज्य के लिए आधिकारिक परिवहन सेवा का उपयोग करें।')}</p></div></div>
+    {configured ? <button className="button button--primary button--full" onClick={proceed}>{copy(language, 'Continue to Madhya Pradesh services', 'मध्य प्रदेश सेवाओं पर जाएँ')} <ArrowRight size={18} /></button> : <a className="button button--primary button--full" href="https://parivahan.gov.in/" target="_blank" rel="noreferrer">{copy(language, 'Open official Parivahan portal', 'आधिकारिक परिवहन पोर्टल खोलें')} <ExternalLink size={18} /></a>}
+  </section></div>
+}
+
 function PortalFooter({ language, national, onPrototypeDetails }: { language: Language; national: boolean; onPrototypeDetails: () => void }) {
   return (
     <footer className="portal-footer">
@@ -1672,6 +1697,7 @@ function PortalApp() {
   const [helpOpen, setHelpOpen] = useState(false)
   const [prototypeDetailsOpen, setPrototypeDetailsOpen] = useState(false)
   const [unavailableDestination, setUnavailableDestination] = useState<HomeDestination | null>(null)
+  const [stateSelectionOpen, setStateSelectionOpen] = useState(false)
   const [session, setSession] = useState<DemoSession | null>(() => loadDemoSession())
   const [accountOpen, setAccountOpen] = useState(false)
   const [demoApplication, setDemoApplication] = useState<DemoApplication | null>(() => loadDemoApplication())
@@ -1734,7 +1760,7 @@ function PortalApp() {
   }, [pathname, route, demoApplication])
 
   let page: ReactNode
-  if (route.name === 'home') page = <NationalHomePage language={language} onUnavailable={setUnavailableDestination} />
+  if (route.name === 'home') page = <NationalHomePage language={language} onUnavailable={setUnavailableDestination} onDrivingServices={() => setStateSelectionOpen(true)} />
   else if (route.name === 'login') page = <LoginPage language={language} onSignedIn={(nextSession) => { saveDemoSession(nextSession); setSession(nextSession) }} />
   else if (route.name === 'services') page = <ServicesPage language={language} demoApplication={demoApplication} />
   else if (route.name === 'll-start') page = <LLStartPage language={language} onCreate={createApplication} demoApplication={demoApplication} />
@@ -1767,7 +1793,7 @@ function PortalApp() {
   if (route.name === 'gateway') return <Suspense fallback={<RouteLoading language={language} />}>{page}</Suspense>
 
   const national = route.name === 'home' || route.name === 'login'
-  return <div className="portal-app"><PortalHeader pathname={pathname} language={language} textScale={textScale} national={national} session={session} onLanguage={() => setLanguage((value) => value === 'en' ? 'hi' : 'en')} onTextScale={() => setTextScale((value) => value === 'normal' ? 'large' : 'normal')} onHelp={() => setHelpOpen(true)} onAccount={() => setAccountOpen(true)} /><main id="main-content" className={`portal-container portal-main ${route.name === 'home' ? 'portal-main--home' : ''}`}><Suspense fallback={<RouteLoading language={language} />}>{page}</Suspense></main><PortalFooter language={language} national={national} onPrototypeDetails={() => setPrototypeDetailsOpen(true)} />{helpOpen && <HelpDialog route={route} language={language} onClose={() => setHelpOpen(false)} />}{prototypeDetailsOpen && <PrototypeDetailsDialog language={language} onClose={() => setPrototypeDetailsOpen(false)} />}{unavailableDestination && <UnavailableServiceDialog destination={unavailableDestination} language={language} onClose={() => setUnavailableDestination(null)} />}{accountOpen && session && <Suspense fallback={null}><AccountDialog language={language} session={session} onClose={() => setAccountOpen(false)} onSignOut={() => { clearDemoSession(); setSession(null); setAccountOpen(false); navigatePortal('/') }} /></Suspense>}</div>
+  return <div className="portal-app"><PortalHeader pathname={pathname} language={language} textScale={textScale} national={national} session={session} onLanguage={() => setLanguage((value) => value === 'en' ? 'hi' : 'en')} onTextScale={() => setTextScale((value) => value === 'normal' ? 'large' : 'normal')} onHelp={() => setHelpOpen(true)} onAccount={() => setAccountOpen(true)} /><main id="main-content" className={`portal-container portal-main ${route.name === 'home' ? 'portal-main--home' : ''}`}><Suspense fallback={<RouteLoading language={language} />}>{page}</Suspense></main><PortalFooter language={language} national={national} onPrototypeDetails={() => setPrototypeDetailsOpen(true)} />{helpOpen && <HelpDialog route={route} language={language} onClose={() => setHelpOpen(false)} />}{prototypeDetailsOpen && <PrototypeDetailsDialog language={language} onClose={() => setPrototypeDetailsOpen(false)} />}{unavailableDestination && <UnavailableServiceDialog destination={unavailableDestination} language={language} onClose={() => setUnavailableDestination(null)} />}{stateSelectionOpen && <StateSelectionDialog language={language} onClose={() => setStateSelectionOpen(false)} />}{accountOpen && session && <Suspense fallback={null}><AccountDialog language={language} session={session} onClose={() => setAccountOpen(false)} onSignOut={() => { clearDemoSession(); setSession(null); setAccountOpen(false); navigatePortal('/') }} /></Suspense>}</div>
 }
 
 export default PortalApp

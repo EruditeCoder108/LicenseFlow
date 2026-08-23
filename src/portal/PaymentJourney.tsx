@@ -464,9 +464,9 @@ export function PaymentReturnPage({ language, applicationId, onStageChange }: { 
         </div>
         <div className="lf-actions">
           {confirmed && (
-            <FlowLink className="button button--primary" href={`/mp/application/${applicationId}/receipt`}>
-              <ReceiptText size={18} /> {local(language, 'View receipt', 'रसीद देखें')}
-            </FlowLink>
+            <><FlowLink className="button button--primary" href={`/mp/application/${applicationId}/tutorial`}>
+              {local(language, 'Continue to road-safety learning', 'सड़क सुरक्षा सीख पर आगे बढ़ें')} <ArrowRight size={18} />
+            </FlowLink><FlowLink className="button button--secondary" href={`/mp/application/${applicationId}/receipt`}><ReceiptText size={18} /> {local(language, 'View receipt', 'रसीद देखें')}</FlowLink></>
           )}
           {uncertain && (
             <FlowLink className="button button--primary" href={`/mp/application/${applicationId}/payment-status`}>
@@ -478,7 +478,7 @@ export function PaymentReturnPage({ language, applicationId, onStageChange }: { 
               {local(language, 'Try paying again', 'दोबारा भुगतान करें')} <RefreshCcw size={18} />
             </button>
           )}
-          <FlowLink className="button button--secondary" href={`/mp/application/${applicationId}`}>
+          <FlowLink className="text-button" href={`/mp/application/${applicationId}`}>
             {local(language, 'Application status', 'आवेदन स्थिति')}
           </FlowLink>
         </div>

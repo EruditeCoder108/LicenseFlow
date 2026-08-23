@@ -13,8 +13,17 @@ import {
 
 export type ReadinessMode = 'real-browser-checks' | 'guided-signals'
 
+export interface TutorialProgress {
+  status: 'not-started' | 'in-progress' | 'completed'
+  revision: string
+  lastPosition: number
+  maxWatched: number
+  duration: number
+  completedAt?: string
+}
+
 export interface LLJourneyProgress {
-  version: 2
+  version: 3
   applicationId: string
   readiness: {
     status: 'not-started' | 'passed'
@@ -27,10 +36,7 @@ export interface LLJourneyProgress {
     completedAt?: string
   }
   payment: PaymentState
-  tutorial: {
-    status: 'not-started' | 'completed'
-    completedAt?: string
-  }
+  tutorial: TutorialProgress
   updatedAt: string
 }
 
@@ -38,12 +44,12 @@ const STORAGE_PREFIX = 'mp-ll-journey-progress-v1:'
 
 export function createJourneyProgress(applicationId: string): LLJourneyProgress {
   return {
-    version: 2,
+    version: 3,
     applicationId,
     readiness: { status: 'not-started' },
     rehearsal: { status: 'not-started' },
     payment: createPaymentState(),
-    tutorial: { status: 'not-started' },
+    tutorial: { status: 'not-started', revision: '', lastPosition: 0, maxWatched: 0, duration: 0 },
     updatedAt: new Date().toISOString(),
   }
 }
@@ -52,9 +58,13 @@ export function loadJourneyProgress(applicationId: string): LLJourneyProgress {
   try {
     const saved = localStorage.getItem(`${STORAGE_PREFIX}${applicationId}`)
     if (!saved) return createJourneyProgress(applicationId)
-    const parsed = JSON.parse(saved) as LLJourneyProgress | (Omit<LLJourneyProgress, 'version' | 'payment'> & {
+    const parsed = JSON.parse(saved) as LLJourneyProgress | (Omit<LLJourneyProgress, 'version' | 'payment' | 'tutorial'> & {
       version: 1
       payment: { status: 'not-started' | 'paid'; reference?: string; paidAt?: string }
+      tutorial?: { status: 'not-started' | 'completed'; completedAt?: string }
+    }) | (Omit<LLJourneyProgress, 'version' | 'tutorial'> & {
+      version: 2
+      tutorial?: { status: 'not-started' | 'completed'; completedAt?: string }
     })
     if (parsed.applicationId !== applicationId) return createJourneyProgress(applicationId)
     if (parsed.version === 1) {
@@ -68,12 +78,41 @@ export function loadJourneyProgress(applicationId: string): LLJourneyProgress {
             updatedAt: parsed.payment.paidAt,
           }
         : createPaymentState()
-      return { ...migrated, ...parsed, version: 2, payment, tutorial: parsed.tutorial ?? { status: 'not-started' } }
+      return {
+        ...migrated,
+        ...parsed,
+        version: 3,
+        payment,
+        tutorial: migrateTutorial(parsed.tutorial),
+      }
     }
-    if (parsed.version !== 2) return createJourneyProgress(applicationId)
-    return { ...parsed, payment: { ...createPaymentState(), ...parsed.payment, activity: parsed.payment.activity ?? [] }, tutorial: parsed.tutorial ?? { status: 'not-started' } }
+    if (parsed.version === 2) {
+      return {
+        ...parsed,
+        version: 3,
+        payment: { ...createPaymentState(), ...parsed.payment, activity: parsed.payment.activity ?? [] },
+        tutorial: migrateTutorial(parsed.tutorial),
+      }
+    }
+    if (parsed.version !== 3) return createJourneyProgress(applicationId)
+    return {
+      ...parsed,
+      payment: { ...createPaymentState(), ...parsed.payment, activity: parsed.payment.activity ?? [] },
+      tutorial: { ...createJourneyProgress(applicationId).tutorial, ...parsed.tutorial },
+    }
   } catch {
     return createJourneyProgress(applicationId)
+  }
+}
+
+function migrateTutorial(tutorial?: { status: 'not-started' | 'completed'; completedAt?: string }): TutorialProgress {
+  return {
+    status: tutorial?.status ?? 'not-started',
+    revision: tutorial?.status === 'completed' ? 'legacy-v2' : '',
+    lastPosition: 0,
+    maxWatched: 0,
+    duration: 0,
+    completedAt: tutorial?.completedAt,
   }
 }
 
@@ -153,12 +192,49 @@ export function preparePaymentRetry(progress: LLJourneyProgress): LLJourneyProgr
   return { ...progress, payment, updatedAt: new Date().toISOString() }
 }
 
-export function completeTutorial(progress: LLJourneyProgress): LLJourneyProgress {
+export function startTutorial(progress: LLJourneyProgress, revision: string, duration = 0): LLJourneyProgress {
   if (!isPaymentConfirmed(progress.payment)) return progress
+  if (progress.tutorial.status === 'completed' && progress.tutorial.revision === revision) return progress
   const now = new Date().toISOString()
   return {
     ...progress,
-    tutorial: { status: 'completed', completedAt: now },
+    tutorial: progress.tutorial.revision === revision
+      ? { ...progress.tutorial, status: 'in-progress', duration: Math.max(progress.tutorial.duration, duration) }
+      : { status: 'in-progress', revision, lastPosition: 0, maxWatched: 0, duration, completedAt: undefined },
+    updatedAt: now,
+  }
+}
+
+export function updateTutorialWatch(
+  progress: LLJourneyProgress,
+  input: { revision: string; position: number; maxWatched: number; duration: number },
+): LLJourneyProgress {
+  if (!isPaymentConfirmed(progress.payment) || progress.tutorial.status === 'completed') return progress
+  const base = progress.tutorial.revision === input.revision
+    ? progress.tutorial
+    : { status: 'in-progress' as const, revision: input.revision, lastPosition: 0, maxWatched: 0, duration: 0 }
+  const now = new Date().toISOString()
+  const duration = Math.max(0, input.duration)
+  return {
+    ...progress,
+    tutorial: {
+      ...base,
+      status: 'in-progress',
+      duration,
+      lastPosition: Math.min(Math.max(0, input.position), duration || input.position),
+      maxWatched: Math.min(Math.max(base.maxWatched, input.maxWatched), duration || input.maxWatched),
+    },
+    updatedAt: now,
+  }
+}
+
+export function completeTutorial(progress: LLJourneyProgress, revision: string, duration: number): LLJourneyProgress {
+  if (!isPaymentConfirmed(progress.payment) || duration <= 0) return progress
+  if (progress.tutorial.revision !== revision || progress.tutorial.maxWatched < Math.max(0, duration - 1.5)) return progress
+  const now = new Date().toISOString()
+  return {
+    ...progress,
+    tutorial: { ...progress.tutorial, status: 'completed', duration, lastPosition: duration, maxWatched: duration, completedAt: now },
     updatedAt: now,
   }
 }

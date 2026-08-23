@@ -368,8 +368,8 @@ export function deriveJourneyState(input: {
       nextAction = {
         title: { en: 'Start the online LL test', hi: 'ऑनलाइन एलएल परीक्षा शुरू करें' },
         body: {
-          en: 'Enter the 5-question road safety exam. Camera monitoring is enabled during the test.',
-          hi: '5 प्रश्नों की सड़क सुरक्षा परीक्षा में प्रवेश करें। परीक्षा के दौरान कैमरा निगरानी चालू रहेगी।',
+          en: 'Enter the 15-question road safety exam. Camera monitoring is enabled during the test.',
+          hi: '15 प्रश्नों की सड़क सुरक्षा परीक्षा में प्रवेश करें। परीक्षा के दौरान कैमरा निगरानी चालू रहेगी।',
         },
         action: { en: 'Enter test', hi: 'परीक्षा में जाएँ' },
         href: resumeHref,
