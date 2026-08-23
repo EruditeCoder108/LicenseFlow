@@ -46,6 +46,7 @@ import {
   TrendingUp,
   Truck,
   Upload,
+  UserRound,
   UserRoundCheck,
   Wifi,
   X,
@@ -82,6 +83,7 @@ const PaymentStatusPage = lazy(() => import('./portal/StatusUtilities').then((mo
 
 type Language = 'en' | 'hi'
 type TextScale = 'normal' | 'large'
+export type HomeDestination = 'vehicle' | 'permit' | 'safety' | 'information'
 
 const copy = (language: Language, en: string, hi: string) => language === 'en' ? en : hi
 
@@ -196,18 +198,18 @@ function PortalHeader({ pathname, language, textScale, national, session, onLang
             {national ? <>
               <PortalLink href="/" className={isHome ? 'portal-nav__link--active' : ''} aria-current={isHome ? 'page' : undefined} onNavigate={close}>{copy(language, 'Home', 'होम')}</PortalLink>
               <a href="#citizen-services" onClick={close}>{copy(language, 'Online services', 'ऑनलाइन सेवाएँ')}</a>
-              <a href="#ecosystem" onClick={close}>{copy(language, 'Digital Ecosystem', 'डिजिटल इकोसिस्टम')}</a>
-              <a href="#notices" onClick={close}>{copy(language, 'What’s New', 'नवीनतम')}</a>
+              <a href="#ecosystem" onClick={close}>{copy(language, 'Other services', 'अन्य सेवाएँ')}</a>
+              <a href="#notices" onClick={close}>{copy(language, 'Updates', 'अपडेट')}</a>
               <a href="#information" onClick={close}>{copy(language, 'Information', 'जानकारी')}</a>
               <PortalLink href="/mp/services" className="portal-nav__pill-link" onNavigate={close}>{copy(language, 'MP DL Services', 'म.प्र. ड्राइविंग सेवाएँ')} <ArrowRight size={13} /></PortalLink>
-              <button onClick={() => { close(); onHelp() }}>{copy(language, 'Help & support', 'सहायता')}</button>
+              <button onClick={() => { close(); onHelp() }}>{copy(language, 'Help', 'सहायता')}</button>
             </> : <>
               <PortalLink href="/" className={isHome ? 'portal-nav__link--active' : ''} aria-current={isHome ? 'page' : undefined} onNavigate={close}>{copy(language, 'Home', 'होम')}</PortalLink>
               <PortalLink href="/mp/services" className={isServices ? 'portal-nav__link--active' : ''} aria-current={isServices ? 'page' : undefined} onNavigate={close}>{copy(language, 'Services', 'सेवाएँ')}</PortalLink>
               <PortalLink href="/mp/ll/start" className={isLLStart ? 'portal-nav__link--active' : ''} aria-current={isLLStart ? 'page' : undefined} onNavigate={close}>{copy(language, 'Apply for LL', 'एलएल के लिए आवेदन')}</PortalLink>
               <PortalLink href="/mp/service/application-status" className={isAppStatus ? 'portal-nav__link--active' : ''} aria-current={isAppStatus ? 'page' : undefined} onNavigate={close}>{copy(language, 'Application status', 'आवेदन की स्थिति')}</PortalLink>
-              <PortalLink href="/mp/service/fee-payment" className={isFeePayment ? 'portal-nav__link--active' : ''} aria-current={isFeePayment ? 'page' : undefined} onNavigate={close}>{copy(language, 'Fee & receipts', 'शुल्क और रसीदें')}</PortalLink>
-              <button onClick={() => { close(); onHelp() }}>{copy(language, 'Help & support', 'सहायता')}</button>
+              <PortalLink href="/mp/service/fee-payment" className={isFeePayment ? 'portal-nav__link--active' : ''} aria-current={isFeePayment ? 'page' : undefined} onNavigate={close}>{copy(language, 'Fees & receipts', 'शुल्क और रसीदें')}</PortalLink>
+              <button onClick={() => { close(); onHelp() }}>{copy(language, 'Help', 'सहायता')}</button>
             </>}
           </div>
         </nav>
@@ -219,33 +221,35 @@ function PortalHeader({ pathname, language, textScale, national, session, onLang
 function Breadcrumbs({ items }: { items: Array<{ label: string; href?: string }> }) {
   return (
     <nav className="breadcrumbs" aria-label="Breadcrumb">
-      <ol>{items.map((item, index) => <li key={`${item.label}-${index}`}>{item.href ? <PortalLink href={item.href}>{item.label}</PortalLink> : <span aria-current="page">{item.label}</span>}</li>)}</ol>
+      <ol>
+        {items.map((item, index) => {
+          const current = index === items.length - 1
+          return (
+            <li key={item.label}>
+              {item.href && !current ? (
+                <PortalLink href={item.href}>{item.label}</PortalLink>
+              ) : (
+                <span aria-current={current ? 'page' : undefined}>{item.label}</span>
+              )}
+            </li>
+          )
+        })}
+      </ol>
     </nav>
   )
 }
 
-type HomeDestination = 'vehicle' | 'permit' | 'safety' | 'information'
-
-function NationalHomePage({ language, onUnavailable }: { language: Language; onUnavailable: (destination: HomeDestination) => void }) {
+function NationalHomePage({ onUnavailable, language }: { onUnavailable: (destination: HomeDestination) => void; language: Language }) {
   const [activeNoticeTab, setActiveNoticeTab] = useState<'notifications' | 'advisories' | 'media'>('notifications')
 
-  const serviceCategoriesList: Array<{
-    id: 'licence' | HomeDestination
-    icon: LucideIcon
-    title: string
-    titleHi: string
-    body: string
-    bodyHi: string
-    image: string
-    href?: string
-  }> = [
+  const serviceCategoriesList = [
     {
-      id: 'licence',
-      icon: Bike,
+      id: 'driving',
+      icon: UserRound,
       title: 'Driving licence services',
       titleHi: 'ड्राइविंग लाइसेंस सेवाएँ',
-      body: 'Learner’s licence, application status, test and related services.',
-      bodyHi: 'लर्नर लाइसेंस, आवेदन स्थिति, परीक्षा और संबंधित सेवाएँ।',
+      body: 'Learner licence, permanent DL, renewal and test booking.',
+      bodyHi: 'लर्नर लाइसेंस, स्थायी डीएल, नवीनीकरण और परीक्षा स्लॉट।',
       image: '/assets/service-driving-licence.webp',
       href: '/mp/services',
     },
@@ -290,8 +294,8 @@ function NationalHomePage({ language, onUnavailable }: { language: Language; onU
       badgeBg: '#e0f2fe',
       badgeColor: '#0369a1',
       image: '/assets/ecosystem-mparivahan.webp',
-      desc: 'Virtual RC & Driving Licence on your smartphone, legally valid across India.',
-      descHi: 'स्मार्टफोन पर वर्चुअल आरसी और ड्राइविंग लाइसेंस, पूरे भारत में कानूनी रूप से मान्य।',
+      desc: 'Keep your digital RC and Driving Licence on your phone. These digital documents are valid across India.',
+      descHi: 'अपने फोन पर डिजिटल RC और Driving Licence रखें। ये डिजिटल दस्तावेज़ पूरे भारत में मान्य हैं।',
     },
     {
       id: 'echallan',
@@ -304,8 +308,8 @@ function NationalHomePage({ language, onUnavailable }: { language: Language; onU
       badgeBg: '#fef3c7',
       badgeColor: '#b45309',
       image: '/assets/ecosystem-echallan.webp',
-      desc: 'Paperless traffic violation notice lookup, instant fine settlement & dispute tracking.',
-      descHi: 'पेपरलेस चालान स्थिति खोज, ऑनलाइन जुर्माना निपटान और विवाद ट्रैकिंग।',
+      desc: 'Check traffic challans, pay fines online and track disputes.',
+      descHi: 'ट्रैफिक चालान देखें, जुर्माना ऑनलाइन भरें और विवाद की स्थिति देखें।',
     },
     {
       id: 'pucc',
@@ -526,10 +530,10 @@ function NationalHomePage({ language, onUnavailable }: { language: Language; onU
       <section id="ecosystem" className="home-section" aria-labelledby="ecosystem-title">
         <div className="home-section__heading">
           <div>
-            <p className="eyebrow">{copy(language, 'Digital Ecosystem', 'डिजिटल इकोसिस्टम')}</p>
-            <h2 id="ecosystem-title">{copy(language, 'Other Parivahan Apps & Services', 'अन्य परिवहन ऐप्स और सेवाएँ')}</h2>
+            <p className="eyebrow">{copy(language, 'Other online services', 'अन्य ऑनलाइन सेवाएँ')}</p>
+            <h2 id="ecosystem-title">{copy(language, 'Other Parivahan apps and services', 'अन्य परिवहन ऐप्स और सेवाएँ')}</h2>
           </div>
-          <p>{copy(language, 'Seamless digital tools for traffic enforcement, emissions testing, mobile wallet and clean mobility.', 'यातायात अनुपालन, उत्सर्जन जांच, मोबाइल वॉलेट और हरित परिवहन हेतु डिजिटल उपकरण।')}</p>
+          <p>{copy(language, 'Use other online transport services for challans, pollution checks, mobile documents and green vehicles.', 'चालान, प्रदूषण जाँच, मोबाइल दस्तावेज़ और ग्रीन वाहन सेवाएँ ऑनलाइन देखें।')}</p>
         </div>
         <div className="ecosystem-grid">
           {ecosystemApps.map((app) => {
@@ -554,7 +558,7 @@ function NationalHomePage({ language, onUnavailable }: { language: Language; onU
                   <strong className="ecosystem-card__title">{copy(language, app.title, app.titleHi)}</strong>
                   <p className="ecosystem-card__desc">{copy(language, app.desc, app.descHi)}</p>
                   <div className="ecosystem-card__footer">
-                    <span>{copy(language, 'Access service', 'सेवा खोलें')}</span>
+                    <span>{copy(language, 'Open service', 'सेवा खोलें')}</span>
                     <ArrowRight size={16} />
                   </div>
                 </div>
@@ -568,8 +572,8 @@ function NationalHomePage({ language, onUnavailable }: { language: Language; onU
       <section id="notices" className="home-section notice-board-section" aria-labelledby="notice-board-title">
         <div className="home-section__heading">
           <div>
-            <p className="eyebrow">{copy(language, 'Public Communications', 'सार्वजनिक सूचनाएँ')}</p>
-            <h2 id="notice-board-title">{copy(language, 'What’s New, Circulars & Advisories', 'नवीनतम अपडेट, परिपत्र और परामर्श')}</h2>
+            <p className="eyebrow">{copy(language, 'Updates', 'अपडेट')}</p>
+            <h2 id="notice-board-title">{copy(language, 'Latest updates and notices', 'नवीनतम अपडेट और सूचनाएँ')}</h2>
           </div>
           <div className="notice-tab-group" role="tablist">
             <button
@@ -580,7 +584,7 @@ function NationalHomePage({ language, onUnavailable }: { language: Language; onU
               onClick={() => setActiveNoticeTab('notifications')}
             >
               <Bell size={16} />
-              <span>{copy(language, 'Notifications', 'अधिसूचनाएँ')}</span>
+              <span>{copy(language, 'Notifications', 'सूचनाएँ')}</span>
             </button>
             <button
               type="button"
@@ -600,7 +604,7 @@ function NationalHomePage({ language, onUnavailable }: { language: Language; onU
               onClick={() => setActiveNoticeTab('media')}
             >
               <PlayCircle size={16} />
-              <span>{copy(language, 'Citizen Guides & Media', 'नागरिक गाइड व मीडिया')}</span>
+              <span>{copy(language, 'Guides & videos', 'गाइड और वीडियो')}</span>
             </button>
           </div>
         </div>
@@ -622,9 +626,9 @@ function NationalHomePage({ language, onUnavailable }: { language: Language; onU
       {/* Informational Guidance */}
       <section id="information" className="home-information" aria-labelledby="information-title">
         <div className="home-information__intro">
-          <p className="eyebrow">{copy(language, 'Information services', 'जानकारी सेवाएँ')}</p>
-          <h2 id="information-title">{copy(language, 'Understand the process before you begin', 'शुरू करने से पहले प्रक्रिया समझें')}</h2>
-          <p>{copy(language, 'Simple guides help you prepare the correct documents, understand road rules and find the right office.', 'सरल मार्गदर्शिकाएँ सही दस्तावेज़ तैयार करने, सड़क नियम समझने और सही कार्यालय खोजने में मदद करती हैं।')}</p>
+          <p className="eyebrow">{copy(language, 'Information', 'जानकारी')}</p>
+          <h2 id="information-title">{copy(language, 'Know what you need before you start', 'शुरू करने से पहले जानें कि क्या चाहिए')}</h2>
+          <p>{copy(language, 'Get simple help with documents, road rules and finding the right office.', 'दस्तावेज़, सड़क नियम और सही कार्यालय खोजने के लिए सरल मदद पाएँ।')}</p>
         </div>
         <div className="home-information__links">
           {informationLinks.map(({ icon: Icon, en, hi }) => (
@@ -806,61 +810,61 @@ function ServicesPage({ language, demoApplication }: { language: Language; demoA
     {
       id: 'apply-ll',
       href: '/mp/ll/start',
-      title: 'Apply for New Learner’s Licence (LL)',
-      titleHi: 'नए लर्नर लाइसेंस (LL) के लिए आवेदन करें',
-      tag: 'Primary Service',
+      title: 'Apply for Learner’s Licence (LL)',
+      titleHi: 'लर्नर लाइसेंस (LL) के लिए आवेदन करें',
+      tag: 'Main service',
       tagHi: 'मुख्य सेवा',
       tagType: 'blue',
       badgeBg: '#e0f2fe',
       badgeColor: '#0369a1',
       icon: Sparkles,
       image: '/assets/service-apply-ll.webp',
-      desc: 'Complete Aadhaar e-KYC, verify details, and take the contactless test from home without visiting RTO.',
-      descHi: 'आधार ई-केवाईसी पूरा करें, विवरण सत्यापित करें और आरटीओ जाए बिना घर से ऑनलाइन टेस्ट दें।',
-      action: 'Start Application',
+      desc: 'Complete e-KYC, fill in your details and take the online test from home.',
+      descHi: 'e-KYC पूरा करें, अपनी जानकारी भरें और घर से ऑनलाइन टेस्ट दें।',
+      action: 'Start application',
       actionHi: 'आवेदन शुरू करें',
     },
     {
       id: 'mock-test',
       href: '/mp/service/mock-test',
-      title: 'Road Safety Tutorial & Mock Test',
-      titleHi: 'सड़क सुरक्षा ट्यूटोरियल व मॉक टेस्ट',
-      tag: 'Practice & Prepare',
-      tagHi: 'तैयारी और अभ्यास',
+      title: 'Tutorial & practice test',
+      titleHi: 'ट्यूटोरियल व अभ्यास टेस्ट',
+      tag: 'Practice',
+      tagHi: 'अभ्यास',
       tagType: 'green',
       badgeBg: '#dcfce7',
       badgeColor: '#15803d',
       icon: BookOpenCheck,
       image: '/assets/service-mock-test.webp',
-      desc: 'Learn Indian road signs, traffic regulations, and practice sample quiz questions before your real test.',
-      descHi: 'वास्तविक परीक्षा से पहले आधिकारिक यातायात संकेत, नियम और नमूना प्रश्नों का अभ्यास करें।',
-      action: 'Start Practice',
+      desc: 'Learn road signs and traffic rules, then practise sample questions before the test.',
+      descHi: 'सड़क संकेत और ट्रैफिक नियम सीखें, फिर टेस्ट से पहले नमूना प्रश्नों का अभ्यास करें।',
+      action: 'Start practice',
       actionHi: 'अभ्यास शुरू करें',
     },
     {
       id: 'print-ll',
       href: '/mp/service/print-ll',
-      title: 'Print / Download Learner’s Licence',
-      titleHi: 'लर्नर लाइसेंस प्रिंट व डाउनलोड करें',
-      tag: 'Instant Document',
-      tagHi: 'डिजिटल दस्तावेज़',
+      title: 'Download Learner’s Licence',
+      titleHi: 'लर्नर लाइसेंस डाउनलोड करें',
+      tag: 'Download',
+      tagHi: 'डाउनलोड',
       tagType: 'purple',
       badgeBg: '#f3e8ff',
       badgeColor: '#7e22ce',
       icon: Printer,
       image: '/assets/service-print-ll.webp',
-      desc: 'Download your official digitally verified and QR-coded Learner’s Licence certificate immediately.',
-      descHi: 'अपना आधिकारिक डिजिटल हस्ताक्षरित और क्यूआर-कोड युक्त लर्नर लाइसेंस तुरंत डाउनलोड करें।',
-      action: 'Download Licence',
+      desc: 'Download or print your Learner’s Licence after it is issued.',
+      descHi: 'लर्नर लाइसेंस जारी होने के बाद उसे डाउनलोड या प्रिंट करें।',
+      action: 'Download licence',
       actionHi: 'लाइसेंस डाउनलोड करें',
     },
   ]
 
   const categoryFilterOptions: { key: 'All' | ServiceDefinition['category']; labelEn: string; labelHi: string; count: number }[] = [
-    { key: 'All', labelEn: 'All Services', labelHi: 'सभी सेवाएँ', count: services.length },
+    { key: 'All', labelEn: 'All services', labelHi: 'सभी सेवाएँ', count: services.length },
     { key: 'Learner licence', labelEn: "Learner's Licence", labelHi: 'लर्नर लाइसेंस', count: services.filter((s) => s.category === 'Learner licence').length },
-    { key: 'Application utilities', labelEn: 'Application & Status', labelHi: 'आवेदन व स्थिति', count: services.filter((s) => s.category === 'Application utilities').length },
-    { key: 'Other licence services', labelEn: 'Other DL Services', labelHi: 'अन्य लाइसेंस सेवाएँ', count: services.filter((s) => s.category === 'Other licence services').length },
+    { key: 'Application utilities', labelEn: 'Application & status', labelHi: 'आवेदन व स्थिति', count: services.filter((s) => s.category === 'Application utilities').length },
+    { key: 'Other licence services', labelEn: 'Other DL services', labelHi: 'अन्य लाइसेंस सेवाएँ', count: services.filter((s) => s.category === 'Other licence services').length },
   ]
 
   return (
@@ -872,38 +876,38 @@ function ServicesPage({ language, demoApplication }: { language: Language; demoA
         <div className="mp-services-hero__content">
           <div className="mp-services-hero__eyebrow">
             <span className="pulse-dot" />
-            <span>{copy(language, 'Madhya Pradesh Transport Department • Contactless Citizen Services', 'मध्य प्रदेश परिवहन विभाग • संपर्क रहित नागरिक सेवाएँ')}</span>
+            <span>{copy(language, 'Madhya Pradesh Transport Department • Online services', 'मध्य प्रदेश परिवहन विभाग • ऑनलाइन सेवाएँ')}</span>
           </div>
           <h1 id="mp-services-hero-title" tabIndex={-1}>
-            {copy(language, 'Driving Licence Services Directory', 'ड्राइविंग लाइसेंस सेवाएँ निर्देशिका')}
+            {copy(language, 'Driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ')}
           </h1>
           <p className="mp-services-hero__lead">
             {copy(
               language,
-              'Apply, complete Aadhaar e-KYC, pay nominal fees, and take your AI-proctored Learner’s Licence test online from the comfort of your home.',
-              'घर बैठे ऑनलाइन लर्नर लाइसेंस के लिए आवेदन करें, आधार ई-केवाईसी सत्यापित करें, शुल्क जमा करें और ऑनलाइन टेस्ट दें।'
+              'Apply for a Learner’s Licence, complete e-KYC, pay the fee and take the online test from home.',
+              'लर्नर लाइसेंस के लिए आवेदन करें, e-KYC पूरा करें, शुल्क भरें और घर से ऑनलाइन टेस्ट दें।'
             )}
           </p>
 
           <div className="mp-services-hero__badges">
             <div className="mp-hero-badge">
               <ShieldCheck size={16} />
-              <span>{copy(language, '100% Faceless / No RTO Visit', '100% संपर्क रहित / आरटीओ जाने की जरूरत नहीं')}</span>
+              <span>{copy(language, 'Online service', 'ऑनलाइन सेवा')}</span>
             </div>
             <div className="mp-hero-badge">
               <Sparkles size={16} />
-              <span>{copy(language, 'Instant Aadhaar e-KYC', 'तुरंत आधार ई-केवाईसी')}</span>
+              <span>{copy(language, 'Aadhaar e-KYC', 'आधार e-KYC')}</span>
             </div>
             <div className="mp-hero-badge">
               <CheckCircle2 size={16} />
-              <span>{copy(language, 'Immediate Digital PDF Download', 'तत्काल डिजिटल पीडीएफ डाउनलोड')}</span>
+              <span>{copy(language, 'Digital licence download', 'डिजिटल लाइसेंस डाउनलोड')}</span>
             </div>
           </div>
 
           {demoApplication ? (
             <div className="mp-services-hero__saved-bar">
               <div className="mp-saved-bar__info">
-                <span className="mp-saved-bar__tag"><CheckCircle2 size={15} /> {copy(language, 'Active Application Saved on Device', 'सक्रिय आवेदन इस डिवाइस पर सहेजा गया')}</span>
+                <span className="mp-saved-bar__tag"><CheckCircle2 size={15} /> {copy(language, 'Saved application', 'सहेजा आवेदन')}</span>
                 <strong>{demoApplication.id} • {citizenApplicantName(demoApplication.applicant)}</strong>
                 <small>{copy(language, 'Next action: ', 'अगला कार्य: ')}{citizenStageName(demoApplication.lastStage, language)}</small>
               </div>
@@ -914,10 +918,10 @@ function ServicesPage({ language, demoApplication }: { language: Language; demoA
           ) : (
             <div className="mp-services-hero__quick-actions">
               <PortalLink href="/mp/ll/start" className="button button--light">
-                {copy(language, 'Start New Application', 'नया आवेदन शुरू करें')} <ArrowRight size={18} />
+                {copy(language, 'Start new application', 'नया आवेदन शुरू करें')} <ArrowRight size={18} />
               </PortalLink>
               <PortalLink href="/mp/service/application-status" className="button button--secondary button--hero-glass">
-                {copy(language, 'Track Existing Application', 'आवेदन की स्थिति देखें')}
+                {copy(language, 'Check application status', 'आवेदन की स्थिति देखें')}
               </PortalLink>
             </div>
           )}
@@ -932,36 +936,43 @@ function ServicesPage({ language, demoApplication }: { language: Language; demoA
       <section className="featured-services-section" aria-labelledby="featured-services-title">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">{copy(language, 'Direct-to-Citizen Fast Track', 'नागरिक त्वरित सेवाएँ')}</p>
-            <h2 id="featured-services-title">{copy(language, 'Most Popular Driving Services', 'सर्वाधिक उपयोग की जाने वाली सेवाएँ')}</h2>
+            <p className="eyebrow">{copy(language, 'Quick access', 'त्वरित पहुँच')}</p>
+            <h2 id="featured-services-title">{copy(language, 'Popular driving licence services', 'लोकप्रिय ड्राइविंग लाइसेंस सेवाएँ')}</h2>
           </div>
         </div>
 
         <div className="featured-services-grid">
-          {featuredSpotlights.map((spotlight) => {
-            const SpotlightIcon = spotlight.icon
-            return (
-              <PortalLink href={spotlight.href} className="featured-spotlight-card" key={spotlight.id}>
-                <div className="featured-spotlight-card__backdrop" aria-hidden="true">
-                  <img src={spotlight.image} alt="" loading="lazy" />
-                </div>
+          {featuredSpotlights.map((spotlight) => (
+            <PortalLink href={spotlight.href} className={`featured-spotlight-card featured-spotlight-card--${spotlight.id}`} key={spotlight.id}>
+              <div className="featured-spotlight-card__main">
                 <div className="featured-spotlight-card__content">
-                  <div className="featured-spotlight-card__header-row">
-                    <span className="featured-spotlight-card__icon" style={{ background: spotlight.badgeBg, color: spotlight.badgeColor }}>
-                      <SpotlightIcon size={18} />
+                  <div className="featured-spotlight-card__meta">
+                    <span className={`spotlight-badge spotlight-badge--${spotlight.tagType}`}>
+                      {copy(language, spotlight.tag, spotlight.tagHi)}
                     </span>
-                    <span className={`tag-pill tag-pill--${spotlight.tagType}`}>{copy(language, spotlight.tag, spotlight.tagHi)}</span>
                   </div>
-                  <strong className="featured-spotlight-card__title">{copy(language, spotlight.title, spotlight.titleHi)}</strong>
-                  <p className="featured-spotlight-card__desc">{copy(language, spotlight.desc, spotlight.descHi)}</p>
-                  <div className="featured-spotlight-card__footer">
-                    <span>{copy(language, spotlight.action, spotlight.actionHi)}</span>
-                    <ArrowRight size={16} />
-                  </div>
+                  <h3 className="featured-spotlight-card__title">
+                    {copy(language, spotlight.title, spotlight.titleHi)}
+                  </h3>
+                  <p className="featured-spotlight-card__desc">
+                    {copy(language, spotlight.desc, spotlight.descHi)}
+                  </p>
                 </div>
-              </PortalLink>
-            )
-          })}
+                <div className="featured-spotlight-card__illustration-zone" aria-hidden="true">
+                  <img
+                    src={spotlight.image}
+                    alt=""
+                    loading="lazy"
+                    className={`spotlight-img spotlight-img--${spotlight.id}`}
+                  />
+                </div>
+              </div>
+              <div className="featured-spotlight-card__footer">
+                <span className="spotlight-cta-text">{copy(language, spotlight.action, spotlight.actionHi)}</span>
+                <ArrowRight className="spotlight-cta-arrow" size={16} aria-hidden="true" />
+              </div>
+            </PortalLink>
+          ))}
         </div>
       </section>
 
@@ -969,8 +980,8 @@ function ServicesPage({ language, demoApplication }: { language: Language; demoA
       <section className="services-section" aria-labelledby="services-title">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">{copy(language, 'Complete Catalog', 'संपूर्ण निर्देशिका')}</p>
-            <h2 id="services-title">{copy(language, 'Explore All Driving Licence Services', 'सभी ड्राइविंग लाइसेंस सेवाएँ देखें')}</h2>
+            <p className="eyebrow">{copy(language, 'All services', 'सभी सेवाएँ')}</p>
+            <h2 id="services-title">{copy(language, 'Find a driving licence service', 'ड्राइविंग लाइसेंस सेवा खोजें')}</h2>
           </div>
           <span className="result-count" aria-live="polite">
             {copy(language, `${filtered.length} services available`, `${filtered.length} सेवाएँ उपलब्ध`)}
@@ -986,7 +997,7 @@ function ServicesPage({ language, demoApplication }: { language: Language; demoA
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder={copy(language, 'Search service by name or keyword...', 'सेवा का नाम या कीवर्ड खोजें...')}
+              placeholder={copy(language, 'Search services...', 'सेवाएँ खोजें...')}
             />
             {query && (
               <button type="button" className="filter-search-clear" onClick={() => setQuery('')} aria-label="Clear search">
@@ -1049,44 +1060,81 @@ function ServicesPage({ language, demoApplication }: { language: Language; demoA
   )
 }
 
-const llStages = [
-  { en: 'Fill in application details', hi: 'आवेदन की जानकारी भरें', detailEn: 'Applicant category, identity, personal details, address, vehicle class and self-declaration.', detailHi: 'आवेदक श्रेणी, पहचान, व्यक्तिगत जानकारी, पता, वाहन वर्ग और स्व-घोषणा।' },
-  { en: 'Upload documents', hi: 'दस्तावेज़ अपलोड करें', detailEn: 'Provide the required supporting documents for your application.', detailHi: 'आवेदन के लिए जरूरी सहायक दस्तावेज़ दें।' },
-  { en: 'Upload photograph and signature', hi: 'फोटो और हस्ताक्षर अपलोड करें', detailEn: 'Check each preview before saving it.', detailHi: 'सहेजने से पहले हर पूर्वावलोकन जाँचें।' },
-  { en: 'Check device and pay the fee', hi: 'डिवाइस जाँचें और शुल्क भरें', detailEn: 'Confirm that the test can run on this device before payment.', detailHi: 'भुगतान से पहले जाँचें कि परीक्षा इस डिवाइस पर चल सकती है।' },
-  { en: 'Complete learning and test', hi: 'अध्ययन और परीक्षा पूरी करें', detailEn: 'Study the road-safety material, then take the secured online test.', detailHi: 'सड़क सुरक्षा सामग्री पढ़ें और फिर सुरक्षित ऑनलाइन परीक्षा दें।' },
-  { en: 'View result and licence', hi: 'परिणाम और लाइसेंस देखें', detailEn: 'Check the outcome and download the available document.', detailHi: 'परिणाम देखें और उपलब्ध दस्तावेज़ डाउनलोड करें।' },
+const launchPhases = [
+  {
+    step: 1,
+    titleEn: 'Application details',
+    titleHi: 'आवेदन की जानकारी',
+    descEn: 'Identity and applicant information',
+    descHi: 'पहचान और आवेदक की जानकारी',
+  },
+  {
+    step: 2,
+    titleEn: 'Documents & photo',
+    titleHi: 'दस्तावेज़ और फोटो',
+    descEn: 'Photo, signature and required documents',
+    descHi: 'फोटो, हस्ताक्षर और आवश्यक दस्तावेज़',
+  },
+  {
+    step: 3,
+    titleEn: 'Device check & fee',
+    titleHi: 'डिवाइस जाँच और शुल्क',
+    descEn: 'Check your test setup before payment',
+    descHi: 'भुगतान से पहले टेस्ट सेटअप की जाँच करें',
+  },
+  {
+    step: 4,
+    titleEn: 'Learn and take the test',
+    titleHi: 'सीखें और टेस्ट दें',
+    descEn: "Prepare, then take the online learner test",
+    descHi: 'तैयारी करें, फिर ऑनलाइन लर्नर टेस्ट दें',
+  },
+]
+
+const llProcessSteps = [
+  { en: 'Applicant details', hi: 'आवेदक की जानकारी' },
+  { en: 'Identity method', hi: 'पहचान का तरीका' },
+  { en: 'Documents and photo', hi: 'दस्तावेज़ और फोटो' },
+  { en: 'Device check', hi: 'डिवाइस जाँच' },
+  { en: 'Demo payment', hi: 'डेमो शुल्क भुगतान' },
+  { en: 'Tutorial and test', hi: 'ट्यूटोरियल और टेस्ट' },
 ]
 
 function LLStartPage({ onCreate, language, demoApplication }: { onCreate: (kind: 'full' | 'judge') => void; language: Language; demoApplication: DemoApplication | null }) {
   const [confirmNewApplication, setConfirmNewApplication] = useState(false)
-  const launchPhases = [
-    { en: 'Application details', hi: 'आवेदन की जानकारी' },
-    { en: 'Documents and photo', hi: 'दस्तावेज़ और फोटो' },
-    { en: 'Device check and fee', hi: 'डिवाइस जाँच और शुल्क' },
-    { en: 'Learning and test', hi: 'अध्ययन और परीक्षा' },
-  ]
 
   const newApplicationCard = (
-    <article className={`ll-launch-card ll-launch-card--new${demoApplication ? '' : ' ll-launch-card--primary'}`}>
-      <div className="ll-launch-card__icon" aria-hidden="true"><ClipboardCheck size={27} /></div>
-      <div className="ll-launch-card__copy">
-        <p className="eyebrow">{copy(language, demoApplication ? 'Another application' : 'New application', demoApplication ? 'दूसरा आवेदन' : 'नया आवेदन')}</p>
-        <h2>{copy(language, demoApplication ? 'Start a different application' : 'Start a new application', demoApplication ? 'अलग आवेदन शुरू करें' : 'नया आवेदन शुरू करें')}</h2>
-        <p>{copy(language, 'Begin with applicant type and identity verification. Your progress is saved on this device.', 'आवेदक प्रकार और पहचान सत्यापन से शुरू करें। आपकी प्रगति इस डिवाइस पर सहेजी जाती है।')}</p>
+    <article className={`ll-launch-card${demoApplication ? '' : ' ll-launch-card--primary'}`}>
+      <div className="ll-launch-card__header">
+        <span className={`ll-launch-card__badge ${demoApplication ? 'll-launch-card__badge--secondary' : 'll-launch-card__badge--primary'}`}>
+          {copy(language, demoApplication ? 'Another application' : 'New application', demoApplication ? 'दूसरा आवेदन' : 'नया आवेदन')}
+        </span>
       </div>
-      {!demoApplication ? (
-        <button className="button button--light ll-launch-card__action" onClick={() => onCreate('full')}>
-          {copy(language, 'Start new application', 'नया आवेदन शुरू करें')} <ArrowRight className="ll-launch-arrow" size={19} />
-        </button>
-      ) : (
-        <button className="button button--secondary ll-launch-card__action" onClick={() => setConfirmNewApplication(true)} aria-expanded={confirmNewApplication}>
-          {copy(language, 'Start another', 'दूसरा शुरू करें')} <ArrowRight className="ll-launch-arrow" size={19} />
-        </button>
-      )}
+      <div className="ll-launch-card__body">
+        <h2>{copy(language, demoApplication ? 'Start a different application' : 'Start a new application', demoApplication ? 'अलग आवेदन शुरू करें' : 'नया आवेदन शुरू करें')}</h2>
+        <p>{copy(language, 'Start with your details and identity step. We save your progress on this device.', 'अपनी जानकारी और पहचान के चरण से शुरू करें। आपकी प्रगति इस डिवाइस पर सहेजी जाती है।')}</p>
+        <span className="ll-launch-card__meta-note">
+          <CheckCircle2 size={15} aria-hidden="true" />
+          {copy(language, 'Progress is saved on this device', 'प्रगति इस डिवाइस पर सहेजी जाती है')}
+        </span>
+      </div>
+      <div className="ll-launch-card__footer">
+        {!demoApplication ? (
+          <button className="button button--primary ll-launch-card__action" onClick={() => onCreate('full')}>
+            {copy(language, 'Start new application', 'नया आवेदन शुरू करें')} <ArrowRight className="ll-launch-arrow" size={18} />
+          </button>
+        ) : (
+          <button className="button button--secondary ll-launch-card__action" onClick={() => setConfirmNewApplication(true)} aria-expanded={confirmNewApplication}>
+            {copy(language, 'Start another', 'दूसरा शुरू करें')} <ArrowRight className="ll-launch-arrow" size={18} />
+          </button>
+        )}
+      </div>
       {demoApplication && confirmNewApplication && (
         <div className="ll-replace-draft" role="alert">
-          <div><strong>{copy(language, 'Replace the saved application on this device?', 'इस डिवाइस पर सहेजे गए आवेदन को बदलें?')}</strong><p>{copy(language, 'The existing local draft will no longer appear as your current application.', 'मौजूदा स्थानीय ड्राफ्ट आपका वर्तमान आवेदन नहीं रहेगा।')}</p></div>
+          <div>
+            <strong>{copy(language, 'Replace the saved application on this device?', 'इस डिवाइस पर सहेजे गए आवेदन को बदलें?')}</strong>
+            <p>{copy(language, 'The existing local draft will no longer appear as your current application.', 'मौजूदा स्थानीय ड्राफ्ट आपका वर्तमान आवेदन नहीं रहेगा।')}</p>
+          </div>
           <div className="ll-replace-draft__actions">
             <button className="text-button" onClick={() => setConfirmNewApplication(false)}>{copy(language, 'Keep saved application', 'सहेजा आवेदन रखें')}</button>
             <button className="button button--primary" onClick={() => onCreate('full')}>{copy(language, 'Start another', 'दूसरा शुरू करें')}</button>
@@ -1098,52 +1146,142 @@ function LLStartPage({ onCreate, language, demoApplication }: { onCreate: (kind:
 
   const existingApplicationCard = demoApplication ? (
     <article className="ll-launch-card ll-launch-card--primary ll-launch-card--saved">
-      <div className="ll-launch-card__icon" aria-hidden="true"><FileClock size={27} /></div>
-      <div className="ll-launch-card__copy">
-        <p className="eyebrow">{copy(language, 'Saved application', 'सहेजा गया आवेदन')}</p>
+      <div className="ll-launch-card__header">
+        <span className="ll-launch-card__badge ll-launch-card__badge--primary">
+          {copy(language, 'Saved application', 'सहेजा गया आवेदन')}
+        </span>
+      </div>
+      <div className="ll-launch-card__body">
         <h2>{copy(language, 'Continue where you stopped', 'जहाँ रुके थे वहीं से जारी रखें')}</h2>
         <dl className="ll-saved-facts">
           <div><dt>{copy(language, 'Application number', 'आवेदन संख्या')}</dt><dd>{demoApplication.id}</dd></div>
           <div><dt>{copy(language, 'Next action', 'अगला काम')}</dt><dd>{citizenStageName(demoApplication.lastStage, language)}</dd></div>
         </dl>
+        <span className="ll-launch-card__meta-note">
+          <CheckCircle2 size={15} aria-hidden="true" />
+          {copy(language, 'Saved on this device', 'इस डिवाइस पर सहेजा गया')}
+        </span>
       </div>
-      <PortalLink href={`/mp/application/${demoApplication.id}`} className="button button--light ll-launch-card__action">
-        {copy(language, 'Continue saved application', 'सहेजा आवेदन जारी रखें')} <ArrowRight className="ll-launch-arrow" size={19} />
-      </PortalLink>
+      <div className="ll-launch-card__footer">
+        <PortalLink href={`/mp/application/${demoApplication.id}`} className="button button--primary ll-launch-card__action">
+          {copy(language, 'Continue saved application', 'सहेजा आवेदन जारी रखें')} <ArrowRight className="ll-launch-arrow" size={18} />
+        </PortalLink>
+      </div>
     </article>
   ) : (
     <article className="ll-launch-card ll-launch-card--existing">
-      <div className="ll-launch-card__icon" aria-hidden="true"><FileClock size={27} /></div>
-      <div className="ll-launch-card__copy">
-        <p className="eyebrow">{copy(language, 'Existing application', 'मौजूदा आवेदन')}</p>
-        <h2>{copy(language, 'Find an application', 'आवेदन खोजें')}</h2>
-        <p>{copy(language, 'Use your application number to check its status or continue the next available step.', 'आवेदन संख्या से स्थिति देखें या अगली उपलब्ध प्रक्रिया जारी रखें।')}</p>
+      <div className="ll-launch-card__header">
+        <span className="ll-launch-card__badge ll-launch-card__badge--secondary">
+          {copy(language, 'Existing application', 'मौजूदा आवेदन')}
+        </span>
       </div>
-      <PortalLink href="/mp/service/application-status" className="button button--secondary ll-launch-card__action">
-        {copy(language, 'Enter application number', 'आवेदन संख्या दर्ज करें')} <ArrowRight className="ll-launch-arrow" size={19} />
-      </PortalLink>
+      <div className="ll-launch-card__body">
+        <h2>{copy(language, 'Find an application', 'आवेदन खोजें')}</h2>
+        <p>{copy(language, 'Enter your application number to check progress or continue where you stopped.', 'आवेदन संख्या दर्ज करके प्रगति देखें या जहाँ रुके थे वहीं से जारी रखें।')}</p>
+        <span className="ll-launch-card__meta-note">
+          <FileText size={15} aria-hidden="true" />
+          {copy(language, 'Application number required', 'आवेदन संख्या आवश्यक है')}
+        </span>
+      </div>
+      <div className="ll-launch-card__footer">
+        <PortalLink href="/mp/service/application-status" className="button button--secondary ll-launch-card__action">
+          {copy(language, 'Enter application number', 'आवेदन संख्या दर्ज करें')} <ArrowRight className="ll-launch-arrow" size={18} />
+        </PortalLink>
+      </div>
     </article>
   )
 
   return (
     <>
       <Breadcrumbs items={[{ label: copy(language, 'Services', 'सेवाएँ'), href: '/mp/services' }, { label: copy(language, 'Apply for Learner’s Licence', 'लर्नर लाइसेंस के लिए आवेदन') }]} />
-      <section className="page-title ll-launch-title"><div><p className="eyebrow">{copy(language, 'Madhya Pradesh · Learner’s Licence', 'मध्य प्रदेश · लर्नर लाइसेंस')}</p><h1 tabIndex={-1}>{copy(language, 'Apply for a Learner’s Licence', 'लर्नर लाइसेंस के लिए आवेदन करें')}</h1><p>{copy(language, 'Start a new application or continue one already saved.', 'नया आवेदन शुरू करें या पहले से सहेजा आवेदन जारी रखें।')}</p></div></section>
+      <section className="page-title ll-launch-title">
+        <div>
+          <p className="eyebrow">{copy(language, 'Madhya Pradesh · Learner’s Licence', 'मध्य प्रदेश · लर्नर लाइसेंस')}</p>
+          <h1 tabIndex={-1}>{copy(language, 'Apply for a Learner’s Licence', 'लर्नर लाइसेंस के लिए आवेदन करें')}</h1>
+          <p>{copy(language, 'Start a new application or continue one already saved.', 'नया आवेदन शुरू करें या पहले से सहेजा आवेदन जारी रखें।')}</p>
+        </div>
+      </section>
 
       <section className={`ll-launch-actions${demoApplication ? ' ll-launch-actions--saved' : ''}`} aria-label={copy(language, 'Choose what you want to do', 'चुनें कि आप क्या करना चाहते हैं')}>
         {demoApplication ? <>{existingApplicationCard}{newApplicationCard}</> : <>{newApplicationCard}{existingApplicationCard}</>}
       </section>
 
       <section className="ll-launch-journey" aria-labelledby="ll-journey-title">
-        <div className="ll-launch-journey__heading"><p className="eyebrow">{copy(language, 'What happens after you start', 'शुरू करने के बाद क्या होगा')}</p><h2 id="ll-journey-title">{copy(language, 'Your application journey', 'आपकी आवेदन प्रक्रिया')}</h2></div>
-        <ol>{launchPhases.map((phase, index) => <li key={phase.en}><span>{index + 1}</span><strong>{phase[language]}</strong></li>)}</ol>
+        <div className="ll-launch-journey__heading">
+          <p className="eyebrow">{copy(language, 'What happens after you start', 'शुरू करने के बाद क्या होगा')}</p>
+          <h2 id="ll-journey-title">{copy(language, 'Your application steps', 'आवेदन के चरण')}</h2>
+        </div>
+        <div className="ll-journey-timeline">
+          {launchPhases.map((phase) => (
+            <div className="ll-journey-node" key={phase.step}>
+              <div className="ll-journey-node__indicator">
+                <span className="ll-journey-node__num">{phase.step}</span>
+              </div>
+              <div className="ll-journey-node__body">
+                <strong>{copy(language, phase.titleEn, phase.titleHi)}</strong>
+                <p>{copy(language, phase.descEn, phase.descHi)}</p>
+              </div>
+            </div>
+          ))}
+        </div>
       </section>
 
       <details className="ll-launch-details">
-        <summary><span><CircleHelp size={22} aria-hidden="true" />{copy(language, 'View the full process and what you will need', 'पूरी प्रक्रिया और जरूरी चीजें देखें')}</span><ChevronDown size={22} aria-hidden="true" /></summary>
+        <summary>
+          <div className="ll-launch-details__summary-main">
+            <span className="ll-launch-details__summary-title">
+              <CircleHelp size={20} aria-hidden="true" />
+              <strong>{copy(language, 'See all steps and what you need', 'सभी चरण और जरूरी चीजें देखें')}</strong>
+            </span>
+            <span className="ll-launch-details__summary-preview">
+              {copy(language, 'Identity details · Photo/signature · Camera-enabled device', 'पहचान विवरण · फोटो/हस्ताक्षर · कैमरा युक्त डिवाइस')}
+            </span>
+          </div>
+          <span className="ll-launch-details__summary-toggle">
+            <span>{copy(language, 'View full process', 'पूरी प्रक्रिया देखें')}</span>
+            <ChevronDown size={18} aria-hidden="true" />
+          </span>
+        </summary>
         <div className="ll-launch-details__body">
-          <section aria-labelledby="ll-full-process-title"><p className="eyebrow">{copy(language, 'Application process', 'आवेदन प्रक्रिया')}</p><h2 id="ll-full-process-title">{copy(language, 'Steps to complete', 'पूरी की जाने वाली प्रक्रियाएँ')}</h2><ol className="process-list">{llStages.map((stage, index) => <li key={stage.en}><span>{index + 1}</span><div><strong>{stage[language]}</strong><p>{language === 'en' ? stage.detailEn : stage.detailHi}</p></div></li>)}</ol></section>
-          <section aria-labelledby="ll-requirements-title"><p className="eyebrow">{copy(language, 'Before you begin', 'शुरू करने से पहले')}</p><h2 id="ll-requirements-title">{copy(language, 'Keep these ready', 'ये चीजें तैयार रखें')}</h2><div className="requirement-list"><div><FileText size={20} /><span><strong>{copy(language, 'Application details', 'आवेदन की जानकारी')}</strong><p>{copy(language, 'Personal, address and vehicle-class information.', 'व्यक्तिगत, पता और वाहन वर्ग की जानकारी।')}</p></span></div><div><Camera size={20} /><span><strong>{copy(language, 'Camera and microphone', 'कैमरा और माइक्रोफोन')}</strong><p>{copy(language, 'Needed later for the online-test compatibility check.', 'ऑनलाइन परीक्षा की अनुकूलता जाँच के लिए बाद में आवश्यक।')}</p></span></div><div><Wifi size={20} /><span><strong>{copy(language, 'Stable internet connection', 'स्थिर इंटरनेट कनेक्शन')}</strong><p>{copy(language, 'If the connection drops, return to the last saved stage.', 'कनेक्शन टूटने पर अंतिम सहेजी गई प्रक्रिया पर वापस आएँ।')}</p></span></div></div></section>
+          <section aria-labelledby="ll-full-process-title">
+            <p className="eyebrow">{copy(language, 'All steps', 'सभी चरण')}</p>
+            <h2 id="ll-full-process-title">{copy(language, 'Application steps', 'आवेदन के चरण')}</h2>
+            <ol className="ll-process-sequence">
+              {llProcessSteps.map((step, idx) => (
+                <li key={idx}>
+                  <span className="ll-step-idx">{idx + 1}</span>
+                  <span>{copy(language, step.en, step.hi)}</span>
+                </li>
+              ))}
+            </ol>
+          </section>
+          <section aria-labelledby="ll-requirements-title">
+            <p className="eyebrow">{copy(language, 'Keep ready', 'तैयार रखें')}</p>
+            <h2 id="ll-requirements-title">{copy(language, 'Before you start', 'शुरू करने से पहले')}</h2>
+            <ul className="ll-ready-list">
+              <li>
+                <Camera size={18} aria-hidden="true" />
+                <div>
+                  <strong>{copy(language, 'Camera-enabled device', 'कैमरा युक्त डिवाइस')}</strong>
+                  <p>{copy(language, 'Needed later for the device check before the test.', 'टेस्ट से पहले डिवाइस जाँच के लिए बाद में जरूरत होगी।')}</p>
+                </div>
+              </li>
+              <li>
+                <Wifi size={18} aria-hidden="true" />
+                <div>
+                  <strong>{copy(language, 'Stable internet connection', 'स्थिर इंटरनेट कनेक्शन')}</strong>
+                  <p>{copy(language, 'If the internet stops, continue from your last saved step.', 'इंटरनेट बंद हो जाए तो आखिरी सहेजे चरण से जारी रखें।')}</p>
+                </div>
+              </li>
+              <li>
+                <FileText size={18} aria-hidden="true" />
+                <div>
+                  <strong>{copy(language, 'Demo applicant details', 'डेमो आवेदक जानकारी')}</strong>
+                  <p>{copy(language, 'Personal, address, vehicle class information, and demo photo/signature.', 'व्यक्तिगत, पता, वाहन वर्ग की जानकारी, और डेमो फोटो/हस्ताक्षर।')}</p>
+                </div>
+              </li>
+            </ul>
+          </section>
         </div>
       </details>
     </>
@@ -1345,7 +1483,7 @@ function PrototypeDetailsDialog({ onClose, language }: { onClose: () => void; la
     window.addEventListener('keydown', closeOnEscape)
     return () => window.removeEventListener('keydown', closeOnEscape)
   }, [onClose])
-  return <div className="dialog-layer" onMouseDown={onClose}><section className="help-dialog prototype-dialog" role="dialog" aria-modal="true" aria-labelledby="prototype-title" onMouseDown={(event) => event.stopPropagation()}><div className="dialog-heading"><div><p className="eyebrow">{copy(language, 'Safe demonstration', 'सुरक्षित प्रदर्शन')}</p><h2 id="prototype-title">{copy(language, 'What is real and what is simulated?', 'क्या वास्तविक है और क्या सिम्युलेट किया गया है?')}</h2></div><button className="icon-button" onClick={onClose} aria-label={copy(language, 'Close details', 'जानकारी बंद करें')} autoFocus><X size={21} /></button></div><dl className="prototype-facts"><div><dt>{copy(language, 'Runs on this device', 'इस डिवाइस पर वास्तविक रूप से चलता है')}</dt><dd>{copy(language, 'Form saving, navigation, camera and microphone checks, test-answer checkpoints and recovery behavior.', 'फॉर्म सहेजना, नेविगेशन, कैमरा-माइक्रोफोन जाँच, परीक्षा उत्तर चेकपॉइंट और रिकवरी व्यवहार।')}</dd></div><div><dt>{copy(language, 'Simulated for safety', 'सुरक्षा के लिए सिम्युलेट किया गया')}</dt><dd>{copy(language, 'Identity verification, government records, fees, payment authorization, official test authority and licence issuance.', 'पहचान सत्यापन, सरकारी रिकॉर्ड, शुल्क, भुगतान प्राधिकरण, आधिकारिक परीक्षा और लाइसेंस जारी करना।')}</dd></div></dl><p className="prototype-dialog__note">{copy(language, 'This independent hackathon prototype is not connected to Sarathi, NIC, UIDAI, a bank or the Government of Madhya Pradesh.', 'यह स्वतंत्र हैकाथॉन प्रोटोटाइप सारथी, एनआईसी, यूआईडीएआई, किसी बैंक या मध्य प्रदेश शासन से जुड़ा नहीं है।')}</p><button className="button button--primary button--full" onClick={onClose}>{copy(language, 'Close', 'बंद करें')}</button></section></div>
+  return <div className="dialog-layer" onMouseDown={onClose}><section className="help-dialog prototype-dialog" role="dialog" aria-modal="true" aria-labelledby="prototype-title" onMouseDown={(event) => event.stopPropagation()}><div className="dialog-heading"><div><p className="eyebrow">{copy(language, 'Safe demo', 'सुरक्षित डेमो')}</p><h2 id="prototype-title">{copy(language, 'What is real and what is simulated?', 'क्या वास्तविक है और क्या सिम्युलेट किया गया है?')}</h2></div><button className="icon-button" onClick={onClose} aria-label={copy(language, 'Close details', 'जानकारी बंद करें')} autoFocus><X size={21} /></button></div><dl className="prototype-facts"><div><dt>{copy(language, 'Runs on this device', 'इस डिवाइस पर वास्तविक रूप से चलता है')}</dt><dd>{copy(language, 'Form saving, camera and microphone checks, saving test answers and restart recovery.', 'फॉर्म सहेजना, कैमरा-माइक्रोफोन जाँच, उत्तर सहेजना और टेस्ट फिर शुरू करना।')}</dd></div><div><dt>{copy(language, 'Simulated for demo', 'डेमो के लिए सिम्युलेट किया गया')}</dt><dd>{copy(language, 'Identity verification, government records, fees, payment approval and official licence issuance.', 'पहचान सत्यापन, सरकारी रिकॉर्ड, शुल्क, भुगतान स्वीकृति और आधिकारिक लाइसेंस जारी करना।')}</dd></div></dl><p className="prototype-dialog__note">{copy(language, 'This independent hackathon prototype is not connected to Sarathi, NIC, UIDAI, a bank or the Government of Madhya Pradesh.', 'यह स्वतंत्र हैकाथॉन प्रोटोटाइप सारथी, एनआईसी, यूआईडीएआई, किसी बैंक या मध्य प्रदेश शासन से जुड़ा नहीं है।')}</p><button className="button button--primary button--full" onClick={onClose}>{copy(language, 'Close', 'बंद करें')}</button></section></div>
 }
 
 function UnavailableServiceDialog({ destination, language, onClose }: { destination: HomeDestination; language: Language; onClose: () => void }) {
@@ -1360,7 +1498,32 @@ function UnavailableServiceDialog({ destination, language, onClose }: { destinat
     window.addEventListener('keydown', closeOnEscape)
     return () => window.removeEventListener('keydown', closeOnEscape)
   }, [onClose])
-  return <div className="dialog-layer" onMouseDown={onClose}><section className="help-dialog service-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="service-preview-title" onMouseDown={(event) => event.stopPropagation()}><div className="dialog-heading"><div><p className="eyebrow">{copy(language, 'Service directory', 'सेवा सूची')}</p><h2 id="service-preview-title">{copy(language, titles[destination][0], titles[destination][1])}</h2></div><button className="icon-button" onClick={onClose} aria-label={copy(language, 'Close', 'बंद करें')} autoFocus><X size={21} /></button></div><div className="service-preview-dialog__body"><CircleHelp size={28} /><div><strong>{copy(language, 'This service area is being prepared.', 'यह सेवा क्षेत्र तैयार किया जा रहा है।')}</strong><p>{copy(language, 'You can view it in the service directory, but an online transaction is not available in this version.', 'आप इसे सेवा सूची में देख सकते हैं, लेकिन इस संस्करण में ऑनलाइन लेन-देन उपलब्ध नहीं है।')}</p></div></div><PortalLink href="/mp/services" className="button button--primary button--full" onNavigate={onClose}>{copy(language, 'Open driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ खोलें')}</PortalLink></section></div>
+  const titlePair = titles[destination] ?? ['Service', 'सेवा']
+  return (
+    <div className="dialog-layer" onMouseDown={onClose}>
+      <section className="help-dialog service-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="service-preview-title" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="dialog-heading">
+          <div>
+            <p className="eyebrow">{copy(language, 'Service directory', 'सेवा सूची')}</p>
+            <h2 id="service-preview-title">{copy(language, titlePair[0], titlePair[1])}</h2>
+          </div>
+          <button className="icon-button" onClick={onClose} aria-label={copy(language, 'Close', 'बंद करें')} autoFocus>
+            <X size={21} />
+          </button>
+        </div>
+        <div className="service-preview-dialog__body">
+          <CircleHelp size={28} />
+          <div>
+            <strong>{copy(language, 'This service is not available in this demo.', 'यह सेवा इस डेमो में उपलब्ध नहीं है।')}</strong>
+            <p>{copy(language, 'You can view it in the service directory, but online applications are not available in this demo.', 'आप इसे सेवा सूची में देख सकते हैं, लेकिन इस डेमो में ऑनलाइन आवेदन उपलब्ध नहीं है।')}</p>
+          </div>
+        </div>
+        <PortalLink href="/mp/services" className="button button--primary button--full" onNavigate={onClose}>
+          {copy(language, 'Open driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ खोलें')}
+        </PortalLink>
+      </section>
+    </div>
+  )
 }
 
 function PortalFooter({ language, national, onPrototypeDetails }: { language: Language; national: boolean; onPrototypeDetails: () => void }) {
@@ -1370,14 +1533,14 @@ function PortalFooter({ language, national, onPrototypeDetails }: { language: La
         <div className="portal-footer__brand">
           <PortalMark language={language} national={national} />
           <p>{copy(language, 'Ministry of Road Transport and Highways (MoRTH), Government of India.', 'सड़क परिवहन और राजमार्ग मंत्रालय, भारत सरकार।')}</p>
-          <p className="portal-footer__tagline">{copy(language, 'Delivering faceless, transparent, and direct-to-citizen digital transport services.', 'फेसलेस, पारदर्शी और डायरेक्ट-टू-सिटिजन डिजिटल परिवहन सेवाएँ।')}</p>
+          <p className="portal-footer__tagline">{copy(language, 'Delivering transparent online transport services.', 'पारदर्शी ऑनलाइन परिवहन सेवाएँ।')}</p>
         </div>
         <div>
           <strong>{copy(language, 'Citizen Services', 'नागरिक सेवाएँ')}</strong>
           <PortalLink href="/mp/services">{copy(language, 'Driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ')}</PortalLink>
           <PortalLink href="/mp/ll/start">{copy(language, 'Apply for Learner’s Licence', 'लर्नर लाइसेंस के लिए आवेदन')}</PortalLink>
           <PortalLink href="/mp/service/application-status">{copy(language, 'Application status', 'आवेदन स्थिति')}</PortalLink>
-          <PortalLink href="/mp/service/fee-payment">{copy(language, 'Fee payment & receipts', 'शुल्क भुगतान व रसीदें')}</PortalLink>
+          <PortalLink href="/mp/service/fee-payment">{copy(language, 'Fees and receipts', 'शुल्क और रसीदें')}</PortalLink>
         </div>
         <div>
           <strong>{copy(language, 'Resources & Acts', 'संसाधन और अधिनियम')}</strong>
@@ -1389,8 +1552,8 @@ function PortalFooter({ language, national, onPrototypeDetails }: { language: La
         <div>
           <strong>{copy(language, 'Portal & Support', 'पोर्टल एवं सहायता')}</strong>
           <PortalLink href="/">{copy(language, 'Home', 'होम')}</PortalLink>
-          <button type="button" onClick={onPrototypeDetails}>{copy(language, 'Prototype demonstration info', 'प्रोटोटाइप जानकारी')}</button>
-          <span>{copy(language, 'Bilingual & Screen Reader Accessible', 'द्विभाषी एवं स्क्रीन रीडर सुलभ')}</span>
+          <button type="button" onClick={onPrototypeDetails}>{copy(language, 'About this demo', 'इस डेमो के बारे में')}</button>
+          <span>{copy(language, 'English/Hindi • Screen-reader friendly', 'द्विभाषी • स्क्रीन-रीडर सुलभ')}</span>
           <div className="portal-footer__counter">
             <small>{copy(language, 'Total Citizen Visitors:', 'कुल नागरिक विज़िटर:')}</small>
             <strong>29,68,35,596</strong>
@@ -1399,8 +1562,8 @@ function PortalFooter({ language, national, onPrototypeDetails }: { language: La
       </div>
       <div className="portal-footer__bottom">
         <div className="portal-container portal-footer__bottom-inner">
-          <span>{copy(language, 'Independent Hackathon Demonstration — Built for Build What Moves India.', 'स्वतंत्र हैकाथॉन प्रदर्शन — बिल्ड व्हॉट मूव्स इंडिया के लिए निर्मित।')}</span>
-          <span className="portal-footer__timestamp">{copy(language, 'Last Updated: August 2026 | Powered by NIC Digital Standards', 'अंतिम अपडेट: अगस्त 2026 | एनआईसी डिजिटल मानकों पर आधारित')}</span>
+          <span>{copy(language, 'Independent hackathon demo for Build What Moves India.', 'बिल्ड व्हॉट मूव्स इंडिया के लिए स्वतंत्र हैकाथॉन डेमो।')}</span>
+          <span className="portal-footer__timestamp">{copy(language, 'Last Updated: August 2026 | Designed with public digital-service patterns', 'अंतिम अपडेट: अगस्त 2026 | सार्वजनिक डिजिटल सेवा मानकों पर आधारित')}</span>
         </div>
       </div>
     </footer>

@@ -61,19 +61,27 @@ function FlowLink({ href, className, children }: { href: string; className?: str
 }
 
 function Breadcrumbs({ language, applicationId, current }: { language: Language; applicationId: string; current: string }) {
-  return <nav className="breadcrumbs" aria-label={local(language, 'Breadcrumb', 'पथ')}><ol><li><FlowLink href="/mp/services">{local(language, 'Services', 'सेवाएँ')}</FlowLink></li><li><FlowLink href={`/mp/application/${applicationId}`}>{local(language, 'Application status', 'आवेदन स्थिति')}</FlowLink></li><li><span aria-current="page">{current}</span></li></ol></nav>
+  return (
+    <nav className="breadcrumbs" aria-label={local(language, 'Breadcrumb', 'स्थान पथ')}>
+      <ol>
+        <li><FlowLink href="/mp/services">{local(language, 'Services', 'सेवाएँ')}</FlowLink></li>
+        <li><FlowLink href={`/mp/application/${applicationId}`}>{local(language, 'Application status', 'आवेदन स्थिति')}</FlowLink></li>
+        <li><span aria-current="page">{current}</span></li>
+      </ol>
+    </nav>
+  )
 }
 
 function statusCopy(language: Language, status: PaymentStatus) {
   const values: Record<PaymentStatus, [string, string]> = {
     'not-started': ['Not started', 'शुरू नहीं हुआ'],
     redirecting: ['Opening gateway', 'गेटवे खुल रहा है'],
-    pending: ['Confirmation pending', 'पुष्टि लंबित'],
-    confirmed: ['Confirmed', 'पुष्ट'],
-    declined: ['Declined', 'अस्वीकृत'],
-    cancelled: ['Cancelled', 'रद्द'],
-    'timed-out': ['Response timed out', 'उत्तर का समय समाप्त'],
-    unknown: ['Status needs checking', 'स्थिति जाँच आवश्यक'],
+    pending: ['Payment pending', 'भुगतान लंबित'],
+    confirmed: ['Payment successful', 'भुगतान सफल रहा'],
+    declined: ['Payment failed', 'भुगतान विफल'],
+    cancelled: ['Payment cancelled', 'भुगतान रद्द'],
+    'timed-out': ['Gateway timed out', 'गेटवे का समय समाप्त'],
+    unknown: ['Status needs checking', 'स्थिति की जाँच आवश्यक'],
   }
   return values[status][language === 'en' ? 0 : 1]
 }
@@ -85,7 +93,20 @@ function paymentAttemptId() {
 
 function readinessGuard(language: Language, applicationId: string, progress: LLJourneyProgress) {
   const next = progress.readiness.status === 'passed' ? 'rehearsal' : 'readiness'
-  return <><Breadcrumbs language={language} applicationId={applicationId} current={local(language, 'Fee payment', 'शुल्क भुगतान')} /><section className="route-guard"><LockKeyhole size={32} /><p className="eyebrow">{local(language, 'Payment protected', 'भुगतान सुरक्षित')}</p><h1 tabIndex={-1}>{local(language, 'Complete the compatibility check first', 'पहले अनुकूलता जाँच पूरी करें')}</h1><p>{local(language, 'Payment stays locked until this device and the answer-recovery rehearsal have both passed.', 'इस डिवाइस और उत्तर-रिकवरी अभ्यास दोनों के सफल होने तक भुगतान बंद रहेगा।')}</p><FlowLink className="button button--primary" href={`/mp/application/${applicationId}/${next}`}>{local(language, 'Continue required check', 'आवश्यक जाँच जारी रखें')}</FlowLink></section></>
+  return (
+    <>
+      <Breadcrumbs language={language} applicationId={applicationId} current={local(language, 'Fee payment', 'शुल्क भुगतान')} />
+      <section className="route-guard">
+        <LockKeyhole size={32} />
+        <p className="eyebrow">{local(language, 'Payment protected', 'भुगतान सुरक्षित')}</p>
+        <h1 tabIndex={-1}>{local(language, 'Complete device check first', 'पहले डिवाइस जाँच पूरी करें')}</h1>
+        <p>{local(language, 'Payment opens only after this device passes the camera and practice checks.', 'कैमरा और अभ्यास जाँच पूरी होने के बाद ही भुगतान खुलेगा।')}</p>
+        <FlowLink className="button button--primary" href={`/mp/application/${applicationId}/${next}`}>
+          {local(language, 'Go to device check', 'डिवाइस जाँच पर जाएँ')}
+        </FlowLink>
+      </section>
+    </>
+  )
 }
 
 export function PaymentPage({ language, applicationId }: { language: Language; applicationId: string }) {
@@ -95,9 +116,54 @@ export function PaymentPage({ language, applicationId }: { language: Language; a
   const ready = progress.readiness.status === 'passed' && progress.rehearsal.status === 'completed'
 
   if (!ready) return readinessGuard(language, applicationId, progress)
-  if (isPaymentConfirmed(progress.payment)) return <><Breadcrumbs language={language} applicationId={applicationId} current={local(language, 'Fee payment', 'शुल्क भुगतान')} /><section className="route-guard route-guard--success"><CheckCircle2 size={34} /><p className="eyebrow">{local(language, 'No action needed', 'कोई कार्रवाई आवश्यक नहीं')}</p><h1 tabIndex={-1}>{local(language, 'Payment is already confirmed', 'भुगतान पहले से पुष्ट है')}</h1><p>{local(language, 'Do not pay again. The receipt remains linked to this application.', 'दोबारा भुगतान न करें। रसीद इस आवेदन से जुड़ी हुई है।')}</p><FlowLink className="button button--primary" href={`/mp/application/${applicationId}/receipt`}>{local(language, 'Open receipt', 'रसीद खोलें')}</FlowLink></section></>
-  if (progress.payment.status === 'redirecting') return <><Breadcrumbs language={language} applicationId={applicationId} current={local(language, 'Fee payment', 'शुल्क भुगतान')} /><section className="route-guard"><ExternalLink size={34} /><p className="eyebrow">{local(language, 'Payment attempt already active', 'भुगतान प्रयास पहले से सक्रिय')}</p><h1 tabIndex={-1}>{local(language, 'Continue the existing gateway attempt', 'मौजूदा गेटवे प्रयास जारी रखें')}</h1><p>{local(language, 'A second attempt is disabled. Continue the saved redirect or cancel it from the gateway.', 'दूसरा प्रयास बंद है। सहेजा रीडायरेक्ट जारी रखें या गेटवे से इसे रद्द करें।')}</p><FlowLink className="button button--primary" href={`/mp/application/${applicationId}/payment/redirect`}>{local(language, 'Continue to gateway', 'गेटवे पर जारी रखें')}</FlowLink></section></>
-  if (paymentNeedsReconciliation(progress.payment)) return <><Breadcrumbs language={language} applicationId={applicationId} current={local(language, 'Fee payment', 'शुल्क भुगतान')} /><section className="route-guard"><Clock3 size={34} /><p className="eyebrow">{local(language, 'System check', 'सिस्टम जाँच')}</p><h1 tabIndex={-1}>{local(language, 'Check the earlier payment before trying again', 'दोबारा प्रयास से पहले पिछले भुगतान की जाँच करें')}</h1><p>{local(language, 'Its final status is not known yet. A second Pay action is disabled to prevent duplicate payment.', 'अंतिम स्थिति अभी ज्ञात नहीं है। दोहरे भुगतान से बचाने के लिए दूसरा भुगतान बंद है।')}</p><FlowLink className="button button--primary" href={`/mp/application/${applicationId}/payment-status`}>{local(language, 'Check payment status', 'भुगतान स्थिति जाँचें')}</FlowLink></section></>
+  if (isPaymentConfirmed(progress.payment)) {
+    return (
+      <>
+        <Breadcrumbs language={language} applicationId={applicationId} current={local(language, 'Fee payment', 'शुल्क भुगतान')} />
+        <section className="route-guard route-guard--success">
+          <CheckCircle2 size={34} />
+          <p className="eyebrow">{local(language, 'No action needed', 'कोई कार्रवाई आवश्यक नहीं')}</p>
+          <h1 tabIndex={-1}>{local(language, 'Payment is already complete', 'भुगतान पहले ही पूरा हो चुका है')}</h1>
+          <p>{local(language, 'Do not pay again. Your receipt is linked to this application.', 'दोबारा भुगतान न करें। आपकी रसीद इस आवेदन से जुड़ी है।')}</p>
+          <FlowLink className="button button--primary" href={`/mp/application/${applicationId}/receipt`}>
+            {local(language, 'View receipt', 'रसीद देखें')}
+          </FlowLink>
+        </section>
+      </>
+    )
+  }
+  if (progress.payment.status === 'redirecting') {
+    return (
+      <>
+        <Breadcrumbs language={language} applicationId={applicationId} current={local(language, 'Fee payment', 'शुल्क भुगतान')} />
+        <section className="route-guard">
+          <ExternalLink size={34} />
+          <p className="eyebrow">{local(language, 'Payment in progress', 'भुगतान प्रक्रिया चालू')}</p>
+          <h1 tabIndex={-1}>{local(language, 'A payment attempt is already in progress', 'भुगतान प्रक्रिया पहले से चालू है')}</h1>
+          <p>{local(language, 'To prevent duplicate charges, please finish or cancel the current payment first.', 'दोबारा पैसे कटने से बचने के लिए पहले चालू भुगतान पूरा करें या रद्द करें।')}</p>
+          <FlowLink className="button button--primary" href={`/mp/application/${applicationId}/payment/redirect`}>
+            {local(language, 'Continue to payment gateway', 'पेमेंट गेटवे पर जाएँ')}
+          </FlowLink>
+        </section>
+      </>
+    )
+  }
+  if (paymentNeedsReconciliation(progress.payment)) {
+    return (
+      <>
+        <Breadcrumbs language={language} applicationId={applicationId} current={local(language, 'Fee payment', 'शुल्क भुगतान')} />
+        <section className="route-guard">
+          <Clock3 size={34} />
+          <p className="eyebrow">{local(language, 'Checking payment', 'भुगतान की जाँच')}</p>
+          <h1 tabIndex={-1}>{local(language, 'Checking earlier payment', 'पिछले भुगतान की जाँच हो रही है')}</h1>
+          <p>{local(language, 'We are verifying your previous payment. To prevent paying twice, please check its status first.', 'हम आपके पिछले भुगतान की पुष्टि कर रहे हैं। दोहरे भुगतान से बचने के लिए पहले स्थिति जाँचें।')}</p>
+          <FlowLink className="button button--primary" href={`/mp/application/${applicationId}/payment-status`}>
+            {local(language, 'Check payment status', 'भुगतान स्थिति जाँचें')}
+          </FlowLink>
+        </section>
+      </>
+    )
+  }
 
   const begin = () => {
     let current = progress
@@ -109,12 +175,112 @@ export function PaymentPage({ language, applicationId }: { language: Language; a
   }
 
   const total = feeTotal()
-  return <><Breadcrumbs language={language} applicationId={applicationId} current={local(language, 'Fee payment', 'शुल्क भुगतान')} /><section className="page-title"><div><p className="eyebrow">{local(language, 'Your action · fee review', 'आपकी कार्रवाई · शुल्क समीक्षा')}</p><h1 tabIndex={-1}>{local(language, 'Review the fee and choose how to pay', 'शुल्क देखें और भुगतान का तरीका चुनें')}</h1><p>{local(language, 'Your compatibility check and recovery rehearsal are complete. Review this configured prototype amount before continuing.', 'अनुकूलता जाँच और रिकवरी अभ्यास पूरे हैं। आगे बढ़ने से पहले इस विन्यास योग्य प्रोटोटाइप राशि को देखें।')}</p></div></section>
-  {(progress.payment.status === 'declined' || progress.payment.status === 'cancelled') && <div className="lf-alert" role="status"><CircleAlert size={20} /><div><strong>{local(language, `Previous attempt: ${statusCopy(language, progress.payment.status)}`, `पिछला प्रयास: ${statusCopy(language, progress.payment.status)}`)}</strong><p>{local(language, 'No payment was confirmed. You may safely begin a new sandbox attempt.', 'कोई भुगतान पुष्ट नहीं हुआ। आप सुरक्षित रूप से नया सैंडबॉक्स प्रयास शुरू कर सकते हैं।')}</p></div></div>}
-  <div className="payment-layout"><section className="payment-summary" aria-labelledby="fee-summary-title"><div className="payment-summary__heading"><div><p className="eyebrow">{local(language, 'Fee summary', 'शुल्क सारांश')}</p><h2 id="fee-summary-title">{local(language, "Learner's Licence", 'लर्नर लाइसेंस')}</h2></div><strong>{money(total, language)}</strong></div><ul>{MP_LL_DEMO_FEE.items.map((item) => <li key={item.id}><div><strong>{local(language, item.labelEn, item.labelHi)}</strong><small>{local(language, item.explanationEn, item.explanationHi)}</small></div><span>{money(item.amountPaise, language)}</span></li>)}</ul><dl><div><dt>{local(language, 'Application number', 'आवेदन संख्या')}</dt><dd>{applicationId}</dd></div><div><dt>{local(language, 'Device check', 'डिवाइस जाँच')}</dt><dd>{local(language, 'Passed', 'सफल')}</dd></div><div><dt>{local(language, 'Recovery rehearsal', 'रिकवरी अभ्यास')}</dt><dd>{local(language, 'Completed', 'पूरा')}</dd></div></dl><div className="payment-summary__total"><span>{local(language, 'Total', 'कुल')}</span><strong>{money(total, language)}</strong></div></section>
-  <section className="payment-methods" aria-labelledby="payment-method-title"><p className="eyebrow">{local(language, 'Payment method', 'भुगतान माध्यम')}</p><h2 id="payment-method-title">{local(language, 'Choose a gateway option', 'गेटवे विकल्प चुनें')}</h2><fieldset><legend className="visually-hidden">{local(language, 'Payment method', 'भुगतान माध्यम')}</legend>{([['upi', Smartphone, 'UPI', 'Test UPI ID'], ['card', CreditCard, local(language, 'Card', 'कार्ड'), local(language, 'Test card details', 'परीक्षण कार्ड विवरण')], ['net-banking', Landmark, local(language, 'Net banking', 'नेट बैंकिंग'), local(language, 'Test bank selection', 'परीक्षण बैंक चयन')]] as const).map(([value, Icon, title, detail]) => <label className={`payment-method ${method === value ? 'payment-method--selected' : ''}`} key={value}><input type="radio" name="payment-method" value={value} checked={method === value} onChange={() => setMethod(value)} /><Icon size={22} /><span><strong>{title}</strong><small>{detail}</small></span></label>)}</fieldset><details className="context-help"><summary><TriangleAlert size={18} /> {local(language, 'What if payment does not return?', 'यदि भुगतान वापस न आए तो क्या होगा?')}</summary><div><p>{local(language, 'Do not pay again immediately. Open Payment status so the existing attempt can be checked first.', 'तुरंत दोबारा भुगतान न करें। पहले मौजूदा प्रयास की जाँच के लिए भुगतान स्थिति खोलें।')}</p></div></details><label className="consent-box"><input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} /><span><strong>{local(language, 'I reviewed the application and amount.', 'मैंने आवेदन और राशि देख ली है।')}</strong><small>{local(language, 'The next page opens a separate sandbox gateway. Do not enter real financial information.', 'अगला पेज अलग सैंडबॉक्स गेटवे खोलेगा। वास्तविक वित्तीय जानकारी दर्ज न करें।')}</small></span></label></section></div>
-  <div className="journey-contract" aria-label={local(language, 'What is safe right now', 'अभी क्या सुरक्षित है')}><ShieldCheck size={21} /><div><strong>{local(language, 'What is safe right now', 'अभी क्या सुरक्षित है')}</strong><ul><li>{local(language, 'Application saved', 'आवेदन सहेजा गया')}</li><li>{local(language, 'No payment attempt is active', 'कोई भुगतान प्रयास सक्रिय नहीं है')}</li><li>{local(language, 'Device and recovery checks passed', 'डिवाइस और रिकवरी जाँच सफल हैं')}</li></ul></div></div>
-  <div className="lf-actions"><button className="button button--primary" disabled={!confirmed || paymentBlocksNewAttempt(progress.payment)} onClick={begin}>{local(language, 'Continue to secure gateway', 'सुरक्षित गेटवे पर जाएँ')} <ExternalLink size={18} /></button><FlowLink className="button button--secondary" href={`/mp/application/${applicationId}`}><ArrowLeft size={18} /> {local(language, 'Exit safely', 'सुरक्षित रूप से बाहर जाएँ')}</FlowLink></div></>
+  return (
+    <>
+      <Breadcrumbs language={language} applicationId={applicationId} current={local(language, 'Fee payment', 'शुल्क भुगतान')} />
+      <section className="page-title">
+        <div>
+          <p className="eyebrow">{local(language, 'Fee payment', 'शुल्क भुगतान')}</p>
+          <h1 tabIndex={-1}>{local(language, 'Review fee and choose payment method', 'शुल्क देखें और भुगतान का तरीका चुनें')}</h1>
+          <p>{local(language, 'Your device check and practice are complete. Check the fee details before you pay.', 'आपकी डिवाइस जाँच और अभ्यास पूरे हैं। भुगतान से पहले शुल्क का विवरण जाँच लें।')}</p>
+        </div>
+      </section>
+      {(progress.payment.status === 'declined' || progress.payment.status === 'cancelled') && (
+        <div className="lf-alert" role="status">
+          <CircleAlert size={20} />
+          <div>
+            <strong>{local(language, `Previous attempt: ${statusCopy(language, progress.payment.status)}`, `पिछला प्रयास: ${statusCopy(language, progress.payment.status)}`)}</strong>
+            <p>{local(language, 'No fee was charged. You can safely try again.', 'कोई शुल्क नहीं कटा। आप सुरक्षित रूप से दोबारा कोशिश कर सकते हैं।')}</p>
+          </div>
+        </div>
+      )}
+      <div className="payment-layout">
+        <section className="payment-summary" aria-labelledby="fee-summary-title">
+          <div className="payment-summary__heading">
+            <div>
+              <p className="eyebrow">{local(language, 'Fee summary', 'शुल्क सारांश')}</p>
+              <h2 id="fee-summary-title">{local(language, "Learner's Licence fee", 'लर्नर लाइसेंस शुल्क')}</h2>
+            </div>
+            <strong>{money(total, language)}</strong>
+          </div>
+          <ul>
+            {MP_LL_DEMO_FEE.items.map((item) => (
+              <li key={item.id}>
+                <div>
+                  <strong>{local(language, item.labelEn, item.labelHi)}</strong>
+                  <small>{local(language, item.explanationEn, item.explanationHi)}</small>
+                </div>
+                <span>{money(item.amountPaise, language)}</span>
+              </li>
+            ))}
+          </ul>
+          <dl>
+            <div><dt>{local(language, 'Application number', 'आवेदन संख्या')}</dt><dd>{applicationId}</dd></div>
+            <div><dt>{local(language, 'Device check', 'डिवाइस जाँच')}</dt><dd>{local(language, 'Passed', 'पास')}</dd></div>
+            <div><dt>{local(language, 'Practice question', 'अभ्यास प्रश्न')}</dt><dd>{local(language, 'Completed', 'पूरा हुआ')}</dd></div>
+          </dl>
+          <div className="payment-summary__total">
+            <span>{local(language, 'Total amount', 'कुल राशि')}</span>
+            <strong>{money(total, language)}</strong>
+          </div>
+        </section>
+
+        <section className="payment-methods" aria-labelledby="payment-method-title">
+          <p className="eyebrow">{local(language, 'Payment method', 'भुगतान का तरीका')}</p>
+          <h2 id="payment-method-title">{local(language, 'Choose how to pay', 'भुगतान का तरीका चुनें')}</h2>
+          <fieldset>
+            <legend className="visually-hidden">{local(language, 'Payment method', 'भुगतान का तरीका')}</legend>
+            {([
+              ['upi', Smartphone, 'UPI', local(language, 'Pay via UPI (GPay, PhonePe, Paytm)', 'UPI से भुगतान करें (GPay, PhonePe, Paytm)')],
+              ['card', CreditCard, local(language, 'Debit or Credit Card', 'डेबिट या क्रेडिट कार्ड'), local(language, 'Visa, Mastercard, RuPay', 'वीज़ा, मास्टरकार्ड, रुपे')],
+              ['net-banking', Landmark, local(language, 'Net Banking', 'नेट बैंकिंग'), local(language, 'All major Indian banks', 'सभी प्रमुख भारतीय बैंक')],
+            ] as const).map(([value, Icon, title, detail]) => (
+              <label className={`payment-method ${method === value ? 'payment-method--selected' : ''}`} key={value}>
+                <input type="radio" name="payment-method" value={value} checked={method === value} onChange={() => setMethod(value)} />
+                <Icon size={22} />
+                <span>
+                  <strong>{title}</strong>
+                  <small>{detail}</small>
+                </span>
+              </label>
+            ))}
+          </fieldset>
+          <details className="context-help">
+            <summary><TriangleAlert size={18} /> {local(language, 'What if the payment screen does not return?', 'अगर भुगतान के बाद स्क्रीन वापस न आए?')}</summary>
+            <div>
+              <p>{local(language, 'Do not pay again immediately. Open the payment status page to check whether your payment went through.', 'तुरंत दोबारा भुगतान न करें। भुगतान स्थिति पेज खोलकर देखें कि भुगतान सफल हुआ या नहीं।')}</p>
+            </div>
+          </details>
+          <label className="consent-box">
+            <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
+            <span>
+              <strong>{local(language, 'I have checked the fee and application details.', 'मैंने शुल्क और आवेदन का विवरण देख लिया है।')}</strong>
+              <small>{local(language, 'This demo opens a simulated payment gateway. Do not enter real bank or card details.', 'यह डेमो एक सिम्युलेटेड पेमेंट गेटवे खोलेगा। अपने असली बैंक या कार्ड का विवरण न डालें।')}</small>
+            </span>
+          </label>
+        </section>
+      </div>
+      <div className="journey-contract" aria-label={local(language, 'What is safe right now', 'अभी क्या सुरक्षित है')}>
+        <ShieldCheck size={21} />
+        <div>
+          <strong>{local(language, 'What is safe right now', 'अभी क्या सुरक्षित है')}</strong>
+          <ul>
+            <li>{local(language, 'Application saved', 'आवेदन सहेजा गया')}</li>
+            <li>{local(language, 'No fee charged yet', 'अभी कोई शुल्क नहीं कटा')}</li>
+            <li>{local(language, 'Device check and practice complete', 'डिवाइस जाँच और अभ्यास पूरा हुआ')}</li>
+          </ul>
+        </div>
+      </div>
+      <div className="lf-actions">
+        <button className="button button--primary" disabled={!confirmed || paymentBlocksNewAttempt(progress.payment)} onClick={begin}>
+          {local(language, 'Pay now', 'अभी भुगतान करें')} <ExternalLink size={18} />
+        </button>
+        <FlowLink className="button button--secondary" href={`/mp/application/${applicationId}`}>
+          <ArrowLeft size={18} /> {local(language, 'Back to application status', 'आवेदन स्थिति पर लौटें')}
+        </FlowLink>
+      </div>
+    </>
+  )
 }
 
 export function PaymentRedirectPage({ language, applicationId }: { language: Language; applicationId: string }) {
@@ -126,19 +292,42 @@ export function PaymentRedirectPage({ language, applicationId }: { language: Lan
     setProgress(updated)
     navigatePortal(`/sandbox-gateway/${applicationId}`)
   }
-  return <><Breadcrumbs language={language} applicationId={applicationId} current={local(language, 'Gateway redirect', 'गेटवे रीडायरेक्ट')} /><section className="redirect-panel"><span><ExternalLink size={32} /></span><p className="eyebrow">{local(language, 'Leaving department portal', 'विभागीय पोर्टल से बाहर जा रहे हैं')}</p><h1 tabIndex={-1}>{local(language, 'Continue to the secure test gateway', 'सुरक्षित परीक्षण गेटवे पर जाएँ')}</h1><p>{local(language, 'The gateway will authorize this sandbox transaction and return you to the same application. The department portal does not ask for payment credentials here.', 'गेटवे इस सैंडबॉक्स लेन-देन को अधिकृत करके इसी आवेदन पर वापस लाएगा। विभागीय पोर्टल यहाँ भुगतान विवरण नहीं माँगता।')}</p><dl><div><dt>{local(language, 'Amount', 'राशि')}</dt><dd>{money(progress.payment.amountPaise, language)}</dd></div><div><dt>{local(language, 'Method', 'माध्यम')}</dt><dd>{progress.payment.method}</dd></div><div><dt>{local(language, 'Application', 'आवेदन')}</dt><dd>{applicationId}</dd></div></dl><div className="lf-actions"><button className="button button--primary" onClick={open}>{local(language, 'Open secure test gateway', 'सुरक्षित परीक्षण गेटवे खोलें')} <ArrowRight size={18} /></button><FlowLink className="button button--secondary" href={`/mp/application/${applicationId}/payment`}>{local(language, 'Return to fee review', 'शुल्क समीक्षा पर लौटें')}</FlowLink></div></section></>
+  return (
+    <>
+      <Breadcrumbs language={language} applicationId={applicationId} current={local(language, 'Payment gateway', 'पेमेंट गेटवे')} />
+      <section className="redirect-panel">
+        <span><ExternalLink size={32} /></span>
+        <p className="eyebrow">{local(language, 'Opening payment gateway', 'पेमेंट गेटवे खुल रहा है')}</p>
+        <h1 tabIndex={-1}>{local(language, 'Opening payment gateway', 'पेमेंट गेटवे खुल रहा है')}</h1>
+        <p>{local(language, 'You are moving to the secure payment page to complete this demo payment.', 'डेमो भुगतान पूरा करने के लिए आपको सुरक्षित पेमेंट पेज पर भेजा जा रहा है।')}</p>
+        <dl>
+          <div><dt>{local(language, 'Amount', 'राशि')}</dt><dd>{money(progress.payment.amountPaise, language)}</dd></div>
+          <div><dt>{local(language, 'Method', 'माध्यम')}</dt><dd>{(progress.payment.method ?? 'UPI').toUpperCase()}</dd></div>
+          <div><dt>{local(language, 'Application', 'आवेदन')}</dt><dd>{applicationId}</dd></div>
+        </dl>
+        <div className="lf-actions">
+          <button className="button button--primary" onClick={open}>
+            {local(language, 'Continue to payment gateway', 'पेमेंट गेटवे पर जाएँ')} <ArrowRight size={18} />
+          </button>
+          <FlowLink className="button button--secondary" href={`/mp/application/${applicationId}/payment`}>
+            {local(language, 'Back to fee details', 'शुल्क विवरण पर लौटें')}
+          </FlowLink>
+        </div>
+      </section>
+    </>
+  )
 }
 
 export function GatewayPage({ language, applicationId }: { language: Language; applicationId: string }) {
   const [progress, setProgress] = useState(() => loadJourneyProgress(applicationId))
-  const [credential, setCredential] = useState(progress.payment.method === 'upi' ? 'demo@licenceflow' : progress.payment.method === 'card' ? '4242 4242 4242 4242' : 'LicenceFlow Test Bank')
+  const [credential, setCredential] = useState(progress.payment.method === 'upi' ? 'demo@licenceflow' : progress.payment.method === 'card' ? '4242 4242 4242 4242' : 'LicenceFlow Demo Bank')
   const [outcome, setOutcome] = useState<PaymentOutcome>('confirmed')
   const [error, setError] = useState('')
 
   const authorize = (event: FormEvent) => {
     event.preventDefault()
     if (credential.trim().length < 4) {
-      setError(local(language, 'Enter the provided fictional test value.', 'दिया गया काल्पनिक परीक्षण मान दर्ज करें।'))
+      setError(local(language, 'Enter a demo value to continue.', 'आगे बढ़ने के लिए डेमो मान दर्ज करें।'))
       return
     }
     const updated = finishSyntheticPayment(progress, outcome)
@@ -154,10 +343,75 @@ export function GatewayPage({ language, applicationId }: { language: Language; a
     navigatePortal(`/mp/application/${applicationId}/payment/return`)
   }
 
-  if (progress.payment.status !== 'redirecting') return <div className="gateway-shell"><main className="gateway-card"><CircleAlert size={34} /><h1>{local(language, 'This gateway session is no longer active', 'यह गेटवे सत्र अब सक्रिय नहीं है')}</h1><p>{local(language, 'Return to the department portal to check the saved transaction.', 'सहेजे गए लेन-देन की जाँच के लिए विभागीय पोर्टल पर लौटें।')}</p><FlowLink className="button button--primary" href={`/mp/application/${applicationId}/payment-status`}>{local(language, 'Return to department', 'विभाग पर लौटें')}</FlowLink></main></div>
+  if (progress.payment.status !== 'redirecting') {
+    return (
+      <div className="gateway-shell">
+        <main className="gateway-card">
+          <CircleAlert size={34} />
+          <h1>{local(language, 'This demo session is no longer active', 'यह डेमो सत्र अब सक्रिय नहीं है')}</h1>
+          <p>{local(language, 'Return to the portal to check your saved payment status.', 'सहेजी गई स्थिति देखने के लिए पोर्टल पर लौटें।')}</p>
+          <FlowLink className="button button--primary" href={`/mp/application/${applicationId}/payment-status`}>
+            {local(language, 'Check payment status', 'भुगतान स्थिति जाँचें')}
+          </FlowLink>
+        </main>
+      </div>
+    )
+  }
 
-  const methodLabel = progress.payment.method === 'upi' ? 'UPI ID' : progress.payment.method === 'card' ? local(language, 'Test card number', 'परीक्षण कार्ड नंबर') : local(language, 'Test bank', 'परीक्षण बैंक')
-  return <div className="gateway-shell"><header className="gateway-header"><div><span><LockKeyhole size={20} /></span><div><strong>{local(language, 'LicenceFlow Test Gateway', 'लाइसेंसफ्लो परीक्षण गेटवे')}</strong><small>{local(language, 'Encrypted sandbox session', 'एन्क्रिप्टेड सैंडबॉक्स सत्र')}</small></div></div><span className="gateway-sandbox">SANDBOX</span></header><main className="gateway-card"><div className="gateway-merchant"><Building2 size={26} /><div><small>{local(language, 'Paying', 'भुगतान')}</small><strong>{local(language, 'Madhya Pradesh Transport Department prototype', 'मध्य प्रदेश परिवहन विभाग प्रोटोटाइप')}</strong></div><b>{money(progress.payment.amountPaise, language)}</b></div><form onSubmit={authorize}><div className="field"><label htmlFor="gateway-credential">{methodLabel}</label><input id="gateway-credential" value={credential} onChange={(event) => { setCredential(event.target.value); setError('') }} aria-describedby="gateway-safety" autoComplete="off" /></div>{error && <p className="field-error" role="alert">{error}</p>}<p id="gateway-safety" className="gateway-safety"><ShieldCheck size={17} /> {local(language, 'Use only the pre-filled fictional value. No bank is contacted.', 'केवल पहले से भरा काल्पनिक मान उपयोग करें। किसी बैंक से संपर्क नहीं होता।')}</p><details className="gateway-test-controls"><summary>{local(language, 'Gateway test controls', 'गेटवे परीक्षण नियंत्रण')} <ChevronDown size={17} /></summary><label htmlFor="gateway-outcome">{local(language, 'Return this test outcome', 'यह परीक्षण परिणाम लौटाएँ')}</label><select id="gateway-outcome" value={outcome} onChange={(event) => setOutcome(event.target.value as PaymentOutcome)}><option value="confirmed">{local(language, 'Successful authorization', 'सफल प्राधिकरण')}</option><option value="pending">{local(language, 'Confirmation pending', 'पुष्टि लंबित')}</option><option value="declined">{local(language, 'Authorization declined', 'प्राधिकरण अस्वीकृत')}</option><option value="cancelled">{local(language, 'Citizen cancelled', 'नागरिक ने रद्द किया')}</option><option value="timed-out">{local(language, 'Gateway timeout', 'गेटवे समय समाप्त')}</option><option value="unknown">{local(language, 'Return status lost', 'वापसी स्थिति खो गई')}</option></select></details><button className="button button--primary button--full" type="submit">{local(language, 'Authorize test payment', 'परीक्षण भुगतान अधिकृत करें')} <ArrowRight size={18} /></button><button className="gateway-cancel" type="button" onClick={cancel}>{local(language, 'Cancel and return', 'रद्द करके लौटें')}</button></form></main><footer>{local(language, 'Independent hackathon sandbox · No real transaction', 'स्वतंत्र हैकाथॉन सैंडबॉक्स · कोई वास्तविक लेन-देन नहीं')}</footer></div>
+  const methodLabel = progress.payment.method === 'upi' ? 'UPI ID' : progress.payment.method === 'card' ? local(language, 'Demo card number', 'डेमो कार्ड नंबर') : local(language, 'Demo bank', 'डेमो बैंक')
+  return (
+    <div className="gateway-shell">
+      <header className="gateway-header">
+        <div>
+          <span><LockKeyhole size={20} /></span>
+          <div>
+            <strong>{local(language, 'LicenceFlow Demo Gateway', 'लाइसेंसफ्लो डेमो गेटवे')}</strong>
+            <small>{local(language, 'Demo payment session', 'डेमो भुगतान सत्र')}</small>
+          </div>
+        </div>
+        <span className="gateway-sandbox">DEMO</span>
+      </header>
+      <main className="gateway-card">
+        <div className="gateway-merchant">
+          <Building2 size={26} />
+          <div>
+            <small>{local(language, 'Paying', 'भुगतान')}</small>
+            <strong>{local(language, 'MP Transport Department (Demo)', 'म.प्र. परिवहन विभाग (डेमो)')}</strong>
+          </div>
+          <b>{money(progress.payment.amountPaise, language)}</b>
+        </div>
+        <form onSubmit={authorize}>
+          <div className="field">
+            <label htmlFor="gateway-credential">{methodLabel}</label>
+            <input id="gateway-credential" value={credential} onChange={(event) => { setCredential(event.target.value); setError('') }} aria-describedby="gateway-safety" autoComplete="off" />
+          </div>
+          {error && <p className="field-error" role="alert">{error}</p>}
+          <p id="gateway-safety" className="gateway-safety">
+            <ShieldCheck size={17} /> {local(language, 'Use only demo details. Do not enter real bank or card numbers.', 'केवल डेमो जानकारी भरें। असली बैंक या कार्ड नंबर न डालें।')}
+          </p>
+          <details className="gateway-test-controls">
+            <summary>{local(language, 'Demo test outcomes', 'डेमो परिणाम चुनें')} <ChevronDown size={17} /></summary>
+            <label htmlFor="gateway-outcome">{local(language, 'Choose result to simulate', 'सिम्युलेट करने के लिए परिणाम चुनें')}</label>
+            <select id="gateway-outcome" value={outcome} onChange={(event) => setOutcome(event.target.value as PaymentOutcome)}>
+              <option value="confirmed">{local(language, 'Successful payment', 'सफल भुगतान')}</option>
+              <option value="pending">{local(language, 'Payment pending', 'भुगतान लंबित')}</option>
+              <option value="declined">{local(language, 'Payment failed', 'भुगतान विफल')}</option>
+              <option value="cancelled">{local(language, 'Payment cancelled', 'भुगतान रद्द')}</option>
+              <option value="timed-out">{local(language, 'Gateway timeout', 'समय समाप्त')}</option>
+              <option value="unknown">{local(language, 'Status lost', 'स्थिति खो गई')}</option>
+            </select>
+          </details>
+          <button className="button button--primary button--full" type="submit">
+            {local(language, 'Complete demo payment', 'डेमो भुगतान पूरा करें')} <ArrowRight size={18} />
+          </button>
+          <button className="gateway-cancel" type="button" onClick={cancel}>
+            {local(language, 'Cancel and go back', 'रद्द करें और वापस जाएँ')}
+          </button>
+        </form>
+      </main>
+      <footer>{local(language, 'Demo payment system · No real money is charged', 'डेमो भुगतान प्रणाली · कोई वास्तविक शुल्क नहीं')}</footer>
+    </div>
+  )
 }
 
 export function PaymentReturnPage({ language, applicationId, onStageChange }: { language: Language; applicationId: string; onStageChange?: StageChange }) {
@@ -168,17 +422,17 @@ export function PaymentReturnPage({ language, applicationId, onStageChange }: { 
   const retryable = payment.status === 'declined' || payment.status === 'cancelled'
   const Icon = confirmed ? CheckCircle2 : uncertain ? Clock3 : retryable ? XCircle : RefreshCcw
   const title = confirmed
-    ? local(language, 'Payment confirmed and linked', 'भुगतान पुष्ट होकर जुड़ गया')
+    ? local(language, 'Payment successful', 'भुगतान सफल रहा')
     : uncertain
-      ? local(language, 'Payment status needs checking', 'भुगतान स्थिति की जाँच आवश्यक है')
+      ? local(language, 'Checking payment status', 'भुगतान स्थिति जाँची जा रही है')
       : retryable
-        ? local(language, `Payment ${payment.status}`, payment.status === 'declined' ? 'भुगतान अस्वीकृत हुआ' : 'भुगतान रद्द हुआ')
+        ? local(language, 'Payment was not completed', 'भुगतान पूरा नहीं हुआ')
         : local(language, 'Return to payment status', 'भुगतान स्थिति पर लौटें')
   const body = confirmed
-    ? local(language, 'One sandbox receipt was created. You do not need to pay again.', 'एक सैंडबॉक्स रसीद बनी है। दोबारा भुगतान आवश्यक नहीं है।')
+    ? local(language, 'Your receipt is ready. You do not need to pay again.', 'आपकी रसीद तैयार है। दोबारा भुगतान करने की जरूरत नहीं है।')
     : uncertain
-      ? local(language, 'Do not pay again yet. Check and reconcile this existing attempt first.', 'अभी दोबारा भुगतान न करें। पहले इसी प्रयास की जाँच और मिलान करें।')
-      : local(language, 'No payment was confirmed. Your application and readiness results remain saved.', 'कोई भुगतान पुष्ट नहीं हुआ। आपका आवेदन और तैयारी परिणाम सहेजे हुए हैं।')
+      ? local(language, 'Please do not pay again. We are checking your transaction.', 'कृपया दोबारा भुगतान न करें। हम आपके लेन-देन की जाँच कर रहे हैं।')
+      : local(language, 'No money was deducted. Your application remains saved.', 'कोई शुल्क नहीं कटा। आपका आवेदन सुरक्षित है।')
 
   const retry = () => {
     const updated = preparePaymentRetry(progress)
@@ -189,5 +443,46 @@ export function PaymentReturnPage({ language, applicationId, onStageChange }: { 
   useEffect(() => {
     if (confirmed) onStageChange?.('Road-safety tutorial')
   }, [confirmed])
-  return <><Breadcrumbs language={language} applicationId={applicationId} current={local(language, 'Gateway return', 'गेटवे वापसी')} /><section className={`payment-return payment-return--${payment.status}`}><span><Icon size={36} /></span><p className="eyebrow">{local(language, `Transaction status · ${statusCopy(language, payment.status)}`, `लेन-देन स्थिति · ${statusCopy(language, payment.status)}`)}</p><h1 tabIndex={-1}>{title}</h1><p>{body}</p><div className="journey-contract"><ShieldCheck size={20} /><div><strong>{local(language, 'What is safe right now', 'अभी क्या सुरक्षित है')}</strong><ul><li>{local(language, 'Application saved', 'आवेदन सहेजा गया')}</li><li>{confirmed ? local(language, 'Payment confirmed once', 'भुगतान एक बार पुष्ट') : uncertain ? local(language, 'Existing attempt protected from duplicate payment', 'मौजूदा प्रयास दोहरे भुगतान से सुरक्षित') : local(language, 'No confirmed charge in this sandbox', 'इस सैंडबॉक्स में कोई पुष्ट शुल्क नहीं')}</li><li>{local(language, 'Compatibility and rehearsal remain passed', 'अनुकूलता और अभ्यास सफल बने हुए हैं')}</li></ul></div></div><div className="lf-actions">{confirmed && <FlowLink className="button button--primary" href={`/mp/application/${applicationId}/receipt`}><ReceiptText size={18} /> {local(language, 'Open receipt', 'रसीद खोलें')}</FlowLink>}{uncertain && <FlowLink className="button button--primary" href={`/mp/application/${applicationId}/payment-status`}>{local(language, 'Check existing payment', 'मौजूदा भुगतान जाँचें')} <ArrowRight size={18} /></FlowLink>}{retryable && <button className="button button--primary" onClick={retry}>{local(language, 'Return and try again', 'लौटकर दोबारा प्रयास करें')} <RefreshCcw size={18} /></button>}<FlowLink className="button button--secondary" href={`/mp/application/${applicationId}`}>{local(language, 'Application status', 'आवेदन स्थिति')}</FlowLink></div></section></>
+  return (
+    <>
+      <Breadcrumbs language={language} applicationId={applicationId} current={local(language, 'Payment result', 'भुगतान परिणाम')} />
+      <section className={`payment-return payment-return--${payment.status}`}>
+        <span><Icon size={36} /></span>
+        <p className="eyebrow">{local(language, `Payment status · ${statusCopy(language, payment.status)}`, `भुगतान स्थिति · ${statusCopy(language, payment.status)}`)}</p>
+        <h1 tabIndex={-1}>{title}</h1>
+        <p>{body}</p>
+        <div className="journey-contract">
+          <ShieldCheck size={20} />
+          <div>
+            <strong>{local(language, 'What is safe right now', 'अभी क्या सुरक्षित है')}</strong>
+            <ul>
+              <li>{local(language, 'Application saved', 'आवेदन सहेजा गया')}</li>
+              <li>{confirmed ? local(language, 'Payment confirmed once', 'भुगतान एक बार पुष्ट') : uncertain ? local(language, 'Protected from duplicate payment', 'दोहरे भुगतान से सुरक्षित') : local(language, 'No charge made in this demo', 'इस डेमो में कोई शुल्क नहीं कटा')}</li>
+              <li>{local(language, 'Device check and practice remain passed', 'डिवाइस जाँच और अभ्यास पूरा हुआ')}</li>
+            </ul>
+          </div>
+        </div>
+        <div className="lf-actions">
+          {confirmed && (
+            <FlowLink className="button button--primary" href={`/mp/application/${applicationId}/receipt`}>
+              <ReceiptText size={18} /> {local(language, 'View receipt', 'रसीद देखें')}
+            </FlowLink>
+          )}
+          {uncertain && (
+            <FlowLink className="button button--primary" href={`/mp/application/${applicationId}/payment-status`}>
+              {local(language, 'Check payment status', 'भुगतान स्थिति जाँचें')} <ArrowRight size={18} />
+            </FlowLink>
+          )}
+          {retryable && (
+            <button className="button button--primary" onClick={retry}>
+              {local(language, 'Try paying again', 'दोबारा भुगतान करें')} <RefreshCcw size={18} />
+            </button>
+          )}
+          <FlowLink className="button button--secondary" href={`/mp/application/${applicationId}`}>
+            {local(language, 'Application status', 'आवेदन स्थिति')}
+          </FlowLink>
+        </div>
+      </section>
+    </>
+  )
 }
