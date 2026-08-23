@@ -841,7 +841,7 @@ export function SubmittedPage({ onContinue, language }: { onContinue: (draft: LL
 }
 
 export function UploadsPage({ applicationId, onComplete, language }: { applicationId: string; onComplete: (draft: LLApplicationDraft) => void; language: AppLanguage }) {
-  const [draft, setDraft] = useState<LLApplicationDraft>(() => loadApplicationDraft() ?? createEmptyDraft(applicationId))
+  const [draft, setDraft] = useState<LLApplicationDraft>(() => loadApplicationDraft(applicationId) ?? createEmptyDraft(applicationId))
   const update = (patch: Partial<LLApplicationDraft>) => { const next = { ...draft, ...patch }; setDraft(next); saveApplicationDraft(next) }
   const complete = draft.documentsUploaded && draft.photoUploaded && draft.signatureUploaded
   return (

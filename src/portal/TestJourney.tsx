@@ -454,17 +454,16 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
     examCompleted: state.exam.status === 'completed',
     knowledgePassed: passed,
   })
-  const draft = loadApplicationDraft()
-  const matchingDraft = draft?.applicationId === applicationId ? draft : null
-  const holderName = matchingDraft
-    ? [matchingDraft.firstName, matchingDraft.middleName, matchingDraft.lastName].filter(Boolean).join(' ') || state.application.fullName
+  const draft = loadApplicationDraft(applicationId)
+  const holderName = draft
+    ? [draft.firstName, draft.middleName, draft.lastName].filter(Boolean).join(' ') || state.application.fullName
     : state.application.fullName
   const completedAt = [...state.events].reverse().find((event) => event.kind === 'EXAM_COMPLETED')?.at ?? progress.updatedAt
   const licenceData: DemonstrationLicenceData = {
     applicationId,
     holderName: holderName || local(language, 'Demo MP applicant', 'डेमो मध्य प्रदेश आवेदक'),
-    dateOfBirth: matchingDraft?.dateOfBirth,
-    vehicleClasses: matchingDraft?.vehicleClasses.length ? matchingDraft.vehicleClasses : state.application.vehicleClass.split(/\s*\+\s*/).filter(Boolean),
+    dateOfBirth: draft?.dateOfBirth,
+    vehicleClasses: draft?.vehicleClasses.length ? draft.vehicleClasses : state.application.vehicleClass.split(/\s*\+\s*/).filter(Boolean),
     completedAt,
     paymentReference: progress.payment.reference,
   }

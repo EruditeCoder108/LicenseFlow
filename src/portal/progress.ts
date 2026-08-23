@@ -163,9 +163,8 @@ export function completeTutorial(progress: LLJourneyProgress): LLJourneyProgress
   }
 }
 
-export function completedJourneyStageCount(progress: LLJourneyProgress): number {
-  return 3
-    + (progress.readiness.status === 'passed' ? 1 : 0)
+export function completedProgressItemsCount(progress: LLJourneyProgress): number {
+  return (progress.readiness.status === 'passed' ? 1 : 0)
     + (progress.rehearsal.status === 'completed' ? 1 : 0)
     + (isPaymentConfirmed(progress.payment) ? 1 : 0)
     + (progress.tutorial.status === 'completed' ? 1 : 0)

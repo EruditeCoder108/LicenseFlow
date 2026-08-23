@@ -3,7 +3,7 @@ import {
   completeReadiness,
   completeRehearsal,
   completeTutorial,
-  completedJourneyStageCount,
+  completedProgressItemsCount,
   createJourneyProgress,
   finishSyntheticPayment,
   startSyntheticPayment,
@@ -31,7 +31,7 @@ describe('MP LL journey progress', () => {
     expect(paid.payment.status).toBe('confirmed')
     expect(paid.payment.reference).toContain('SBX')
     expect(startSyntheticPayment(paid, 'upi', 'ATTEMPT-2')).toBe(paid)
-    expect(completedJourneyStageCount(paid)).toBe(6)
+    expect(completedProgressItemsCount(paid)).toBe(3)
   })
 
   it('does not complete learning before payment', () => {

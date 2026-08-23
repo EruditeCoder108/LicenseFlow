@@ -59,6 +59,7 @@ import { isPaymentConfirmed, paymentNeedsReconciliation } from './portal/payment
 import { loadJourneyProgress } from './portal/progress'
 import { loadExamSession } from './portal/examSession'
 import { clearDemoSession, loadDemoSession, saveDemoSession, type DemoSession } from './portal/auth'
+import { deriveJourneyState, getRouteAccess } from './portal/journeyState'
 
 const ApplicationFlow = lazy(() => import('./portal/ApplicationFlow').then((module) => ({ default: module.ApplicationFlow })))
 const SubmittedPage = lazy(() => import('./portal/ApplicationFlow').then((module) => ({ default: module.SubmittedPage })))
@@ -793,6 +794,14 @@ function ServicesPage({ language, demoApplication }: { language: Language; demoA
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState<'All' | ServiceDefinition['category']>('All')
 
+  const journey = useMemo(() => {
+    if (!demoApplication) return null
+    const draft = loadApplicationDraft(demoApplication.id)
+    const progress = loadJourneyProgress(demoApplication.id)
+    const examSession = loadExamSession(demoApplication.id, progress)
+    return deriveJourneyState({ applicationId: demoApplication.id, draft, progress, examSession })
+  }, [demoApplication])
+
   const filtered = useMemo(() => {
     const needle = query.trim().toLocaleLowerCase()
     return services.filter((service) => {
@@ -904,14 +913,14 @@ function ServicesPage({ language, demoApplication }: { language: Language; demoA
             </div>
           </div>
 
-          {demoApplication ? (
+          {demoApplication && journey ? (
             <div className="mp-services-hero__saved-bar">
               <div className="mp-saved-bar__info">
                 <span className="mp-saved-bar__tag"><CheckCircle2 size={15} /> {copy(language, 'Saved application', 'सहेजा आवेदन')}</span>
                 <strong>{demoApplication.id} • {citizenApplicantName(demoApplication.applicant)}</strong>
-                <small>{copy(language, 'Next action: ', 'अगला कार्य: ')}{citizenStageName(demoApplication.lastStage, language)}</small>
+                <small>{copy(language, 'Next action: ', 'अगला कार्य: ')}{copy(language, journey.nextAction.title.en, journey.nextAction.title.hi)}</small>
               </div>
-              <PortalLink href={`/mp/application/${demoApplication.id}`} className="button button--light mp-saved-bar__cta">
+              <PortalLink href={journey.resumeHref} className="button button--light mp-saved-bar__cta">
                 {copy(language, 'Resume application', 'आवेदन जारी रखें')} <ArrowRight size={18} />
               </PortalLink>
             </div>
@@ -1103,6 +1112,14 @@ const llProcessSteps = [
 function LLStartPage({ onCreate, language, demoApplication }: { onCreate: (kind: 'full' | 'judge') => void; language: Language; demoApplication: DemoApplication | null }) {
   const [confirmNewApplication, setConfirmNewApplication] = useState(false)
 
+  const journey = useMemo(() => {
+    if (!demoApplication) return null
+    const draft = loadApplicationDraft(demoApplication.id)
+    const progress = loadJourneyProgress(demoApplication.id)
+    const examSession = loadExamSession(demoApplication.id, progress)
+    return deriveJourneyState({ applicationId: demoApplication.id, draft, progress, examSession })
+  }, [demoApplication])
+
   const newApplicationCard = (
     <article className={`ll-launch-card${demoApplication ? '' : ' ll-launch-card--primary'}`}>
       <div className="ll-launch-card__header">
@@ -1155,7 +1172,7 @@ function LLStartPage({ onCreate, language, demoApplication }: { onCreate: (kind:
         <h2>{copy(language, 'Continue where you stopped', 'जहाँ रुके थे वहीं से जारी रखें')}</h2>
         <dl className="ll-saved-facts">
           <div><dt>{copy(language, 'Application number', 'आवेदन संख्या')}</dt><dd>{demoApplication.id}</dd></div>
-          <div><dt>{copy(language, 'Next action', 'अगला काम')}</dt><dd>{citizenStageName(demoApplication.lastStage, language)}</dd></div>
+          <div><dt>{copy(language, 'Next action', 'अगला काम')}</dt><dd>{journey ? copy(language, journey.nextAction.title.en, journey.nextAction.title.hi) : citizenStageName(demoApplication.lastStage, language)}</dd></div>
         </dl>
         <span className="ll-launch-card__meta-note">
           <CheckCircle2 size={15} aria-hidden="true" />
@@ -1163,7 +1180,7 @@ function LLStartPage({ onCreate, language, demoApplication }: { onCreate: (kind:
         </span>
       </div>
       <div className="ll-launch-card__footer">
-        <PortalLink href={`/mp/application/${demoApplication.id}`} className="button button--primary ll-launch-card__action">
+        <PortalLink href={journey?.resumeHref ?? `/mp/application/${demoApplication.id}`} className="button button--primary ll-launch-card__action">
           {copy(language, 'Continue saved application', 'सहेजा आवेदन जारी रखें')} <ArrowRight className="ll-launch-arrow" size={18} />
         </PortalLink>
       </div>
@@ -1290,50 +1307,107 @@ function LLStartPage({ onCreate, language, demoApplication }: { onCreate: (kind:
 
 function ApplicationPage({ application, language }: { application: DemoApplication; language: Language }) {
   const progress = loadJourneyProgress(application.id)
-  const savedDraft = loadApplicationDraft()
-  const uploadsComplete = Boolean(savedDraft?.documentsUploaded && savedDraft.photoUploaded && savedDraft.signatureUploaded)
+  const savedDraft = loadApplicationDraft(application.id)
   const examSession = loadExamSession(application.id, progress)
-  const examCompleted = examSession.stage === 'result'
-  const applicationStages: Array<[{ en: string; hi: string }, 'completed' | 'needs-action' | 'not-started']> = [
-    [{ en: 'Application details', hi: 'आवेदन की जानकारी' }, 'completed'],
-    [{ en: 'Identity verification', hi: 'पहचान सत्यापन' }, 'completed'],
-    [{ en: 'Photo and documents', hi: 'फोटो और दस्तावेज़' }, uploadsComplete ? 'completed' : 'needs-action'],
-    [{ en: 'Device compatibility', hi: 'डिवाइस अनुकूलता' }, progress.readiness.status === 'passed' ? 'completed' : 'needs-action'],
-    [{ en: 'Test rehearsal', hi: 'परीक्षा अभ्यास' }, progress.rehearsal.status === 'completed' ? 'completed' : progress.readiness.status === 'passed' ? 'needs-action' : 'not-started'],
-    [{ en: 'Fee payment', hi: 'शुल्क भुगतान' }, isPaymentConfirmed(progress.payment) ? 'completed' : progress.rehearsal.status === 'completed' ? 'needs-action' : 'not-started'],
-    [{ en: 'Road-safety tutorial', hi: 'सड़क सुरक्षा ट्यूटोरियल' }, progress.tutorial.status === 'completed' ? 'completed' : isPaymentConfirmed(progress.payment) ? 'needs-action' : 'not-started'],
-    [{ en: 'LL test', hi: 'एलएल परीक्षा' }, examCompleted ? 'completed' : progress.tutorial.status === 'completed' ? 'needs-action' : 'not-started'],
-    [{ en: 'Result and licence', hi: 'परिणाम और लाइसेंस' }, examCompleted ? 'completed' : 'not-started'],
-  ]
-  const next = !uploadsComplete
-    ? { title: copy(language, 'Complete document and image uploads', 'दस्तावेज़ और चित्र अपलोड पूरा करें'), body: copy(language, 'Check the document, photograph and signature previews before continuing.', 'आगे बढ़ने से पहले दस्तावेज़, फोटो और हस्ताक्षर पूर्वावलोकन जाँचें।'), route: 'uploads', action: copy(language, 'Open uploads', 'अपलोड खोलें') }
-    : progress.readiness.status !== 'passed'
-    ? { title: copy(language, 'Check this device before payment', 'भुगतान से पहले इस डिवाइस की जाँच करें'), body: copy(language, 'Check the camera, microphone, browser and connection so that test problems are found early.', 'कैमरा, माइक्रोफोन, ब्राउज़र और कनेक्शन जाँचें ताकि परीक्षा की समस्या पहले मिल सके।'), route: 'readiness', action: copy(language, 'Check device', 'डिवाइस जाँचें') }
-    : progress.rehearsal.status !== 'completed'
-      ? { title: copy(language, 'Complete the test rehearsal', 'परीक्षा अभ्यास पूरा करें'), body: copy(language, 'Learn how answers are saved and how a paused test can be resumed.', 'जानें कि उत्तर कैसे सहेजे जाते हैं और रुकी परीक्षा कैसे फिर शुरू होती है।'), route: 'rehearsal', action: copy(language, 'Start rehearsal', 'अभ्यास शुरू करें') }
-      : !isPaymentConfirmed(progress.payment)
-        ? paymentNeedsReconciliation(progress.payment)
-          ? { title: copy(language, 'Check the earlier payment attempt', 'पिछले भुगतान प्रयास की जाँच करें'), body: copy(language, 'Its final status is uncertain. Do not pay again until the existing attempt is reconciled.', 'अंतिम स्थिति अनिश्चित है। मौजूदा प्रयास का मिलान होने तक दोबारा भुगतान न करें।'), route: 'payment-status', action: copy(language, 'Check payment', 'भुगतान जाँचें') }
-          : { title: copy(language, 'Review and pay the fee', 'शुल्क देखें और भुगतान करें'), body: copy(language, 'Your device check and rehearsal are complete. Review the fee before continuing.', 'डिवाइस जाँच और अभ्यास पूरा है। आगे बढ़ने से पहले शुल्क देखें।'), route: 'payment', action: copy(language, 'Review fee', 'शुल्क देखें') }
-        : progress.tutorial.status !== 'completed'
-          ? { title: copy(language, 'Complete the road-safety tutorial', 'सड़क सुरक्षा ट्यूटोरियल पूरा करें'), body: copy(language, 'Study the required material before entering the online test.', 'ऑनलाइन परीक्षा शुरू करने से पहले जरूरी सामग्री पढ़ें।'), route: 'tutorial', action: copy(language, 'Open tutorial', 'ट्यूटोरियल खोलें') }
-          : examSession.stage === 'result'
-            ? { title: copy(language, 'View result and receipt', 'परिणाम और रसीद देखें'), body: copy(language, 'Review the test outcome and the completed journey record.', 'परीक्षा परिणाम और पूरी प्रक्रिया का रिकॉर्ड देखें।'), route: 'result', action: copy(language, 'View result', 'परिणाम देखें') }
-            : { title: examSession.stage === 'interruption' ? copy(language, 'Resume the paused test', 'रुकी हुई परीक्षा फिर शुरू करें') : examSession.stage === 'exam' ? copy(language, 'Continue the saved test', 'सहेजी गई परीक्षा जारी रखें') : copy(language, 'Start the LL test', 'एलएल परीक्षा शुरू करें'), body: copy(language, 'Each confirmed answer is saved before the next question opens.', 'अगला प्रश्न खुलने से पहले हर पक्का उत्तर सहेजा जाता है।'), route: examSession.stage === 'interruption' ? 'test-interruption' : examSession.stage === 'exam' ? 'test' : 'test-entry', action: examSession.stage === 'exam-intro' ? copy(language, 'Enter test', 'परीक्षा में जाएँ') : copy(language, 'Continue test', 'परीक्षा जारी रखें') }
-  const completed = 2 + (uploadsComplete ? 1 : 0) + (progress.readiness.status === 'passed' ? 1 : 0) + (progress.rehearsal.status === 'completed' ? 1 : 0) + (isPaymentConfirmed(progress.payment) ? 1 : 0) + (progress.tutorial.status === 'completed' ? 1 : 0) + (examCompleted ? 2 : 0)
+  const journey = deriveJourneyState({
+    applicationId: application.id,
+    draft: savedDraft,
+    progress,
+    examSession,
+  })
+
   const activity = [
     { title: copy(language, 'Application saved', 'आवेदन सहेजा गया'), detail: copy(language, 'Application details and declaration were recorded.', 'आवेदन जानकारी और घोषणा दर्ज हुई।'), time: application.savedAt },
     ...(progress.readiness.completedAt ? [{ title: copy(language, 'Device check passed', 'डिवाइस जाँच सफल'), detail: copy(language, 'Camera, microphone, browser and connection checks completed.', 'कैमरा, माइक्रोफोन, ब्राउज़र और कनेक्शन जाँच पूरी हुई।'), time: progress.readiness.completedAt }] : []),
-    ...(progress.rehearsal.completedAt ? [{ title: copy(language, 'Test rehearsal completed', 'परीक्षा अभ्यास पूरा'), detail: copy(language, 'Answer saving and recovery behavior was practiced.', 'उत्तर सहेजने और रिकवरी का अभ्यास हुआ।'), time: progress.rehearsal.completedAt }] : []),
+    ...(progress.rehearsal.completedAt ? [{ title: copy(language, 'Test practice completed', 'परीक्षा अभ्यास पूरा'), detail: copy(language, 'Answer saving and recovery behavior was practiced.', 'उत्तर सहेजने और रिकवरी का अभ्यास हुआ।'), time: progress.rehearsal.completedAt }] : []),
     ...progress.payment.activity.map((item) => ({ title: item[language === 'en' ? 'titleEn' : 'titleHi'], detail: item[language === 'en' ? 'detailEn' : 'detailHi'], time: item.at })),
     ...(progress.tutorial.completedAt ? [{ title: copy(language, 'Tutorial completed', 'ट्यूटोरियल पूरा'), detail: copy(language, 'Road-safety learning material was completed.', 'सड़क सुरक्षा अध्ययन सामग्री पूरी हुई।'), time: progress.tutorial.completedAt }] : []),
   ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+
   return (
     <>
       <Breadcrumbs items={[{ label: copy(language, 'Services', 'सेवाएँ'), href: '/mp/services' }, { label: copy(language, 'Application status', 'आवेदन की स्थिति') }]} />
-      <section className="page-title"><div><p className="eyebrow">{copy(language, 'Application', 'आवेदन')} · {application.id}</p><h1 tabIndex={-1}>{copy(language, 'Application status', 'आवेदन की स्थिति')}</h1><p>{copy(language, 'See what is complete, what is pending and the next action required.', 'देखें कि क्या पूरा हुआ है, क्या बाकी है और अगला जरूरी काम क्या है।')}</p></div><span className="saved-indicator"><CheckCircle2 size={17} /> {copy(language, 'Last saved', 'अंतिम बार सहेजा')} {new Date(application.savedAt).toLocaleTimeString(language === 'en' ? 'en-IN' : 'hi-IN', { hour: '2-digit', minute: '2-digit' })}</span></section>
-      <section className="next-action-card"><span><MonitorCheck size={25} /></span><div><p className="eyebrow">{copy(language, 'What’s next', 'आगे क्या करना है')}</p><h2>{next.title}</h2><p>{next.body}</p></div><PortalLink className="button button--primary" href={`/mp/application/${application.id}/${next.route}`}>{next.action} <ArrowRight size={18} /></PortalLink></section>
-      <div className="status-overview-grid"><section className="content-card"><div className="section-heading"><div><p className="eyebrow">{copy(language, 'Application progress', 'आवेदन की प्रगति')}</p><h2>{copy(language, 'Current stages', 'वर्तमान चरण')}</h2></div><span className="progress-count">{copy(language, `${completed} of 9 complete`, `9 में से ${completed} पूरी`)}</span></div><ol className="stage-tracker">{applicationStages.map(([stage, status], index) => <li key={stage.en} className={`stage-tracker__item stage-tracker__item--${status}`}><span className="stage-tracker__marker">{status === 'completed' ? <Check size={16} /> : index + 1}</span><div><strong>{stage[language]}</strong><small>{status === 'completed' ? copy(language, 'Completed and saved', 'पूरा और सहेजा गया') : status === 'needs-action' ? copy(language, 'Action required now', 'अब यह काम करें') : copy(language, 'Not started', 'शुरू नहीं हुआ')}</small></div>{status === 'needs-action' && <span className="stage-label">{copy(language, 'Next', 'अगला')}</span>}</li>)}</ol></section><section className="content-card"><div className="section-heading"><div><p className="eyebrow">{copy(language, 'What happened', 'अब तक क्या हुआ')}</p><h2>{copy(language, 'Application activity', 'आवेदन गतिविधि')}</h2></div></div><ol className="status-activity">{activity.map((item) => <li key={`${item.title}-${item.time}`}><span><Check size={15} /></span><div><strong>{item.title}</strong><p>{item.detail}</p><time dateTime={item.time}>{new Date(item.time).toLocaleString(language === 'en' ? 'en-IN' : 'hi-IN', { dateStyle: 'medium', timeStyle: 'short' })}</time></div></li>)}</ol><div className="status-utilities"><PortalLink href={`/mp/application/${application.id}/payment-status`}><IndianRupee size={18} /> {copy(language, 'Verify payment status', 'भुगतान स्थिति जाँचें')}</PortalLink><PortalLink href={`/mp/application/${application.id}/receipt`}><Printer size={18} /> {copy(language, 'Open receipt', 'रसीद खोलें')}</PortalLink></div></section></div>
+      <section className="page-title">
+        <div>
+          <p className="eyebrow">{copy(language, 'Application', 'आवेदन')} · {application.id}</p>
+          <h1 tabIndex={-1}>{copy(language, 'Application status', 'आवेदन की स्थिति')}</h1>
+          <p>{copy(language, 'See what is complete, what is pending and the next action required.', 'देखें कि क्या पूरा हुआ है, क्या बाकी है और अगला जरूरी काम क्या है।')}</p>
+        </div>
+        <span className="saved-indicator"><CheckCircle2 size={17} /> {copy(language, 'Last saved', 'अंतिम बार सहेजा')} {new Date(application.savedAt).toLocaleTimeString(language === 'en' ? 'en-IN' : 'hi-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+      </section>
+
+      {journey.mode === 'prepared-demo' && (
+        <section className="reference-banner" style={{ margin: '0 0 20px' }}>
+          <Sparkles size={20} />
+          <div>
+            <strong>{copy(language, 'Prepared review demo', 'तैयार समीक्षा डेमो')}</strong>
+            <p>{copy(language, 'Prepared demo details and sample documents have been loaded so you can review the test-readiness, payment, and test experience quickly.', 'तैयार डेमो जानकारी और नमूना दस्तावेज़ लोड किए गए हैं ताकि आप डिवाइस जाँच, भुगतान और परीक्षा अनुभव की त्वरित समीक्षा कर सकें।')}</p>
+          </div>
+        </section>
+      )}
+
+      <section className="next-action-card">
+        <span><MonitorCheck size={25} /></span>
+        <div>
+          <p className="eyebrow">{copy(language, 'What’s next', 'आगे क्या करना है')}</p>
+          <h2>{copy(language, journey.nextAction.title.en, journey.nextAction.title.hi)}</h2>
+          <p>{copy(language, journey.nextAction.body.en, journey.nextAction.body.hi)}</p>
+        </div>
+        <PortalLink className="button button--primary" href={journey.nextAction.href}>
+          {copy(language, journey.nextAction.action.en, journey.nextAction.action.hi)} <ArrowRight size={18} />
+        </PortalLink>
+      </section>
+
+      <div className="status-overview-grid">
+        <section className="content-card">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">{copy(language, 'Application progress', 'आवेदन की प्रगति')}</p>
+              <h2>{copy(language, 'Current stages', 'वर्तमान चरण')}</h2>
+            </div>
+            <span className="progress-count">{copy(language, `${journey.completedStageCount} of ${journey.totalStageCount} complete`, `${journey.totalStageCount} में से ${journey.completedStageCount} पूरी`)}</span>
+          </div>
+          <ol className="stage-tracker">
+            {journey.stages.map((stage, index) => {
+              const isNeedsAction = stage.status === 'needs_action' || stage.status === 'in_progress'
+              return (
+                <li key={stage.id} className={`stage-tracker__item stage-tracker__item--${stage.status}`}>
+                  <span className="stage-tracker__marker">{stage.status === 'completed' ? <Check size={16} /> : index + 1}</span>
+                  <div>
+                    <strong>{copy(language, stage.title.en, stage.title.hi)}</strong>
+                    <small>{stage.detail ? copy(language, stage.detail.en, stage.detail.hi) : copy(language, 'Locked', 'लॉक्ड')}</small>
+                  </div>
+                  {isNeedsAction && <span className="stage-label">{copy(language, 'Next', 'अगला')}</span>}
+                </li>
+              )
+            })}
+          </ol>
+        </section>
+        <section className="content-card">
+          <div className="section-heading">
+            <div>
+              <p className="eyebrow">{copy(language, 'What happened', 'अब तक क्या हुआ')}</p>
+              <h2>{copy(language, 'Application activity', 'आवेदन गतिविधि')}</h2>
+            </div>
+          </div>
+          <ol className="status-activity">
+            {activity.map((item) => (
+              <li key={`${item.title}-${item.time}`}>
+                <span><Check size={15} /></span>
+                <div>
+                  <strong>{item.title}</strong>
+                  <p>{item.detail}</p>
+                  <time dateTime={item.time}>{new Date(item.time).toLocaleString(language === 'en' ? 'en-IN' : 'hi-IN', { dateStyle: 'medium', timeStyle: 'short' })}</time>
+                </div>
+              </li>
+            ))}
+          </ol>
+          <div className="status-utilities">
+            <PortalLink href={`/mp/application/${application.id}/payment-status`}><IndianRupee size={18} /> {copy(language, 'Verify payment status', 'भुगतान स्थिति जाँचें')}</PortalLink>
+            <PortalLink href={`/mp/application/${application.id}/receipt`}><Printer size={18} /> {copy(language, 'Open receipt', 'रसीद खोलें')}</PortalLink>
+          </div>
+        </section>
+      </div>
     </>
   )
 }
@@ -1602,10 +1676,16 @@ function PortalApp() {
   const createApplication = (kind: 'full' | 'judge') => {
     const draft = kind === 'judge' ? createPreparedDraft() : createEmptyDraft()
     saveApplicationDraft(draft)
-    const application: DemoApplication = { version: 1, id: draft.applicationId, applicant: kind === 'judge' ? 'Aarav Verma' : 'New applicant', lastStage: kind === 'judge' ? 'Device readiness' : 'Applicant category', savedAt: new Date().toISOString() }
+    const application: DemoApplication = {
+      version: 1,
+      id: draft.applicationId,
+      applicant: kind === 'judge' ? 'Aarav Verma' : 'New applicant',
+      lastStage: kind === 'judge' ? 'Device check & test practice' : 'Applicant category',
+      savedAt: new Date().toISOString(),
+    }
     saveDemoApplicationRecord(application)
     setDemoApplication(application)
-    navigatePortal(kind === 'judge' ? `/mp/application/${application.id}` : '/mp/ll/application/category')
+    navigatePortal(kind === 'judge' ? `/mp/application/${application.id}/readiness` : '/mp/ll/application/category')
   }
 
   const syncApplication = (draft: LLApplicationDraft, lastStage: string) => {
@@ -1624,14 +1704,27 @@ function PortalApp() {
     })
   }
 
+  useEffect(() => {
+    const appId = ('applicationId' in route && route.applicationId) ? route.applicationId : demoApplication?.id
+    if (!appId) return
+    const draft = loadApplicationDraft(appId)
+    const progress = loadJourneyProgress(appId)
+    const examSession = loadExamSession(appId, progress)
+    const journey = deriveJourneyState({ applicationId: appId, draft, progress, examSession })
+    const access = getRouteAccess({ route, journey })
+    if (!access.allowed && access.redirectHref && access.redirectHref !== pathname) {
+      navigatePortal(access.redirectHref)
+    }
+  }, [pathname, route, demoApplication])
+
   let page: ReactNode
   if (route.name === 'home') page = <NationalHomePage language={language} onUnavailable={setUnavailableDestination} />
   else if (route.name === 'login') page = <LoginPage language={language} onSignedIn={(nextSession) => { saveDemoSession(nextSession); setSession(nextSession) }} />
   else if (route.name === 'services') page = <ServicesPage language={language} demoApplication={demoApplication} />
   else if (route.name === 'll-start') page = <LLStartPage language={language} onCreate={createApplication} demoApplication={demoApplication} />
-  else if (route.name === 'll-application') page = <ApplicationFlow language={language} step={route.step} onSubmitted={(draft) => { syncApplication(draft, 'Photo and signature'); navigatePortal('/mp/ll/submitted') }} />
-  else if (route.name === 'll-submitted') page = <SubmittedPage language={language} onContinue={(draft) => { syncApplication(draft, 'Photo and signature'); navigatePortal(`/mp/application/${draft.applicationId}/uploads`) }} />
-  else if (route.name === 'uploads') page = <UploadsPage language={language} applicationId={route.applicationId} onComplete={(draft) => { syncApplication(draft, 'Device readiness'); navigatePortal(`/mp/application/${draft.applicationId}`) }} />
+  else if (route.name === 'll-application') page = <ApplicationFlow language={language} step={route.step} onSubmitted={(draft) => { syncApplication(draft, 'Documents & photo'); navigatePortal('/mp/ll/submitted') }} />
+  else if (route.name === 'll-submitted') page = <SubmittedPage language={language} onContinue={(draft) => { syncApplication(draft, 'Documents & photo'); navigatePortal(`/mp/application/${draft.applicationId}/uploads`) }} />
+  else if (route.name === 'uploads') page = <UploadsPage language={language} applicationId={route.applicationId} onComplete={(draft) => { syncApplication(draft, 'Device check & test practice'); navigatePortal(`/mp/application/${draft.applicationId}/readiness`) }} />
   else if (route.name === 'readiness') page = <DeviceReadinessPage language={language} applicationId={route.applicationId} onStageChange={updateApplicationStage} />
   else if (route.name === 'rehearsal') page = <RehearsalPage language={language} applicationId={route.applicationId} onStageChange={updateApplicationStage} />
   else if (route.name === 'payment') page = <PaymentPage language={language} applicationId={route.applicationId} />

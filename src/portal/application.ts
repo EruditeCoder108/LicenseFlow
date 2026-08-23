@@ -12,8 +12,11 @@ export type AddressFields = {
   pin: string
 }
 
+export type ApplicationMode = 'citizen-journey' | 'prepared-demo'
+
 export type LLApplicationDraft = {
-  version: 1
+  version: 2
+  mode: ApplicationMode
   applicationId: string
   applicantCategory: ApplicantCategory
   existingLicenceNumber: string
@@ -70,7 +73,8 @@ const emptyAddress = (): AddressFields => ({ house: '', street: '', locality: ''
 
 export function createEmptyDraft(applicationId = `MP-LL-${String(Date.now()).slice(-8)}`): LLApplicationDraft {
   return {
-    version: 1,
+    version: 2,
+    mode: 'citizen-journey',
     applicationId,
     applicantCategory: '',
     existingLicenceNumber: '',
@@ -113,6 +117,7 @@ export function createPreparedDraft(): LLApplicationDraft {
   const draft = createEmptyDraft('MP-LL-DEMO-2408')
   return {
     ...draft,
+    mode: 'prepared-demo',
     applicantCategory: 'no-licence',
     identityRoute: 'aadhaar-ekyc',
     identityConsent: true,
@@ -136,6 +141,7 @@ export function createPreparedDraft(): LLApplicationDraft {
     trainedAtDrivingSchool: 'no',
     fitnessAnswers: Object.fromEntries(fitnessQuestions.map((question) => [question.id, 'no'])) as Record<string, FitnessAnswer>,
     declarationAccepted: true,
+    submittedAt: new Date().toISOString(),
     documentsUploaded: true,
     photoUploaded: true,
     signatureUploaded: true,
@@ -203,19 +209,66 @@ export function completedStepCount(draft: LLApplicationDraft): number {
   return applicationSteps.filter((step) => Object.keys(validateApplicationStep(draft, step)).length === 0).length
 }
 
-export const APPLICATION_DRAFT_KEY = 'mp-ll-application-draft-v1'
+export const ACTIVE_APP_STORAGE_KEY = 'mp-ll-active-application-id'
+export const DRAFT_STORAGE_PREFIX = 'mp-ll-application-draft-v2:'
+const LEGACY_DRAFT_KEY = 'mp-ll-application-draft-v1'
 
-export function loadApplicationDraft(): LLApplicationDraft | null {
+function migrateV1Draft(parsed: any): LLApplicationDraft {
+  return {
+    ...createEmptyDraft(parsed.applicationId || 'MP-LL-UNKNOWN'),
+    ...parsed,
+    version: 2,
+    mode: parsed.applicationId === 'MP-LL-DEMO-2408' ? 'prepared-demo' : 'citizen-journey',
+    identityOtpSent: parsed.identityOtpSent ?? false,
+    identityVerified: parsed.identityVerified ?? false,
+    documentsUploaded: parsed.documentsUploaded ?? false,
+    photoUploaded: parsed.photoUploaded ?? false,
+    signatureUploaded: parsed.signatureUploaded ?? false,
+    submittedAt: parsed.submittedAt ?? null,
+  }
+}
+
+export function getActiveApplicationId(): string | null {
   try {
-    const raw = localStorage.getItem(APPLICATION_DRAFT_KEY)
-    if (!raw) return null
-    const parsed = JSON.parse(raw) as LLApplicationDraft
-    return parsed.version === 1 ? {
-      ...parsed,
-      identityOtpSent: parsed.identityOtpSent ?? false,
-      identityVerified: parsed.identityVerified ?? false,
-      documentsUploaded: parsed.documentsUploaded ?? false,
-    } : null
+    return localStorage.getItem(ACTIVE_APP_STORAGE_KEY)
+  } catch {
+    return null
+  }
+}
+
+export function setActiveApplicationId(applicationId: string): void {
+  try {
+    localStorage.setItem(ACTIVE_APP_STORAGE_KEY, applicationId)
+  } catch {
+    // Ignore storage errors
+  }
+}
+
+export function loadApplicationDraft(applicationId?: string): LLApplicationDraft | null {
+  try {
+    const targetId = applicationId || getActiveApplicationId()
+    if (targetId) {
+      const raw = localStorage.getItem(`${DRAFT_STORAGE_PREFIX}${targetId}`)
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (parsed.version === 2 && (!applicationId || parsed.applicationId === applicationId)) {
+          return parsed as LLApplicationDraft
+        }
+      }
+    }
+
+    // Check legacy storage migration if specific application wasn't requested or matches
+    const legacyRaw = localStorage.getItem(LEGACY_DRAFT_KEY)
+    if (legacyRaw) {
+      const parsedLegacy = JSON.parse(legacyRaw)
+      if (!applicationId || parsedLegacy.applicationId === applicationId) {
+        const migrated = migrateV1Draft(parsedLegacy)
+        saveApplicationDraft(migrated)
+        return migrated
+      }
+    }
+
+    return null
   } catch {
     return null
   }
@@ -223,7 +276,13 @@ export function loadApplicationDraft(): LLApplicationDraft | null {
 
 export function saveApplicationDraft(draft: LLApplicationDraft): boolean {
   try {
-    localStorage.setItem(APPLICATION_DRAFT_KEY, JSON.stringify({ ...draft, lastSavedAt: new Date().toISOString() }))
+    const toSave: LLApplicationDraft = {
+      ...draft,
+      version: 2,
+      lastSavedAt: new Date().toISOString(),
+    }
+    localStorage.setItem(`${DRAFT_STORAGE_PREFIX}${draft.applicationId}`, JSON.stringify(toSave))
+    localStorage.setItem(ACTIVE_APP_STORAGE_KEY, draft.applicationId)
     return true
   } catch {
     return false
