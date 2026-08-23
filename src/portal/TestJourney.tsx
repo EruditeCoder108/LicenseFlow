@@ -151,6 +151,17 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
     }
   }, [guided, media])
 
+  const preTestReady =
+    media.snapshot.camera === 'ready' &&
+    media.snapshot.microphone === 'ready' &&
+    media.snapshot.model === 'ready' &&
+    media.snapshot.faceCount === 1 &&
+    media.snapshot.framing === 'good' &&
+    media.snapshot.lighting === 'good' &&
+    media.snapshot.storage &&
+    media.snapshot.secureContext &&
+    media.snapshot.online
+
   if (progress.tutorial.status !== 'completed') return <Guard applicationId={applicationId} language={language} title={local(language, 'Complete the tutorial first', 'पहले सीखने का भाग पूरा करें')} body={local(language, 'The test starts only after the learning check is completed.', 'सीखने की जाँच पूरी होने के बाद ही परीक्षा शुरू होती है।')} route={`/mp/application/${applicationId}/tutorial`} action={local(language, 'Open road-safety tutorial', 'सड़क सुरक्षा सीख खोलें')} />
   const fresh = session.stage === 'exam-intro'
   const start = () => {
@@ -211,7 +222,7 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
             <strong>
               {guided
                 ? local(language, 'Demo camera simulation ready', 'डेमो कैमरा सिमुलेशन तैयार')
-                : media.ready
+                : preTestReady
                 ? local(language, 'Camera ready for test', 'कैमरा परीक्षा के लिए तैयार')
                 : media.snapshot.camera === 'ready'
                 ? local(language, 'Framing face for verification...', 'चेहरा जाँचा जा रहा है...')
@@ -223,7 +234,7 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
           <p>
             {guided
               ? local(language, 'Simulated camera monitoring will run during the 5 test questions.', 'परीक्षा के 5 प्रश्नों के दौरान सिम्युलेटेड कैमरा निगरानी चलेगी।')
-              : media.ready
+              : preTestReady
               ? local(language, 'Your face and lighting are verified. Continuous monitoring will remain active during the exam.', 'आपका चेहरा और रोशनी सत्यापित हैं। परीक्षा के दौरान निरंतर निगरानी सक्रिय रहेगी।')
               : media.snapshot.camera === 'ready'
               ? local(language, 'Please look directly into the camera so your face and framing can be verified.', 'कृपया कैमरे के सामने सीधे देखें ताकि चेहरा और स्थिति सत्यापित हो सके।')
@@ -256,7 +267,7 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
       )}
       <div className="lf-actions">
         {fresh ? (
-          <button className="button button--primary" disabled={!accepted || (!guided && !media.ready)} onClick={start}>
+          <button className="button button--primary" disabled={!accepted || (!guided && !preTestReady)} onClick={start}>
             {local(language, 'Start 5-question demo test', '5 प्रश्नों का डेमो टेस्ट शुरू करें')} <ArrowRight size={18} />
           </button>
         ) : (
@@ -324,7 +335,14 @@ export function TestPage({ applicationId, onStageChange, language }: { applicati
   }, [applicationId, guided, media.snapshot.blockingReason, media.snapshot.online, state])
   if (state.stage !== 'exam' || !question) return <Guard applicationId={applicationId} language={language} title={local(language, 'Open the saved test stage', 'सहेजा परीक्षा चरण खोलें')} body={local(language, 'This route follows the persisted exam state.', 'यह पेज सहेजी हुई परीक्षा स्थिति का अनुसरण करता है।')} route={routeForSession(applicationId, state)} action={local(language, 'Continue saved session', 'सहेजा सत्र जारी रखें')} />
 
-  const mediaReady = guided ? media.snapshot.started : media.ready
+  const mediaReady = guided
+    ? media.snapshot.started
+    : media.snapshot.camera === 'ready' &&
+      media.snapshot.microphone === 'ready' &&
+      media.snapshot.model === 'ready' &&
+      media.snapshot.faceCount === 1 &&
+      media.snapshot.framing === 'good' &&
+      media.snapshot.online
   const needsCameraStart = !guided && !media.snapshot.started
   const coaching = media.snapshot.coachingReason === 'multiple-faces'
     ? { title: local(language, 'Only one person should be visible', 'कैमरे में सिर्फ एक व्यक्ति होना चाहिए'), body: local(language, 'Ask others to step away from the camera.', 'दूसरों को कैमरे से दूर जाने को कहें।') }

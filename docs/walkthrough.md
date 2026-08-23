@@ -55,9 +55,9 @@ LicenceFlow's journey architecture has been refactored into **one canonical stat
   - Extended coaching and blocking grace timeouts.
 - **Test Entry Pre-Verification & Test Gating:**
   - `TestEntryPage` reacquires and previews the camera stream before Question 1.
-  - Start test CTA is strictly gated on `accepted && (guided || media.ready)`.
-  - Status copy accurately reflects `Camera ready for test` only when face, framing, and lighting are verified.
-  - Question options on `TestPage` remain disabled until camera verification is confirmed.
+  - Start test CTA is gated on `accepted && (guided || preTestReady)` (where `preTestReady` verifies camera, mic, 1 face, framing, lighting, storage, secure context, and network without forcing a duplicate head-turn challenge).
+  - Status copy accurately reflects `Camera ready for test` as soon as `preTestReady` is satisfied.
+  - Question options on `TestPage` remain disabled until active stream verification is confirmed.
 
 ---
 
