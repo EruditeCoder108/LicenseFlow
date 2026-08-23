@@ -17,7 +17,7 @@ const sitesWorkerEntry: Plugin = {
     const acceptsHtml = (request.headers.get('accept') || '').includes('text/html');
     if (request.method !== 'GET' || !acceptsHtml) return assetResponse;
 
-    const indexUrl = new URL('/', request.url);
+    const indexUrl = new URL('/index.html', request.url);
     return env.ASSETS.fetch(new Request(indexUrl, request));
   },
 };\n`,
