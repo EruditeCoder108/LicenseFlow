@@ -2,7 +2,7 @@ import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { sites } from '@openai/sites-vite-plugin'
 // @ts-expect-error Vite runs this config in Node; the browser app intentionally omits Node types.
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 
 const toUtf8Bytes = (value: string) => {
   const bytes: number[] = []
@@ -57,6 +57,7 @@ const sitesWorkerEntry: Plugin = {
   name: 'licenceflow-sites-worker-entry',
   apply: 'build',
   writeBundle(options, bundle) {
+    const outputDirectory = options.dir ?? 'dist'
     const embeddedAssets: Record<string, string> = {}
 
     for (const output of Object.values(bundle)) {
@@ -65,6 +66,10 @@ const sitesWorkerEntry: Plugin = {
       const contents = output.type === 'chunk' ? output.code : output.source
       embeddedAssets[`/${output.fileName}`] = encodeOutput(contents)
     }
+
+    embeddedAssets['/index.html'] = encodeOutput(
+      readFileSync(`${outputDirectory}/index.html`, 'utf8'),
+    )
 
     const workerSource = `const assets = ${JSON.stringify(embeddedAssets)};
 
@@ -116,7 +121,6 @@ export default {
   },
 };\n`
 
-    const outputDirectory = options.dir ?? 'dist'
     mkdirSync(`${outputDirectory}/server`, { recursive: true })
     writeFileSync(`${outputDirectory}/server/index.js`, workerSource)
   },
