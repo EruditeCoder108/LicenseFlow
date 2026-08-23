@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import {
   ArrowLeft, ArrowRight, BookOpenCheck, Camera, Check, CheckCircle2, CircleHelp,
-  ClipboardCheck, Eraser, FileText, Flag, Info, LockKeyhole, Network, Printer,
+  ClipboardCheck, Download, Eraser, FileCheck2, FileText, Flag, Info, LockKeyhole, Network, Printer,
   RefreshCcw, RotateCcw, ShieldCheck, Signal, TriangleAlert, UserRound, WifiOff,
 } from 'lucide-react'
 import { demoQuestions, practiceQuestion, type Question } from '../content/questions'
 import { journeyReducer, type InterruptionKind, type JourneyEvent, type JourneyState } from '../domain/journey'
 import { useDeviceReadiness } from '../hooks/useDeviceReadiness'
 import { clearLicenceFlowDeviceData } from './devicePrivacy'
+import { loadApplicationDraft } from './application'
+import { createDemonstrationLicencePdf, createJourneyReceiptPdf, downloadPdf, isDemonstrationLicenceEligible, type DemonstrationLicenceData, type JourneyReceiptData } from './downloadDocuments'
 import { loadExamSession, resetExamSession, saveExamSession } from './examSession'
 import { isPaymentConfirmed } from './payment'
 import { completeTutorial, loadJourneyProgress, saveJourneyProgress } from './progress'
@@ -200,13 +202,116 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
   const progress = loadJourneyProgress(applicationId)
   const [state, setState] = useState(() => loadExamSession(applicationId, progress))
   const [confirmClear, setConfirmClear] = useState(false)
+  const [documentStatus, setDocumentStatus] = useState<'idle' | 'licence' | 'receipt' | 'licence-ready' | 'receipt-ready' | 'error'>('idle')
   if (state.stage !== 'result') return <Guard applicationId={applicationId} language={language} title={local(language, 'Result not available yet', 'परिणाम अभी उपलब्ध नहीं')} body={local(language, 'Complete the saved synthetic test before opening its outcome.', 'परिणाम खोलने से पहले सहेजी सिंथेटिक परीक्षा पूरी करें।')} route={routeForSession(applicationId, state)} action={local(language, 'Continue saved session', 'सहेजा सत्र जारी रखें')} />
   const passed = state.exam.knowledgeResult === 'passed'
+  const eligible = isDemonstrationLicenceEligible({
+    paymentConfirmed: isPaymentConfirmed(progress.payment),
+    tutorialCompleted: progress.tutorial.status === 'completed',
+    examCompleted: state.exam.status === 'completed',
+    knowledgePassed: passed,
+  })
+  const draft = loadApplicationDraft()
+  const matchingDraft = draft?.applicationId === applicationId ? draft : null
+  const holderName = matchingDraft
+    ? [matchingDraft.firstName, matchingDraft.middleName, matchingDraft.lastName].filter(Boolean).join(' ') || state.application.fullName
+    : state.application.fullName
+  const completedAt = [...state.events].reverse().find((event) => event.kind === 'EXAM_COMPLETED')?.at ?? progress.updatedAt
+  const licenceData: DemonstrationLicenceData = {
+    applicationId,
+    holderName: holderName || local(language, 'Synthetic MP applicant', 'सिंथेटिक मध्य प्रदेश आवेदक'),
+    dateOfBirth: matchingDraft?.dateOfBirth,
+    vehicleClasses: matchingDraft?.vehicleClasses.length ? matchingDraft.vehicleClasses : state.application.vehicleClass.split(/\s*\+\s*/).filter(Boolean),
+    completedAt,
+    paymentReference: progress.payment.reference,
+  }
+  const receiptData: JourneyReceiptData = {
+    ...licenceData,
+    correctAnswers: state.exam.correctAnswers,
+    totalQuestions: demoQuestions.length,
+    interruptionRecovered: state.exam.interruptionSeen,
+    integrityStatus: state.exam.integrityStatus,
+    events: state.events.map((event) => {
+      const translated = eventText(event, language)
+      return { ...event, title: translated.title, detail: translated.detail }
+    }),
+  }
   const reset = () => {
     const next = resetExamSession(applicationId, progress)
     setState(next); onStageChange(local(language, 'LL test entry', 'एलएल परीक्षा प्रवेश'))
     navigatePortal(`/mp/application/${applicationId}/test-entry`)
   }
+  const downloadLicence = async () => {
+    if (!eligible || documentStatus === 'licence' || documentStatus === 'receipt') return
+    setDocumentStatus('licence')
+    try {
+      const pdf = await createDemonstrationLicencePdf(licenceData, language)
+      downloadPdf(pdf, `LicenceFlow-${applicationId}-demonstration-LL.pdf`)
+      setDocumentStatus('licence-ready')
+    } catch {
+      setDocumentStatus('error')
+    }
+  }
+  const downloadReceipt = async () => {
+    if (documentStatus === 'licence' || documentStatus === 'receipt') return
+    setDocumentStatus('receipt')
+    try {
+      const pdf = await createJourneyReceiptPdf(receiptData, language)
+      downloadPdf(pdf, `LicenceFlow-${applicationId}-journey-receipt.pdf`)
+      setDocumentStatus('receipt-ready')
+    } catch {
+      setDocumentStatus('error')
+    }
+  }
   const clearDevice = () => { clearLicenceFlowDeviceData(); window.location.assign('/') }
-  return <><Breadcrumbs applicationId={applicationId} current={local(language, 'Result and journey receipt', 'परिणाम और यात्रा रसीद')} language={language} /><section className={`result-hero ${passed ? 'result-hero--passed' : ''}`}><span>{passed ? <CheckCircle2 size={34} /> : <Flag size={34} />}</span><div><p className="eyebrow">{local(language, 'Synthetic knowledge result', 'सिंथेटिक ज्ञान परिणाम')}</p><h1 tabIndex={-1}>{passed ? local(language, 'Knowledge simulation passed', 'ज्ञान सिमुलेशन सफल') : local(language, 'Knowledge simulation not passed', 'ज्ञान सिमुलेशन सफल नहीं')}</h1><p>{local(language, `${state.exam.correctAnswers} of ${demoQuestions.length} answers correct · prototype threshold 3. This is not an official MP result.`, `${demoQuestions.length} में से ${state.exam.correctAnswers} उत्तर सही · प्रोटोटाइप सीमा 3। यह आधिकारिक मध्य प्रदेश परिणाम नहीं है।`)}</p></div></section><section className="outcome-grid"><article><span><BookOpenCheck size={23} /></span><div><small>{local(language, 'Knowledge', 'ज्ञान')}</small><strong>{passed ? local(language, 'Passed', 'सफल') : local(language, 'Not passed', 'सफल नहीं')}</strong><p>{local(language, 'Based only on saved simulation answers.', 'केवल सहेजे सिमुलेशन उत्तरों पर आधारित।')}</p></div></article><article><span><Network size={23} /></span><div><small>{local(language, 'Technical status', 'तकनीकी स्थिति')}</small><strong>{state.exam.interruptionSeen ? local(language, 'Recovered safely', 'सुरक्षित वापसी') : local(language, 'No interruption', 'कोई बाधा नहीं')}</strong><p>{state.exam.interruptionSeen ? local(language, 'Answers and payment remained intact.', 'उत्तर और भुगतान सुरक्षित रहे।') : local(language, 'Journey completed normally.', 'प्रक्रिया सामान्य रूप से पूरी हुई।')}</p></div></article><article><span><ShieldCheck size={23} /></span><div><small>{local(language, 'Integrity status', 'अखंडता स्थिति')}</small><strong>{state.exam.integrityStatus === 'observation-recorded' ? local(language, 'Observation recorded', 'अवलोकन दर्ज') : local(language, 'No adverse verdict', 'कोई प्रतिकूल निर्णय नहीं')}</strong><p>{local(language, 'A browser signal is never presented as proof of cheating.', 'ब्राउज़र संकेत को नकल के प्रमाण के रूप में नहीं दिखाया जाता।')}</p></div></article></section>{passed ? <section className="demo-licence"><div className="demo-licence__watermark">{local(language, 'NOT VALID', 'मान्य नहीं')}</div><div><p>मध्य प्रदेश · {local(language, "LEARNER'S LICENCE", 'लर्नर लाइसेंस')}</p><strong>{local(language, 'DEMONSTRATION DOCUMENT', 'प्रदर्शन दस्तावेज')}</strong></div><dl><div><dt>{local(language, 'Application', 'आवेदन')}</dt><dd>{applicationId}</dd></div><div><dt>{local(language, 'Holder', 'धारक')}</dt><dd>{local(language, 'Synthetic MP applicant', 'सिंथेटिक मध्य प्रदेश आवेदक')}</dd></div><div><dt>{local(language, 'Validity', 'वैधता')}</dt><dd>{local(language, 'None · prototype only', 'कोई नहीं · केवल प्रोटोटाइप')}</dd></div><div><dt>{local(language, 'Government record', 'सरकारी रिकॉर्ड')}</dt><dd>{local(language, 'Not created', 'नहीं बनाया गया')}</dd></div></dl></section> : <section className="lf-alert"><Info size={20} /><div><strong>{local(language, 'Practice again without another payment.', 'दोबारा भुगतान के बिना फिर अभ्यास करें।')}</strong><p>{local(language, 'Official retest timing, fees and eligibility remain governed by current Madhya Pradesh rules and are not asserted here.', 'आधिकारिक पुनर्परीक्षा समय, शुल्क और पात्रता वर्तमान मध्य प्रदेश नियमों के अनुसार होंगे; यहाँ उनका दावा नहीं किया गया है।')}</p></div></section>}<section className="journey-receipt"><div className="section-heading"><div><p className="eyebrow">{local(language, 'Journey receipt', 'यात्रा रसीद')}</p><h2>{local(language, 'What happened, in order', 'क्रमवार क्या हुआ')}</h2></div><ClipboardCheck size={24} /></div><ol>{state.events.map((event) => { const translated = eventText(event, language); return <li key={event.id}><span><Check size={14} /></span><div><strong>{translated.title}</strong><p>{translated.detail}</p><small>{eventTime(event.at, language)} · {translated.source}</small></div></li> })}</ol></section>{confirmClear && <section className="clear-device-confirm" role="alertdialog" aria-labelledby="clear-device-title"><div><p className="eyebrow">{local(language, 'Shared computer privacy', 'साझा कंप्यूटर गोपनीयता')}</p><h2 id="clear-device-title">{local(language, 'Clear all LicenceFlow data from this device?', 'इस डिवाइस से LicenceFlow का पूरा डेटा हटाएँ?')}</h2><p>{local(language, 'This removes the saved application, test answers, payment sandbox receipt, preferences and sign-in session from this browser. It cannot be undone.', 'यह इस ब्राउज़र से सहेजा आवेदन, परीक्षा उत्तर, भुगतान सैंडबॉक्स रसीद, पसंद और साइन-इन सत्र हटाता है। इसे वापस नहीं लाया जा सकता।')}</p></div><div className="lf-actions"><button className="button button--danger" onClick={clearDevice}>{local(language, 'Yes, clear this device', 'हाँ, इस डिवाइस का डेटा हटाएँ')}</button><button className="button button--secondary" onClick={() => setConfirmClear(false)}>{local(language, 'Cancel', 'रद्द करें')}</button></div></section>}<div className="lf-actions"><button className="button button--primary" onClick={() => window.print()}><Printer size={18} /> {local(language, 'Print demonstration result', 'प्रदर्शन परिणाम प्रिंट करें')}</button><button className="button button--secondary" onClick={reset}><RotateCcw size={18} /> {local(language, 'Restart test simulation', 'परीक्षा सिमुलेशन फिर शुरू करें')}</button><button className="text-button" onClick={() => setConfirmClear(true)}><Eraser size={17} /> {local(language, 'Clear this device', 'इस डिवाइस का डेटा हटाएँ')}</button><FlowLink className="text-button" href={`/mp/application/${applicationId}`}>{local(language, 'Application status', 'आवेदन स्थिति')}</FlowLink></div></>
+  const busy = documentStatus === 'licence' || documentStatus === 'receipt'
+  return <>
+    <Breadcrumbs applicationId={applicationId} current={local(language, 'Result and journey receipt', 'परिणाम और यात्रा रसीद')} language={language} />
+    <section className={`result-hero ${passed ? 'result-hero--passed' : ''}`}>
+      <span>{passed ? <CheckCircle2 size={34} /> : <Flag size={34} />}</span>
+      <div>
+        <p className="eyebrow">{passed ? local(language, 'Application journey complete', 'आवेदन प्रक्रिया पूरी') : local(language, 'Synthetic knowledge result', 'सिंथेटिक ज्ञान परिणाम')}</p>
+        <h1 tabIndex={-1}>{passed ? local(language, 'Your demonstration document is ready', 'आपका प्रदर्शन दस्तावेज तैयार है') : local(language, 'Knowledge simulation not passed', 'ज्ञान सिमुलेशन सफल नहीं')}</h1>
+        <p>{local(language, `${state.exam.correctAnswers} of ${demoQuestions.length} answers correct · prototype threshold 3. No government record was created.`, `${demoQuestions.length} में से ${state.exam.correctAnswers} उत्तर सही · प्रोटोटाइप सीमा 3। कोई सरकारी रिकॉर्ड नहीं बनाया गया।`)}</p>
+      </div>
+    </section>
+    <section className="outcome-grid">
+      <article><span><BookOpenCheck size={23} /></span><div><small>{local(language, 'Knowledge', 'ज्ञान')}</small><strong>{passed ? local(language, 'Passed', 'सफल') : local(language, 'Not passed', 'सफल नहीं')}</strong><p>{local(language, 'Based only on saved simulation answers.', 'केवल सहेजे सिमुलेशन उत्तरों पर आधारित।')}</p></div></article>
+      <article><span><Network size={23} /></span><div><small>{local(language, 'Technical status', 'तकनीकी स्थिति')}</small><strong>{state.exam.interruptionSeen ? local(language, 'Recovered safely', 'सुरक्षित वापसी') : local(language, 'No interruption', 'कोई बाधा नहीं')}</strong><p>{state.exam.interruptionSeen ? local(language, 'Answers and payment remained intact.', 'उत्तर और भुगतान सुरक्षित रहे।') : local(language, 'Journey completed normally.', 'प्रक्रिया सामान्य रूप से पूरी हुई।')}</p></div></article>
+      <article><span><ShieldCheck size={23} /></span><div><small>{local(language, 'Integrity status', 'अखंडता स्थिति')}</small><strong>{state.exam.integrityStatus === 'observation-recorded' ? local(language, 'Observation recorded', 'अवलोकन दर्ज') : local(language, 'No adverse verdict', 'कोई प्रतिकूल निर्णय नहीं')}</strong><p>{local(language, 'A browser signal is never presented as proof of cheating.', 'ब्राउज़र संकेत को नकल के प्रमाण के रूप में नहीं दिखाया जाता।')}</p></div></article>
+    </section>
+    {eligible ? <>
+      <section className="demo-licence">
+        <div className="demo-licence__watermark">{local(language, 'NOT VALID', 'मान्य नहीं')}</div>
+        <div><p>मध्य प्रदेश · {local(language, "LEARNER'S LICENCE", 'लर्नर लाइसेंस')}</p><strong>{local(language, 'DEMONSTRATION DOCUMENT', 'प्रदर्शन दस्तावेज')}</strong></div>
+        <dl>
+          <div><dt>{local(language, 'Application', 'आवेदन')}</dt><dd>{applicationId}</dd></div>
+          <div><dt>{local(language, 'Holder', 'धारक')}</dt><dd>{licenceData.holderName}</dd></div>
+          <div><dt>{local(language, 'Vehicle classes', 'वाहन वर्ग')}</dt><dd>{licenceData.vehicleClasses.join(', ') || local(language, 'Not recorded', 'दर्ज नहीं')}</dd></div>
+          <div><dt>{local(language, 'Government record', 'सरकारी रिकॉर्ड')}</dt><dd>{local(language, 'Not created', 'नहीं बनाया गया')}</dd></div>
+        </dl>
+      </section>
+      <section className="journey-receipt" aria-labelledby="document-download-title">
+        <div className="section-heading"><div><p className="eyebrow">{local(language, 'Process complete', 'प्रक्रिया पूरी')}</p><h2 id="document-download-title">{local(language, 'Keep your demonstration records', 'अपने प्रदर्शन रिकॉर्ड सुरक्षित रखें')}</h2></div><FileCheck2 size={24} /></div>
+        <p>{local(language, 'Both PDFs are created on this device from the saved fictional application. They are clearly marked as prototype documents.', 'दोनों PDF इस डिवाइस पर सहेजे काल्पनिक आवेदन से बनते हैं। उन पर स्पष्ट रूप से प्रोटोटाइप दस्तावेज लिखा है।')}</p>
+        <div className="lf-actions">
+          <button className="button button--primary" disabled={busy} onClick={() => void downloadLicence()}><Download size={18} /> {documentStatus === 'licence' ? local(language, 'Preparing LL PDF…', 'एलएल PDF तैयार हो रहा है…') : local(language, 'Download demonstration LL', 'प्रदर्शन एलएल डाउनलोड करें')}</button>
+          <button className="button button--secondary" disabled={busy} onClick={() => void downloadReceipt()}><ClipboardCheck size={18} /> {documentStatus === 'receipt' ? local(language, 'Preparing receipt…', 'रसीद तैयार हो रही है…') : local(language, 'Download Journey Receipt', 'यात्रा रसीद डाउनलोड करें')}</button>
+        </div>
+        <p role="status" aria-live="polite">{documentStatus === 'licence-ready' ? local(language, 'The demonstration LL PDF was downloaded.', 'प्रदर्शन एलएल PDF डाउनलोड हो गया।') : documentStatus === 'receipt-ready' ? local(language, 'The Journey Receipt PDF was downloaded.', 'यात्रा रसीद PDF डाउनलोड हो गई।') : documentStatus === 'error' ? local(language, 'The PDF could not be created. You can retry or use Print.', 'PDF नहीं बन सकी। दोबारा कोशिश करें या प्रिंट उपयोग करें।') : ''}</p>
+      </section>
+    </> : <section className="lf-alert"><Info size={20} /><div><strong>{local(language, 'No demonstration licence was generated.', 'प्रदर्शन लाइसेंस नहीं बनाया गया।')}</strong><p>{local(language, 'A demonstration LL is available only after confirmed sandbox payment, completed preparation and a passed knowledge simulation. You can still download the Journey Receipt.', 'प्रदर्शन एलएल केवल पुष्ट सैंडबॉक्स भुगतान, पूरी तैयारी और सफल ज्ञान सिमुलेशन के बाद मिलता है। आप फिर भी यात्रा रसीद डाउनलोड कर सकते हैं।')}</p></div></section>}
+    <section className="journey-receipt">
+      <div className="section-heading"><div><p className="eyebrow">{local(language, 'Journey receipt', 'यात्रा रसीद')}</p><h2>{local(language, 'What happened, in order', 'क्रमवार क्या हुआ')}</h2></div><ClipboardCheck size={24} /></div>
+      <ol>{state.events.map((event) => { const translated = eventText(event, language); return <li key={event.id}><span><Check size={14} /></span><div><strong>{translated.title}</strong><p>{translated.detail}</p><small>{eventTime(event.at, language)} · {translated.source}</small></div></li> })}</ol>
+    </section>
+    {confirmClear && <section className="clear-device-confirm" role="alertdialog" aria-labelledby="clear-device-title"><div><p className="eyebrow">{local(language, 'Shared computer privacy', 'साझा कंप्यूटर गोपनीयता')}</p><h2 id="clear-device-title">{local(language, 'Clear all LicenceFlow data from this device?', 'इस डिवाइस से LicenceFlow का पूरा डेटा हटाएँ?')}</h2><p>{local(language, 'This removes the saved application, test answers, payment sandbox receipt, preferences and sign-in session from this browser. It cannot be undone.', 'यह इस ब्राउज़र से सहेजा आवेदन, परीक्षा उत्तर, भुगतान सैंडबॉक्स रसीद, पसंद और साइन-इन सत्र हटाता है। इसे वापस नहीं लाया जा सकता।')}</p></div><div className="lf-actions"><button className="button button--danger" onClick={clearDevice}>{local(language, 'Yes, clear this device', 'हाँ, इस डिवाइस का डेटा हटाएँ')}</button><button className="button button--secondary" onClick={() => setConfirmClear(false)}>{local(language, 'Cancel', 'रद्द करें')}</button></div></section>}
+    <div className="lf-actions">
+      {!eligible && <button className="button button--primary" disabled={busy} onClick={() => void downloadReceipt()}><Download size={18} /> {documentStatus === 'receipt' ? local(language, 'Preparing receipt…', 'रसीद तैयार हो रही है…') : local(language, 'Download Journey Receipt', 'यात्रा रसीद डाउनलोड करें')}</button>}
+      <button className="button button--secondary" onClick={() => window.print()}><Printer size={18} /> {local(language, 'Print complete result', 'पूरा परिणाम प्रिंट करें')}</button>
+      <button className="button button--secondary" onClick={reset}><RotateCcw size={18} /> {local(language, 'Restart test simulation', 'परीक्षा सिमुलेशन फिर शुरू करें')}</button>
+      <button className="text-button" onClick={() => setConfirmClear(true)}><Eraser size={17} /> {local(language, 'Clear this device', 'इस डिवाइस का डेटा हटाएँ')}</button>
+      <FlowLink className="text-button" href={`/mp/application/${applicationId}`}>{local(language, 'Application status', 'आवेदन स्थिति')}</FlowLink>
+    </div>
+  </>
 }

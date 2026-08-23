@@ -1,5 +1,14 @@
 # LicenceFlow build log
 
+## 2026-08-23 — downloadable completion records added
+
+- Reworked the passed result into a clear process-complete state without adding presentation animation.
+- Added a locally generated, one-page demonstration Learner's Licence PDF using saved fictional applicant, application, vehicle-class, payment and completion data.
+- Added a separate downloadable Journey Receipt PDF containing the result, recovery status and ordered journey events.
+- Enforced issuance rules: the demonstration LL is available only after confirmed sandbox payment, completed tutorial, completed test and a passed knowledge result; unsuccessful journeys can still download their receipt.
+- Kept every generated document visibly marked as a prototype that creates no government record and is not valid for driving.
+- Added deterministic document/verification identifiers and automated PDF-structure and eligibility tests.
+
 ## 2026-08-23 — Milestone 5B architecture and performance hardening completed
 
 - Split application, readiness, payment, secure-test, sign-in and status utilities into route-loaded production chunks while preserving the existing interface.
