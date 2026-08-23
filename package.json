@@ -11,18 +11,19 @@
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
-    "@mediapipe/tasks-vision": "^1.0.1",
     "@fontsource/atkinson-hyperlegible": "^5.2.8",
+    "@mediapipe/tasks-vision": "^1.0.1",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@openai/sites-vite-plugin": "^0.2.0",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
-    "@vitejs/plugin-react": "^4.3.4",
+    "@vitejs/plugin-react": "^6.1.0",
     "typescript": "~5.7.2",
-    "vite": "^6.0.5",
+    "vite": "^8.0.0",
     "vitest": "^4.1.11"
   }
 }

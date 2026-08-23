@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FaceLandmarker, FilesetResolver, type NormalizedLandmark } from '@mediapipe/tasks-vision'
+import type { FaceLandmarker, NormalizedLandmark } from '@mediapipe/tasks-vision'
 
 const WASM_ROOT = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm'
 const FACE_MODEL =
@@ -220,6 +220,7 @@ export function useDeviceReadiness() {
         microphone: audioTrack ? 'ready' : 'error',
       }))
 
+      const { FaceLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision')
       const fileset = await FilesetResolver.forVisionTasks(WASM_ROOT)
       const landmarker = await FaceLandmarker.createFromOptions(fileset, {
         baseOptions: { modelAssetPath: FACE_MODEL, delegate: 'CPU' },

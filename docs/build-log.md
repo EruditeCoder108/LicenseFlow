@@ -2,6 +2,107 @@
 
 This file records genuine Codex-assisted milestones for the hackathon submission.
 
+## 2026-08-23 — earlier responsive collapse and Sites publishing support
+
+- Moved the compact portal breakpoint to 1180 px so resized desktop inspection windows use an intentional tablet layout instead of squeezing the navigation and application sidebar.
+- Replaced the clipped horizontal application-step strip with a concise expandable progress summary at compact widths.
+- Kept autosave state visible on phones and verified the application form at 375 px, 792 px and 1139 px without horizontal overflow.
+- Added the official Sites Vite integration and deployment metadata for mobile-accessible hosting.
+
+## 2026-08-23 — task-first LL entry and responsive mobile hierarchy
+
+- Replaced the long pre-application reading page with two immediate, state-aware choices: start new or find/continue an application.
+- Made the most likely next action visually dominant: new application for a first visit, saved application when a draft exists.
+- Added a safe confirmation before replacing a locally saved draft with another application.
+- Kept the complete six-stage process and preparation requirements accessible in an expandable section instead of removing them.
+- Added a compact four-phase journey preview and rewrote route Help around the new interaction.
+- Added dedicated 900 px, 640 px and 390 px responsive behavior so cards, actions, journey phases, expanded details and Hindi text reflow without desktop shrinking or horizontal scrolling.
+
+## 2026-08-23 — Milestone 3 payment and compatibility foundation started
+
+- Replaced the former paid/unpaid receipt shortcut with a versioned transaction model covering redirecting, pending, confirmed, declined, cancelled, timed-out and unknown states.
+- Added stable attempt IDs, idempotency keys, duplicate-attempt suppression, reconciliation and a human-readable payment activity trail.
+- Moved the synthetic fee into configuration and kept it explicitly separate from an unverified current Madhya Pradesh amount.
+- Added fee review, payment-method choice, redirect interstitial, separate sandbox gateway, gateway return, reconciliation and updated receipt behavior in English and Hindi.
+- Added a deterministic pre-payment exam-window issue that preserves the application, prevents payment and gives real-check/guided recovery actions.
+- Added a state-derived “What is safe right now” contract and two-part failure messaging.
+- Lazy-loaded the MediaPipe vision bundle so the normal homepage and form bundle no longer includes it; the production build has no oversized-chunk warning.
+- Expanded the transaction and route test coverage; 28 tests, TypeScript and the production build pass.
+
+## 2026-08-23 — final execution roadmap consolidated
+
+- Reconciled the national portal shell with the frozen Madhya Pradesh Learner's Licence transactional scope.
+- Recorded the current implemented baseline so completed work is not rebuilt.
+- Defined release gates for payment/readiness, Secure Test Mode, content completeness, constrained UI polish, QA and submission.
+- Added detailed deliverables, failure cases, test expectations, exclusions and acceptance criteria for every remaining milestone in `docs/roadmap-to-final.md`.
+- Made Milestone 3—the pre-payment compatibility gate and redirect-shaped payment sandbox—the only immediate implementation target.
+
+## 2026-08-22 — Milestone 1 professional foundation reset
+
+- Replaced the promotional dashboard banner and wall of equal cards with a compact, categorized public-service directory and a clear current-application area.
+- Reduced heading scale, card styling, shadows and decorative emphasis across the shared portal shell while preserving accessible contrast and 44 px controls.
+- Reworked the LL start screen around the complete citizen process and removed the judge/demo path from the normal application UI.
+- Reframed application status around one required next action and a quieter stage tracker.
+- Consolidated real-versus-simulated disclosure into one compact Prototype details dialog plus a restrained safety strip.
+- Replaced generic help with route-aware, five-part instructions in plain English and Hindi.
+- Completed the English/Hindi experience for the dashboard, LL start, application tracker and applicant-category form, including navigation, statuses, controls, helper text and errors.
+- Verified those surfaces in Chrome at desktop and 375 × 812, with zero horizontal overflow; TypeScript, all 21 tests and the production build pass.
+
+## 2026-08-22 — Milestone 2 authentication and authentic post-submission states
+
+- Added a professional sign-in route based on the current official Sarathi/CAS interaction pattern: username, password, captcha, refresh, password help and back navigation.
+- Added fixed documented hackathon judge credentials, local session persistence, an account summary and sign-out without storing the password in the session.
+- Extended the identity route from a consent-only choice into consent, demonstration OTP delivery, validation, recovery and a saved verified state.
+- Reworked vehicle-class selection into visual vehicle-first choices with class-code explanations and a selected-class summary.
+- Added prepared document, photograph and signature previews with saved, replace and final-confirmation states.
+- Added a captcha-protected application lookup, a status page split into “What’s next” and “What happened,” plus dedicated payment-status and printable-receipt routes.
+- Added English/Hindi copy for every new screen and documented all judge access values in `docs/judge-access.md`.
+
+## 2026-08-22 — national homepage and desktop-width correction
+
+- Added a distinct Parivahan-style national homepage at `/` instead of opening directly on the Learner’s Licence dashboard.
+- Added ministry identity, accessible national navigation, an image-led transport overview, citizen service areas, information links, quick actions and FAQs.
+- Kept the complete working licence journey behind Driving Licence services at `/mp/services`; secondary national service areas are honest information-only destinations.
+- Removed the permanent prototype warning strip, the repeated MP service-area badge and the scope-promoting footer copy from ordinary citizen screens.
+- Widened the desktop shell from 1120 px to 1320 px so ordinary 100% browser zoom uses the available portal canvas while preserving compact phone gutters.
+- Added complete English/Hindi homepage content and route-aware homepage help.
+- Generated and integrated a custom brand-free Indian road-transport hero visual.
+- Verified desktop and 375 px layouts in the browser with no horizontal overflow, correct national-to-state navigation, bilingual content and secondary-service dialog behavior.
+- Passed TypeScript, 21 unit tests and the production build.
+
+## 2026-08-22 — tutorial, checkpointed test and separated result connected
+
+- Added an active road-safety learning module with a practice check and an explicit distinction between prototype examples and official MP questions.
+- Added guarded secure-test entry with a browser-capability disclosure and technical-only help during the live simulation.
+- Connected the five-question judge test to the existing reducer state machine so every answer is persisted before navigation.
+- Added the deterministic post-Question-3 interruption, refresh-safe recovery at Question 4 and preservation of the single synthetic payment receipt.
+- Added browser-driven pauses for real offline, hidden-page and camera/face conditions while describing observations without asserting cheating.
+- Added separate knowledge, technical and integrity outcomes, a visibly invalid demonstration LL and a chronological Journey Receipt.
+- Made the application tracker reach nine of nine only after a completed test and result, and resume the exact saved test route otherwise.
+- Verified the full path and reload recovery in a real browser, plus the result at 375 px with no horizontal overflow.
+- Passed TypeScript, 21 unit tests, diff validation and the production build.
+
+## 2026-08-22 — readiness, rehearsal and payment connected
+
+- Connected the saved MP LL application tracker to dedicated device-readiness, secure-test rehearsal and synthetic-payment routes.
+- Reused the real browser camera/microphone readiness engine for on-device face count, framing, lighting, head movement and stream-health observations.
+- Kept a plainly labelled guided-signal route so judges can complete the scenario when hardware permission or the face model is unavailable; connection, secure-context and storage checks remain real.
+- Enforced readiness before rehearsal and both readiness and rehearsal before payment at the domain layer, not only in the interface.
+- Added a refresh-safe rehearsal answer checkpoint and an idempotent synthetic payment receipt without collecting bank, card or UPI details.
+- Made the nine-stage application tracker reflect saved progress and point to the actual next required action.
+- Verified the complete guided route, payment and answer recovery after reload, desktop and 375 px layouts, and zero horizontal overflow.
+- Passed TypeScript, 18 unit tests, diff validation and the production build.
+
+## 2026-08-22 — detailed MP LL application implemented
+
+- Added a seven-step learner's-licence application covering applicant category, synthetic identity verification, personal details, addresses, vehicle classes, physical-fitness declarations and final review.
+- Added per-step validation, accessible error summaries and first-error focus, automatic local checkpoints and direct-route refresh recovery.
+- Added both an empty full journey and a prepared judge journey without requesting real Aadhaar, document, payment or biometric data.
+- Added synthetic submission acknowledgement, application-stage tracking and photo/signature upload simulation.
+- Kept unverified MP wording and rules explicitly labelled rather than presenting reference-screen details as current government facts.
+- Rechecked desktop and 375 px phone layouts; the phone progress display is compact and has no horizontal overflow.
+- Passed TypeScript, 14 unit tests and the production build.
+
 ## 2026-08-22 — MP portal foundation implemented
 
 - Replaced the active startup/demo entry with a fixed Madhya Pradesh Sarathi citizen-services shell.
