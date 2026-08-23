@@ -208,14 +208,28 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
         <div className="test-entry-camera-status">
           <div className="test-entry-camera-status__header">
             <Camera size={18} />
-            <strong>{guided ? local(language, 'Demo camera simulation active', 'डेमो कैमरा सिमुलेशन तैयार') : media.snapshot.camera === 'ready' ? local(language, 'Camera check active and verified', 'कैमरा सत्यापित और तैयार') : local(language, 'Connecting camera...', 'कैमरा कनेक्ट हो रहा है...')}</strong>
+            <strong>
+              {guided
+                ? local(language, 'Demo camera simulation ready', 'डेमो कैमरा सिमुलेशन तैयार')
+                : media.ready
+                ? local(language, 'Camera ready for test', 'कैमरा परीक्षा के लिए तैयार')
+                : media.snapshot.camera === 'ready'
+                ? local(language, 'Framing face for verification...', 'चेहरा जाँचा जा रहा है...')
+                : media.snapshot.camera === 'denied'
+                ? local(language, 'Camera permission required', 'कैमरा अनुमति आवश्यक है')
+                : local(language, 'Connecting camera...', 'कैमरा कनेक्ट हो रहा है...')}
+            </strong>
           </div>
           <p>
             {guided
               ? local(language, 'Simulated camera monitoring will run during the 5 test questions.', 'परीक्षा के 5 प्रश्नों के दौरान सिम्युलेटेड कैमरा निगरानी चलेगी।')
-              : media.snapshot.faceCount === 1
-              ? local(language, 'Face framing verified. Camera monitoring will continue during the test.', 'चेहरा सही फ्रेम में है। परीक्षा के दौरान कैमरा निगरानी जारी रहेगी।')
-              : local(language, 'Live camera stream is ready for test monitoring.', 'लाइव कैमरा स्ट्रीम परीक्षा निगरानी के लिए तैयार है।')}
+              : media.ready
+              ? local(language, 'Your face and lighting are verified. Continuous monitoring will remain active during the exam.', 'आपका चेहरा और रोशनी सत्यापित हैं। परीक्षा के दौरान निरंतर निगरानी सक्रिय रहेगी।')
+              : media.snapshot.camera === 'ready'
+              ? local(language, 'Please look directly into the camera so your face and framing can be verified.', 'कृपया कैमरे के सामने सीधे देखें ताकि चेहरा और स्थिति सत्यापित हो सके।')
+              : media.snapshot.camera === 'denied'
+              ? local(language, 'Allow camera access in your browser settings to proceed with the test.', 'परीक्षा शुरू करने के लिए ब्राउज़र सेटिंग में कैमरे की अनुमति दें।')
+              : local(language, 'Starting private camera check before test entry.', 'टेस्ट शुरू करने से पहले निजी कैमरा जाँच शुरू की जा रही है।')}
           </p>
         </div>
       </div>
@@ -242,7 +256,7 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
       )}
       <div className="lf-actions">
         {fresh ? (
-          <button className="button button--primary" disabled={!accepted} onClick={start}>
+          <button className="button button--primary" disabled={!accepted || (!guided && !media.ready)} onClick={start}>
             {local(language, 'Start 5-question demo test', '5 प्रश्नों का डेमो टेस्ट शुरू करें')} <ArrowRight size={18} />
           </button>
         ) : (
@@ -351,8 +365,8 @@ export function TestPage({ applicationId, onStageChange, language }: { applicati
           <fieldset className="test-answer-fieldset">
             <legend className="visually-hidden">{local(language, 'Choose one answer', 'एक उत्तर चुनें')}</legend>
             {answers.map((option, index) => (
-              <label className={selected === index ? 'selected' : ''} key={option}>
-                <input type="radio" name="test-answer" checked={selected === index} onChange={() => setSelected(index)} />
+              <label className={`${selected === index ? 'selected' : ''} ${!mediaReady ? 'disabled' : ''}`} key={option}>
+                <input type="radio" name="test-answer" disabled={!mediaReady} checked={selected === index} onChange={() => setSelected(index)} />
                 <span>{String.fromCharCode(65 + index)}</span>
                 <strong>{option}</strong>
               </label>

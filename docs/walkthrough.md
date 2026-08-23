@@ -47,22 +47,23 @@ LicenceFlow's journey architecture has been refactored into **one canonical stat
 ---
 
 ### 5. Camera Calibration & Liveness Pass (`src/hooks/useDeviceReadiness.ts`, `ReadinessJourney.tsx`, `TestJourney.tsx`)
-- **Multi-Frame Head-Turn State Machine:**
-  - `center_waiting` (face centered for ~1s) $\rightarrow$ `turn_requested` (randomly requests LEFT or RIGHT) $\rightarrow$ `turning` (verifies movement across consecutive detection frames) $\rightarrow$ `passed`.
-  - Replaced single-frame absolute thresholds with multi-frame sustained yaw verification.
+- **Strict Directional Multi-Frame Head-Turn State Machine:**
+  - `center_waiting` (face centered for ~1s) $\rightarrow$ `turn_requested` (randomly requests LEFT or RIGHT) $\rightarrow$ `turning` (requires strictly signed yaw `> 0.15` for left or `< -0.15` for right across consecutive detection frames, with no absolute magnitude bypass) $\rightarrow$ `passed`.
 - **Relaxed Framing & Lighting Calibration:**
-  - Expanded framing bounding box (width 0.16–0.88, height 0.18–0.85, center bounds 0.18–0.82) to avoid false-positive warnings on varied webcam angles or mobile front cameras.
-  - Relaxed lighting range (threshold 40–235) to reliably support normal home lighting.
+  - Bounding box accurately bounded (width 0.16–0.88, height 0.18–0.85, center bounds 0.18–0.82) to avoid false-positive warnings on varied webcam angles or mobile front cameras.
+  - Relaxed lighting range (threshold 40–235) to reliably support normal room lighting.
   - Extended coaching and blocking grace timeouts.
-- **Test Entry Camera Pre-Verification:**
-  - `TestEntryPage` reacquires and previews the camera stream before question 1.
-  - Displays verified camera status card and seamlessly transitions into the active exam.
+- **Test Entry Pre-Verification & Test Gating:**
+  - `TestEntryPage` reacquires and previews the camera stream before Question 1.
+  - Start test CTA is strictly gated on `accepted && (guided || media.ready)`.
+  - Status copy accurately reflects `Camera ready for test` only when face, framing, and lighting are verified.
+  - Question options on `TestPage` remain disabled until camera verification is confirmed.
 
 ---
 
 ## Verification Results
 
-### Automated Test Suite (`src/portal/journeyState.test.ts`)
+### Automated Test Suite
 - **All 19 test files pass (75/75 tests passing).**
-- **Production build (`npm.cmd run build`) passes in ~900ms with 0 errors.**
+- **Production build (`npm.cmd run build`) passes in ~1s with 0 errors.**
 

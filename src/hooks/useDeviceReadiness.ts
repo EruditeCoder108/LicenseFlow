@@ -97,6 +97,7 @@ function getFaceMetrics(landmarks: NormalizedLandmark[]) {
       width >= 0.16 &&
       width <= 0.88 &&
       height >= 0.18 &&
+      height <= 0.85 &&
       centerX >= 0.18 &&
       centerX <= 0.82 &&
       centerY >= 0.15 &&
@@ -393,8 +394,8 @@ export function useDeviceReadiness() {
           if (metrics && metrics.framing && faceCount === 1) {
             const isTargetTurn =
               currentTurnDirection === 'left'
-                ? metrics.signedYaw > 0.13 || metrics.magnitude > 0.16
-                : metrics.signedYaw < -0.13 || metrics.magnitude > 0.16
+                ? metrics.signedYaw > 0.15
+                : metrics.signedYaw < -0.15
 
             if (isTargetTurn) {
               turnFramesRef.current++
