@@ -1,5 +1,12 @@
 # LicenceFlow build log
 
+## 2026-08-23 — Milestone 3 G1 completed
+
+- Verified the complete pre-payment failure, guided recovery, answer-checkpoint rehearsal, fee review, redirect, isolated gateway, authorization return and persisted receipt journey in the deployed browser.
+- Confirmed that payment stays locked before readiness, the prepared camera-session failure preserves the application, and a confirmed payment survives refresh without creating a duplicate receipt.
+- Completed English/Hindi coverage for the readiness and rehearsal routes and removed the remaining citizen-facing “demo payment” wording from the active portal journey.
+- Verified the Milestone 3 routes at 1440 px and 375 px with no horizontal overflow; all 28 automated tests and the production build pass.
+
 This file records genuine Codex-assisted milestones for the hackathon submission.
 
 ## 2026-08-23 — earlier responsive collapse and Sites publishing support

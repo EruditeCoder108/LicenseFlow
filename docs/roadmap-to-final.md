@@ -129,6 +129,8 @@ At every gate, we will run the build, use the product in the browser at desktop 
 
 ## 5. Milestone 3 — compatibility before payment and a believable gateway
 
+**Gate status:** G1 passed on 23 August 2026 after automated, desktop, 375 px, persistence and English/Hindi acceptance checks.
+
 ### Goal
 
 Replace the current synthetic “pay and write a receipt” shortcut with an authentic redirect-shaped sandbox. The most important product proof is that a device problem is found **before** payment.

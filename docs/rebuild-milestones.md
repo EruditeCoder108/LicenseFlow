@@ -67,7 +67,7 @@ Deliverables:
 
 ## Milestone 3 — pre-payment compatibility gate and believable payment-gateway sandbox
 
-**Status:** In progress from 23 August 2026. Transaction foundation and gateway route sequence are implemented; browser interaction and responsive acceptance remain before G1 approval.
+**Status:** Implemented and verified on 23 August 2026. The complete compatibility-failure, guided recovery, rehearsal, gateway, authorization, persistence and receipt path passed desktop and 375 px browser acceptance; G1 is closed.
 
 **Goal:** Prove that the exam environment can launch before money is taken, then reproduce the shape and recovery behavior of a real redirect-based payment journey without charging money or collecting real financial data.
 

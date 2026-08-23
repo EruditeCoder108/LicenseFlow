@@ -691,7 +691,7 @@ function PortalApp() {
   else if (route.name === 'll-submitted') page = <SubmittedPage language={language} onContinue={(draft) => { syncApplication(draft, 'Photo and signature'); navigatePortal(`/mp/application/${draft.applicationId}/uploads`) }} />
   else if (route.name === 'uploads') page = <UploadsPage language={language} applicationId={route.applicationId} onComplete={(draft) => { syncApplication(draft, 'Device readiness'); navigatePortal(`/mp/application/${draft.applicationId}`) }} />
   else if (route.name === 'readiness') page = <DeviceReadinessPage language={language} applicationId={route.applicationId} onStageChange={updateApplicationStage} />
-  else if (route.name === 'rehearsal') page = <RehearsalPage applicationId={route.applicationId} onStageChange={updateApplicationStage} />
+  else if (route.name === 'rehearsal') page = <RehearsalPage language={language} applicationId={route.applicationId} onStageChange={updateApplicationStage} />
   else if (route.name === 'payment') page = <PaymentPage language={language} applicationId={route.applicationId} />
   else if (route.name === 'payment-redirect') page = <PaymentRedirectPage language={language} applicationId={route.applicationId} />
   else if (route.name === 'gateway') page = <GatewayPage language={language} applicationId={route.applicationId} />
