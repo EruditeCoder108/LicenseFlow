@@ -1620,25 +1620,90 @@ function UnavailableServiceDialog({ destination, language, onClose }: { destinat
 function StateSelectionDialog({ language, onClose }: { language: Language; onClose: () => void }) {
   const [selectedState, setSelectedState] = useState('Madhya Pradesh')
   const configured = selectedState === 'Madhya Pradesh'
-  const states = [
-    'Madhya Pradesh', 'Andaman and Nicobar Islands', 'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar',
+  const otherStates = [
+    'Andaman and Nicobar Islands', 'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar',
     'Chandigarh', 'Chhattisgarh', 'Dadra and Nagar Haveli and Daman and Diu', 'Delhi', 'Goa', 'Gujarat',
     'Haryana', 'Himachal Pradesh', 'Jammu and Kashmir', 'Jharkhand', 'Karnataka', 'Kerala', 'Ladakh',
     'Lakshadweep', 'Maharashtra', 'Manipur', 'Meghalaya', 'Mizoram', 'Nagaland', 'Odisha', 'Puducherry',
     'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
   ]
+
   useEffect(() => {
     const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
     window.addEventListener('keydown', closeOnEscape)
     return () => window.removeEventListener('keydown', closeOnEscape)
   }, [onClose])
-  const proceed = () => { if (configured) { onClose(); navigatePortal('/mp/services') } }
-  return <div className="dialog-layer" onMouseDown={onClose}><section className="help-dialog state-selection-dialog" role="dialog" aria-modal="true" aria-labelledby="state-selection-title" onMouseDown={(event) => event.stopPropagation()}>
-    <div className="dialog-heading"><div><p className="eyebrow">{copy(language, 'Driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ')}</p><h2 id="state-selection-title">{copy(language, 'Select your state', 'अपना राज्य चुनें')}</h2></div><button className="icon-button" onClick={onClose} aria-label={copy(language, 'Close state selection', 'राज्य चयन बंद करें')}><X size={21} /></button></div>
-    <label className="field" htmlFor="portal-state"><span>{copy(language, 'State or Union Territory', 'राज्य या केंद्र शासित प्रदेश')}</span><select id="portal-state" value={selectedState} onChange={(event) => setSelectedState(event.target.value)} autoFocus>{states.map((state) => <option key={state}>{state}</option>)}</select></label>
-    <div className={configured ? 'state-availability state-availability--ready' : 'state-availability'}><Info size={20} /><div><strong>{configured ? copy(language, 'Complete prototype journey available', 'पूरा प्रोटोटाइप सफर उपलब्ध') : copy(language, 'Official service only for this state', 'इस राज्य के लिए केवल आधिकारिक सेवा')}</strong><p>{configured ? copy(language, 'The complete prototype journey is currently configured for Madhya Pradesh. Fees, appointments, test rules and screens may differ in other states.', 'पूरा प्रोटोटाइप सफर अभी मध्य प्रदेश के अनुसार कॉन्फ़िगर किया गया है। अन्य राज्यों में शुल्क, अपॉइंटमेंट, टेस्ट नियम और स्क्रीन अलग हो सकते हैं।') : copy(language, 'We will not run the Madhya Pradesh process under another state label. Use the official Parivahan service for this state.', 'हम दूसरे राज्य के नाम पर मध्य प्रदेश की प्रक्रिया नहीं दिखाएँगे। इस राज्य के लिए आधिकारिक परिवहन सेवा का उपयोग करें।')}</p></div></div>
-    {configured ? <button className="button button--primary button--full" onClick={proceed}>{copy(language, 'Continue to Madhya Pradesh services', 'मध्य प्रदेश सेवाओं पर जाएँ')} <ArrowRight size={18} /></button> : <a className="button button--primary button--full" href="https://parivahan.gov.in/" target="_blank" rel="noreferrer">{copy(language, 'Open official Parivahan portal', 'आधिकारिक परिवहन पोर्टल खोलें')} <ExternalLink size={18} /></a>}
-  </section></div>
+
+  const proceed = () => {
+    if (configured) {
+      onClose()
+      navigatePortal('/mp/services')
+    }
+  }
+
+  return (
+    <div className="dialog-layer" onMouseDown={onClose}>
+      <section
+        className="help-dialog state-selection-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="state-selection-title"
+        onMouseDown={(event) => event.stopPropagation()}
+      >
+        <div className="dialog-heading">
+          <div>
+            <p className="eyebrow">{copy(language, 'Driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ')}</p>
+            <h2 id="state-selection-title">{copy(language, 'Select your state', 'अपना राज्य चुनें')}</h2>
+            <p className="state-selection-dialog__subtitle">
+              {copy(language, 'Select your state or territory to continue to citizen services.', 'नागरिक सेवाओं के लिए अपने राज्य या केंद्र शासित प्रदेश का चयन करें।')}
+            </p>
+          </div>
+          <button className="icon-button" onClick={onClose} aria-label={copy(language, 'Close state selection', 'राज्य चयन बंद करें')}>
+            <X size={20} />
+          </button>
+        </div>
+
+        <label className="state-select-field" htmlFor="portal-state-select">
+          <span>{copy(language, 'State or Union Territory', 'राज्य या केंद्र शासित प्रदेश')}</span>
+          <div className="state-select-wrap">
+            <select
+              id="portal-state-select"
+              value={selectedState}
+              onChange={(e) => setSelectedState(e.target.value)}
+              autoFocus
+            >
+              <option value="Madhya Pradesh">Madhya Pradesh (Interactive Demo)</option>
+              {otherStates.map((state) => (
+                <option key={state} value={state}>{state}</option>
+              ))}
+            </select>
+            <ChevronDown size={18} className="state-select-chevron" aria-hidden="true" />
+          </div>
+        </label>
+
+        <div className={`state-notice ${configured ? 'state-notice--demo' : 'state-notice--external'}`}>
+          {configured ? <CheckCircle2 size={16} /> : <Info size={16} />}
+          <span>
+            {configured
+              ? copy(language, 'Configured with the complete interactive demonstration (Application, Device Check, Payment & Test).', 'पूर्ण इंटरैक्टिव डेमो के साथ कॉन्फ़िगर किया गया (आवेदन, डिवाइस जाँच, भुगतान एवं परीक्षा)।')
+              : copy(language, `You will be directed to the official MoRTH Parivahan portal for ${selectedState}.`, `${selectedState} के लिए आपको आधिकारिक MoRTH परिवहन पोर्टल पर ले जाया जाएगा।`)}
+          </span>
+        </div>
+
+        <div className="state-selection-actions">
+          {configured ? (
+            <button className="button button--primary button--full" onClick={proceed}>
+              {copy(language, 'Continue to Madhya Pradesh services', 'मध्य प्रदेश सेवाओं पर जाएँ')} <ArrowRight size={18} />
+            </button>
+          ) : (
+            <a className="button button--primary button--full" href="https://parivahan.gov.in/" target="_blank" rel="noreferrer">
+              {copy(language, `Open official Parivahan portal for ${selectedState}`, `${selectedState} के लिए आधिकारिक पोर्टल खोलें`)} <ExternalLink size={18} />
+            </a>
+          )}
+        </div>
+      </section>
+    </div>
+  )
 }
 
 function PortalFooter({ language, national, onPrototypeDetails }: { language: Language; national: boolean; onPrototypeDetails: () => void }) {
@@ -1764,9 +1829,9 @@ function PortalApp() {
   else if (route.name === 'login') page = <LoginPage language={language} onSignedIn={(nextSession) => { saveDemoSession(nextSession); setSession(nextSession) }} />
   else if (route.name === 'services') page = <ServicesPage language={language} demoApplication={demoApplication} />
   else if (route.name === 'll-start') page = <LLStartPage language={language} onCreate={createApplication} demoApplication={demoApplication} />
-  else if (route.name === 'll-application') page = <ApplicationFlow language={language} step={route.step} onSubmitted={(draft) => { syncApplication(draft, 'Documents & photo'); navigatePortal('/mp/ll/submitted') }} />
-  else if (route.name === 'll-submitted') page = <SubmittedPage language={language} onContinue={(draft) => { syncApplication(draft, 'Documents & photo'); navigatePortal(`/mp/application/${draft.applicationId}/uploads`) }} />
-  else if (route.name === 'uploads') page = <UploadsPage language={language} applicationId={route.applicationId} onComplete={(draft) => { syncApplication(draft, 'Device check & test practice'); navigatePortal(`/mp/application/${draft.applicationId}/readiness`) }} />
+  else if (route.name === 'll-application') page = <ApplicationFlow language={language} step={route.step} onSubmitted={(draft: LLApplicationDraft) => { syncApplication(draft, 'Documents & photo'); navigatePortal('/mp/ll/submitted') }} />
+  else if (route.name === 'll-submitted') page = <SubmittedPage language={language} onContinue={(draft: LLApplicationDraft) => { syncApplication(draft, 'Documents & photo'); navigatePortal(`/mp/application/${draft.applicationId}/uploads`) }} />
+  else if (route.name === 'uploads') page = <UploadsPage language={language} applicationId={route.applicationId} onComplete={(draft: LLApplicationDraft) => { syncApplication(draft, 'Device check & test practice'); navigatePortal(`/mp/application/${draft.applicationId}/readiness`) }} />
   else if (route.name === 'readiness') page = <DeviceReadinessPage language={language} applicationId={route.applicationId} onStageChange={updateApplicationStage} />
   else if (route.name === 'rehearsal') page = <RehearsalPage language={language} applicationId={route.applicationId} onStageChange={updateApplicationStage} />
   else if (route.name === 'payment') page = <PaymentPage language={language} applicationId={route.applicationId} />

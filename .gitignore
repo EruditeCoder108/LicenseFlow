@@ -7,3 +7,6 @@ dist/
 *.tsbuildinfo
 coverage/
 .tmp/
+*.mp4
+*.mov
+images/

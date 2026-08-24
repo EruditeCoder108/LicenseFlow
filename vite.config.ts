@@ -71,7 +71,18 @@ const sitesWorkerEntry: Plugin = {
       readFileSync(`${outputDirectory}/index.html`, 'utf8'),
     )
 
-    for (const publicAssetPath of ['/og.png', '/assets/parivahan-transport-hero.webp', '/assets/parivahan-transport-hero.png']) {
+    const publicAssetPaths = [
+      '/og.png',
+      '/assets/parivahan-transport-hero.webp',
+      '/assets/parivahan-transport-hero.png',
+      '/assets/mediapipe/face_landmarker.task',
+      '/assets/mediapipe/vision-wasm/vision_wasm_internal.js',
+      '/assets/mediapipe/vision-wasm/vision_wasm_internal.wasm',
+      '/assets/mediapipe/vision-wasm/vision_wasm_nosimd_internal.js',
+      '/assets/mediapipe/vision-wasm/vision_wasm_nosimd_internal.wasm',
+    ]
+
+    for (const publicAssetPath of publicAssetPaths) {
       try {
         if (readFileSync(`${outputDirectory}${publicAssetPath}`)) {
           embeddedAssets[publicAssetPath] = encodeOutput(
@@ -94,6 +105,7 @@ const contentType = (path) => {
   if (path.endsWith('.jpg') || path.endsWith('.jpeg')) return 'image/jpeg';
   if (path.endsWith('.webp')) return 'image/webp';
   if (path.endsWith('.svg')) return 'image/svg+xml';
+  if (path.endsWith('.wasm')) return 'application/wasm';
   if (path.endsWith('.woff2')) return 'font/woff2';
   if (path.endsWith('.woff')) return 'font/woff';
   return 'application/octet-stream';

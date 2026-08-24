@@ -61,9 +61,18 @@ LicenceFlow's journey architecture has been refactored into **one canonical stat
 
 ---
 
+### 6. State Selection Dialog Redesign (`src/PortalApp.tsx`, `src/portal.css`)
+- Replaced oversized complex cards and matrices with a compact, quiet, minimal formal design:
+  - Clean modal container (`max-width: 480px`) with MoRTH public service typography.
+  - Standard accessible `<select>` dropdown featuring **Madhya Pradesh (Interactive Demo)** and all 35 other states/territories with zero clipping, overflow, or text truncation.
+  - Subtle, quiet contextual notice providing confirmation for Madhya Pradesh vs. external MoRTH Parivahan redirection for other states.
+  - Full-width primary action button (`Continue to Madhya Pradesh services →` or `Open official Parivahan portal ↗`).
+
+---
+
 ## Verification Results
 
 ### Automated Test Suite
-- **All 19 test files pass (75/75 tests passing).**
-- **Production build (`npm.cmd run build`) passes in ~1s with 0 errors.**
+- **All 20 test files pass (78/78 tests passing via `npm.cmd test`).**
+- **Production build (`npm.cmd run build`) passes cleanly with 0 errors.**
 

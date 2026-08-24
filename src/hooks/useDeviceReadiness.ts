@@ -1,9 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FaceLandmarker, NormalizedLandmark } from '@mediapipe/tasks-vision'
 
-const WASM_ROOT = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.0.1/wasm'
-const FACE_MODEL =
-  'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task'
+const WASM_ROOT = '/assets/mediapipe/vision-wasm'
+const FACE_MODEL = '/assets/mediapipe/face_landmarker.task'
 
 export type MediaStatus = 'idle' | 'requesting' | 'ready' | 'denied' | 'error'
 export type ModelStatus = 'idle' | 'loading' | 'ready' | 'error'
