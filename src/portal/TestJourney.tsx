@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import {
   ArrowLeft, ArrowRight, BookOpenCheck, Camera, Check, CheckCircle2, CircleHelp, Clock3,
-  ClipboardCheck, Download, Eraser, FileCheck2, FileText, Flag, Info, LockKeyhole, Network, Printer,
+  ClipboardCheck, Download, Eraser, FastForward, FileCheck2, FileText, Flag, Info, LockKeyhole, Network, Printer,
   RefreshCcw, RotateCcw, ShieldCheck, Signal, TriangleAlert, UserRound, WifiOff,
 } from 'lucide-react'
 import { fullQuestions, type Question } from '../content/questions'
@@ -11,10 +11,11 @@ import { useDeviceReadiness } from '../hooks/useDeviceReadiness'
 import { clearLicenceFlowDeviceData } from './devicePrivacy'
 import { loadApplicationDraft } from './application'
 import { ageOnDate, createDemonstrationLicencePdf, createJourneyReceiptPdf, demonstrationLicenceNumber, downloadPdf, isDemonstrationLicenceEligible, type DemonstrationLicenceData, type JourneyReceiptData } from './downloadDocuments'
-import { loadExamSession, resetExamSession, saveExamSession } from './examSession'
+import { createPassingJudgeExamSession, loadExamSession, resetExamSession, saveExamSession } from './examSession'
 import { isPaymentConfirmed } from './payment'
 import { completeTutorial, loadJourneyProgress, saveJourneyProgress, startTutorial, updateTutorialWatch } from './progress'
 import { navigatePortal } from './router'
+import { loadYouTubeIframeApi, type YouTubePlayer, type YouTubePlayerStateEvent } from './youtubeIframeApi'
 
 type Language = 'en' | 'hi'
 type StageChange = (label: string) => void
@@ -43,117 +44,347 @@ function Guard({ applicationId, title, body, route, action, language }: { applic
 
 export function TutorialPage({ applicationId, onStageChange, language }: { applicationId: string; onStageChange: StageChange; language: Language }) {
   const [progress, setProgress] = useState(() => loadJourneyProgress(applicationId))
-  const [videoState, setVideoState] = useState<'loading' | 'ready' | 'unavailable'>('loading')
-  const videoRef = useRef<HTMLVideoElement | null>(null)
-  const lastPersistedAt = useRef(0)
-  if (!isPaymentConfirmed(progress.payment)) return <Guard applicationId={applicationId} language={language} title={local(language, 'Complete payment first', 'पहले भुगतान पूरा करें')} body={local(language, 'The learning and secure-test stages unlock only after the saved sandbox payment is confirmed.', 'सीखने और सुरक्षित परीक्षा के चरण सैंडबॉक्स भुगतान पुष्ट होने के बाद ही खुलते हैं।')} route={`/mp/application/${applicationId}/payment`} action={local(language, 'Open fee payment', 'शुल्क भुगतान खोलें')} />
-
-  const persistPosition = (force = false) => {
-    const video = videoRef.current
-    if (!video || !Number.isFinite(video.duration) || video.duration <= 0) return progress
-    if (!force && Date.now() - lastPersistedAt.current < 2000) return progress
-    lastPersistedAt.current = Date.now()
-    const updated = updateTutorialWatch(progress, {
-      revision: ROAD_SAFETY_VIDEO.revision,
-      position: video.currentTime,
-      maxWatched: Math.max(progress.tutorial.maxWatched, video.currentTime),
-      duration: video.duration,
-    })
-    saveJourneyProgress(updated)
-    setProgress(updated)
-    return updated
-  }
-
-  const onLoaded = () => {
-    const video = videoRef.current
-    if (!video) return
-    setVideoState('ready')
-    const started = startTutorial(progress, ROAD_SAFETY_VIDEO.revision, video.duration)
-    const resumeAt = started.tutorial.revision === ROAD_SAFETY_VIDEO.revision ? started.tutorial.lastPosition : 0
-    if (resumeAt > 0 && resumeAt < video.duration - 2) video.currentTime = resumeAt
-    saveJourneyProgress(started)
-    setProgress(started)
-  }
-
-  const onSeeking = () => {
-    const video = videoRef.current
-    if (!video || progress.tutorial.status === 'completed') return
-    const furthestAllowed = progress.tutorial.maxWatched + 2
-    if (video.currentTime > furthestAllowed) video.currentTime = progress.tutorial.maxWatched
-  }
-
-  const onEnded = () => {
-    const video = videoRef.current
-    if (!video) return
-    const watched = updateTutorialWatch(progress, {
-      revision: ROAD_SAFETY_VIDEO.revision,
-      position: video.duration,
-      maxWatched: video.duration,
-      duration: video.duration,
-    })
-    const completed = completeTutorial(watched, ROAD_SAFETY_VIDEO.revision, video.duration)
-    saveJourneyProgress(completed)
-    setProgress(completed)
-    onStageChange(local(language, 'Road-safety learning complete', 'सड़क सुरक्षा सीख पूरी'))
-  }
+  const [playbackSeconds, setPlaybackSeconds] = useState(0)
+  const [videoDuration, setVideoDuration] = useState<number>(ROAD_SAFETY_VIDEO.expectedDurationSeconds)
+  const [playerStatus, setPlayerStatus] = useState<'loading' | 'ready' | 'unavailable'>('loading')
+  const [playerMessage, setPlayerMessage] = useState('')
+  const playerContainerRef = useRef<HTMLDivElement | null>(null)
+  const playerRef = useRef<YouTubePlayer | null>(null)
+  const progressRef = useRef(progress)
+  const maxWatchedRef = useRef(progress.tutorial.maxWatched || 0)
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const lastPersistedAtRef = useRef(0)
+  const lastSampleAtRef = useRef(0)
+  const onStageChangeRef = useRef(onStageChange)
+  const languageRef = useRef(language)
 
   useEffect(() => {
-    const pauseWhenHidden = () => { if (document.hidden) videoRef.current?.pause() }
-    document.addEventListener('visibilitychange', pauseWhenHidden)
-    return () => document.removeEventListener('visibilitychange', pauseWhenHidden)
+    onStageChangeRef.current = onStageChange
+    languageRef.current = language
+  }, [language, onStageChange])
+
+  // Load YouTube IFrame API and attach anti-scrubbing controller
+  useEffect(() => {
+    if (!isPaymentConfirmed(progressRef.current.payment)) return
+    let cancelled = false
+    let mountedPlayer: YouTubePlayer | null = null
+
+    const stopTracking = () => {
+      if (intervalRef.current) clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+
+    const commitProgress = (next: typeof progress, updateUi = true) => {
+      progressRef.current = next
+      saveJourneyProgress(next)
+      if (updateUi) setProgress(next)
+    }
+
+    const recordPosition = (player: YouTubePlayer, force = false, updateUi = true) => {
+      const current = player.getCurrentTime()
+      const duration = player.getDuration() || ROAD_SAFETY_VIDEO.expectedDurationSeconds
+      if (!Number.isFinite(current) || !Number.isFinite(duration) || duration <= 0) return false
+
+      player.setPlaybackRate?.(1)
+      const sampledAt = performance.now()
+      const elapsed = lastSampleAtRef.current ? Math.max(0, (sampledAt - lastSampleAtRef.current) / 1_000) : 0
+      lastSampleAtRef.current = sampledAt
+      if (updateUi) {
+        setPlaybackSeconds(current)
+        setVideoDuration(duration)
+      }
+      const alreadyCompleted = progressRef.current.tutorial.status === 'completed'
+      const allowedLead = Math.max(0.9, elapsed + 0.35)
+      if (!alreadyCompleted && current > maxWatchedRef.current + allowedLead) {
+        player.seekTo(maxWatchedRef.current, true)
+        if (updateUi) setPlayerMessage(local(languageRef.current, 'Forward skipping is locked until that section has been watched.', 'जब तक वह भाग देखा न जाए, आगे छोड़ना लॉक है।'))
+        return false
+      }
+
+      maxWatchedRef.current = Math.max(maxWatchedRef.current, current)
+      if (!force && Date.now() - lastPersistedAtRef.current < 2_000) return true
+      lastPersistedAtRef.current = Date.now()
+      const updated = updateTutorialWatch(progressRef.current, {
+        revision: ROAD_SAFETY_VIDEO.revision,
+        position: current,
+        maxWatched: maxWatchedRef.current,
+        duration,
+      })
+      commitProgress(updated, updateUi)
+      return true
+    }
+
+    const finishIfFullyWatched = (player: YouTubePlayer) => {
+      const duration = player.getDuration() || ROAD_SAFETY_VIDEO.expectedDurationSeconds
+      if (!recordPosition(player, true)) return
+      const completed = completeTutorial(progressRef.current, ROAD_SAFETY_VIDEO.revision, duration)
+      if (completed.tutorial.status !== 'completed') {
+        player.seekTo(maxWatchedRef.current, true)
+        setPlayerMessage(local(languageRef.current, 'The video must be watched in order before the test unlocks.', 'टेस्ट खुलने से पहले वीडियो क्रम में पूरा देखना आवश्यक है।'))
+        return
+      }
+      commitProgress(completed)
+      setPlayerMessage(local(languageRef.current, 'Tutorial complete. Test instructions are now unlocked.', 'ट्यूटोरियल पूरा हुआ। टेस्ट निर्देश अब खुल गए हैं।'))
+      onStageChangeRef.current(local(languageRef.current, 'Road-safety learning complete', 'सड़क सुरक्षा सीख पूरी'))
+    }
+
+    setPlayerStatus('loading')
+    void loadYouTubeIframeApi().then((youtube) => {
+      if (cancelled || !playerContainerRef.current) return
+      const mountNode = document.createElement('div')
+      mountNode.className = 'lf-theatre-player-mount'
+      playerContainerRef.current.replaceChildren(mountNode)
+
+      mountedPlayer = new youtube.Player(mountNode, {
+          videoId: ROAD_SAFETY_VIDEO.youtubeId,
+          playerVars: {
+            rel: 0,
+            modestbranding: 1,
+            enablejsapi: 1,
+            playsinline: 1,
+          },
+          events: {
+            onReady: (event) => {
+              if (cancelled) return
+              const dur = event.target.getDuration()
+              const duration = dur > 0 ? dur : ROAD_SAFETY_VIDEO.expectedDurationSeconds
+              setVideoDuration(duration)
+              setPlayerStatus('ready')
+              event.target.setPlaybackRate?.(1)
+              const started = startTutorial(progressRef.current, ROAD_SAFETY_VIDEO.revision, duration)
+              progressRef.current = started
+              maxWatchedRef.current = started.tutorial.maxWatched
+              saveJourneyProgress(started)
+              setProgress(started)
+              const savedPos = started.tutorial.lastPosition
+              setPlaybackSeconds(savedPos)
+              if (savedPos > 0 && savedPos < dur - 5) {
+                event.target.seekTo(savedPos, true)
+              }
+            },
+            onStateChange: (event: YouTubePlayerStateEvent) => {
+              if (event.data === 1) {
+                stopTracking()
+                setPlayerMessage('')
+                event.target.setPlaybackRate?.(1)
+                lastSampleAtRef.current = performance.now()
+                if (event.target.getCurrentTime() > maxWatchedRef.current + 0.9 && progressRef.current.tutorial.status !== 'completed') {
+                  event.target.seekTo(maxWatchedRef.current, true)
+                }
+                intervalRef.current = setInterval(() => {
+                  if (playerRef.current) recordPosition(playerRef.current)
+                }, 600)
+              } else {
+                stopTracking()
+                if (event.data === 0) finishIfFullyWatched(event.target)
+                else if (event.data === 2) recordPosition(event.target, true)
+              }
+            },
+            onError: () => {
+              stopTracking()
+              setPlayerStatus('unavailable')
+              setPlayerMessage(local(languageRef.current, 'The external video could not be played. Reload the page or try again when online.', 'बाहरी वीडियो नहीं चल सका। पृष्ठ फिर लोड करें या ऑनलाइन होने पर दोबारा कोशिश करें।'))
+            },
+          },
+        })
+      playerRef.current = mountedPlayer
+    }).catch(() => {
+      if (cancelled) return
+      setPlayerStatus('unavailable')
+      setPlayerMessage(local(languageRef.current, 'The YouTube player could not load. Check the connection and reload this page.', 'YouTube प्लेयर लोड नहीं हुआ। कनेक्शन जाँचें और पृष्ठ फिर लोड करें।'))
+    })
+
+    return () => {
+      cancelled = true
+      stopTracking()
+      if (mountedPlayer) {
+        try {
+          recordPosition(mountedPlayer, true, false)
+          mountedPlayer.destroy()
+        } catch {
+          // The API may already have removed its iframe during page teardown.
+        }
+      }
+      if (playerRef.current === mountedPlayer) playerRef.current = null
+      playerContainerRef.current?.replaceChildren()
+    }
+  }, [applicationId])
+
+  // Auto-pause video when tab is hidden
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden && playerRef.current && typeof playerRef.current.pauseVideo === 'function') {
+        playerRef.current.pauseVideo()
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [])
 
+  const skipTutorialForJudgeDemo = () => {
+    if (progressRef.current.tutorial.status === 'completed') return
+    const duration = Number.isFinite(videoDuration) && videoDuration > 0
+      ? videoDuration
+      : ROAD_SAFETY_VIDEO.expectedDurationSeconds
+    const started = startTutorial(progressRef.current, ROAD_SAFETY_VIDEO.revision, duration)
+    const watched = updateTutorialWatch(started, {
+      revision: ROAD_SAFETY_VIDEO.revision,
+      position: duration,
+      maxWatched: duration,
+      duration,
+    })
+    const completedProgress = completeTutorial(watched, ROAD_SAFETY_VIDEO.revision, duration)
+    if (completedProgress.tutorial.status !== 'completed') return
+
+    playerRef.current?.pauseVideo()
+    progressRef.current = completedProgress
+    maxWatchedRef.current = duration
+    saveJourneyProgress(completedProgress)
+    setProgress(completedProgress)
+    setPlaybackSeconds(duration)
+    setPlayerMessage(local(language, 'Judge demo bypass used. Tutorial marked complete for this prototype session.', 'जज डेमो बायपास उपयोग किया गया। इस प्रोटोटाइप सत्र के लिए ट्यूटोरियल पूरा माना गया।'))
+    onStageChange(local(language, 'Road-safety learning complete · judge demo bypass', 'सड़क सुरक्षा सीख पूरी · जज डेमो बायपास'))
+    navigatePortal(`/mp/application/${applicationId}/test-entry`)
+  }
+
+  if (!isPaymentConfirmed(progress.payment)) return <Guard applicationId={applicationId} language={language} title={local(language, 'Complete payment first', 'पहले भुगतान पूरा करें')} body={local(language, 'The learning and secure-test stages unlock only after the saved sandbox payment is confirmed.', 'सीखने और सुरक्षित परीक्षा के चरण सैंडबॉक्स भुगतान पुष्ट होने के बाद ही खुलते हैं।')} route={`/mp/application/${applicationId}/payment`} action={local(language, 'Open fee payment', 'शुल्क भुगतान खोलें')} />
+
   const completed = progress.tutorial.status === 'completed'
+  const progressPercent = Math.min(100, Math.round(((completed ? videoDuration : maxWatchedRef.current) / (videoDuration || ROAD_SAFETY_VIDEO.expectedDurationSeconds)) * 100))
 
   return (
     <>
       <Breadcrumbs applicationId={applicationId} current={local(language, 'Road safety learning', 'सड़क सुरक्षा सीख')} language={language} />
       <section className="page-title">
         <div>
-          <p className="eyebrow">{local(language, 'Learn before the test', 'परीक्षा से पहले सीखें')}</p>
-          <h1 tabIndex={-1}>{local(language, 'Complete the road-safety learning video', 'सड़क सुरक्षा सीखने का वीडियो पूरा करें')}</h1>
-          <p>{local(language, 'Watch the full learning video before the test. Your position is saved on this device, so you can safely return later.', 'टेस्ट से पहले पूरा सीखने का वीडियो देखें। आपकी जगह इस डिवाइस पर सहेजी जाती है, इसलिए आप बाद में सुरक्षित रूप से लौट सकते हैं।')}</p>
+          <p className="eyebrow">{local(language, 'Required prototype learning', 'आवश्यक प्रोटोटाइप सीख')}</p>
+          <h1 tabIndex={-1}>{local(language, 'Road Safety Tutorial', 'सड़क सुरक्षा ट्यूटोरियल')}</h1>
+          <p>{local(language, 'Complete the road safety learning video before entering the learner licence examination.', 'लर्नर लाइसेंस परीक्षा शुरू करने से पहले सड़क सुरक्षा ट्यूटोरियल वीडियो पूरा करें।')}</p>
         </div>
       </section>
-      <section className="learning-video-shell" aria-labelledby="learning-video-title">
-        <div className="learning-video-shell__heading">
-          <div><p className="eyebrow">{local(language, 'Required learning', 'आवश्यक सीख')}</p><h2 id="learning-video-title">{local(language, 'Road safety essentials', 'सड़क सुरक्षा की जरूरी बातें')}</h2></div>
-          <span className={completed ? 'learning-status learning-status--complete' : 'learning-status'}>{completed ? <CheckCircle2 size={18} /> : <Clock3 size={18} />}{completed ? local(language, 'Completed', 'पूरा') : local(language, 'Required', 'आवश्यक')}</span>
+
+      <div className="lf-theatre-layout">
+        {/* Left Column: Video Screen & Control Strip */}
+        <div className="lf-theatre-main">
+          <div className="lf-theatre-frame">
+            <div ref={playerContainerRef} className="lf-theatre-iframe" />
+            {playerStatus !== 'ready' && (
+              <div className="lf-theatre-player-status" role="status" aria-live="polite">
+                {playerStatus === 'unavailable' ? <TriangleAlert size={28} aria-hidden="true" /> : <Clock3 size={28} aria-hidden="true" />}
+                <strong>
+                  {playerStatus === 'unavailable'
+                    ? local(language, 'Video player unavailable', 'वीडियो प्लेयर उपलब्ध नहीं')
+                    : local(language, 'Loading road-safety video…', 'सड़क सुरक्षा वीडियो लोड हो रहा है…')}
+                </strong>
+                {playerStatus === 'unavailable' && (
+                  <button type="button" className="button button--secondary" onClick={() => window.location.reload()}>
+                    <RefreshCcw size={16} aria-hidden="true" /> {local(language, 'Reload player', 'प्लेयर फिर लोड करें')}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="lf-theatre-meta-bar">
+            <div className="lf-theatre-meta-info">
+              <span>{local(language, 'Road-safety learning video · approximately 12 minutes', 'सड़क सुरक्षा सीखने का वीडियो · लगभग १२ मिनट')}</span>
+              <a href={ROAD_SAFETY_VIDEO.youtubeUrl} target="_blank" rel="noreferrer noopener">
+                {local(language, 'Open source video (progress is not tracked)', 'स्रोत वीडियो खोलें (प्रगति ट्रैक नहीं होगी)')} ↗
+              </a>
+            </div>
+          </div>
+
+          {/* Active Watch Progress Bar */}
+          <div className="lf-theatre-watch-progress" role="progressbar" aria-label={local(language, 'Tutorial watch progress', 'ट्यूटोरियल देखने की प्रगति')} aria-valuemin={0} aria-valuemax={100} aria-valuenow={progressPercent}>
+            <div className="lf-theatre-watch-progress__bar">
+              <div className="lf-theatre-watch-progress__fill" style={{ width: `${progressPercent}%` }} />
+            </div>
+            <div className="lf-theatre-watch-progress__meta">
+              <small>
+                {completed
+                  ? local(language, '100% Watched · Requirement Complete', '१००% देखा गया · आवश्यकता पूरी')
+                  : local(language, `${progressPercent}% Watched · Forward skipping locked until watched`, `${progressPercent}% देखा गया · आगे छोड़ना लॉक है`)}
+              </small>
+              <small>
+                {Math.floor(playbackSeconds / 60)}:{String(Math.floor(playbackSeconds % 60)).padStart(2, '0')} / {Math.floor(videoDuration / 60)}:{String(Math.floor(videoDuration % 60)).padStart(2, '0')}
+              </small>
+            </div>
+            {playerMessage && <small className="lf-theatre-watch-message" role="status" aria-live="polite">{playerMessage}</small>}
+          </div>
         </div>
-        <div className="learning-video-frame">
-          <video
-            ref={videoRef}
-            controls
-            playsInline
-            preload="metadata"
-            controlsList="nodownload noplaybackrate"
-            onLoadedMetadata={onLoaded}
-            onTimeUpdate={() => persistPosition()}
-            onPause={() => persistPosition(true)}
-            onSeeking={onSeeking}
-            onEnded={onEnded}
-            onError={() => setVideoState('unavailable')}
-          >
-            <source src={ROAD_SAFETY_VIDEO.source} type="video/mp4" />
-            <track kind="captions" src={ROAD_SAFETY_VIDEO.captions} srcLang="en" label="English" />
-          </video>
-          {videoState === 'unavailable' && <div className="learning-video-unavailable" role="status"><TriangleAlert size={26} /><strong>{local(language, 'Learning video is being prepared', 'सीखने का वीडियो तैयार किया जा रहा है')}</strong><p>{local(language, 'The final original video has not been added to this build yet. The test remains locked so this requirement cannot be bypassed.', 'अंतिम मूल वीडियो अभी इस बिल्ड में जोड़ा नहीं गया है। इस आवश्यकता को छोड़ा न जा सके, इसलिए टेस्ट लॉक रहेगा।')}</p></div>}
+
+        {/* Right Column: Status, Study Pack & Actions */}
+        <div className="lf-theatre-sidebar">
+          <div className="lf-theatre-card">
+            <div className="lf-theatre-card__header">
+              <div>
+                <p className="eyebrow">{local(language, 'Requirement status', 'आवश्यकता स्थिति')}</p>
+                <h3>{local(language, 'Road Safety Module', 'सड़क सुरक्षा मॉड्यूल')}</h3>
+              </div>
+              <span className={completed ? 'learning-status learning-status--complete' : 'learning-status'}>
+                {completed ? <CheckCircle2 size={16} /> : <Clock3 size={16} />}
+                {completed ? local(language, 'Completed', 'पूरा') : local(language, 'Required', 'अनिवार्य')}
+              </span>
+            </div>
+            <p className="lf-theatre-card__desc">
+              {completed
+                ? local(language, 'Tutorial requirements satisfied. You may now proceed to the online knowledge examination.', 'ट्यूटोरियल की आवश्यकता पूरी हुई। अब आप ऑनलाइन परीक्षा शुरू कर सकते हैं।')
+                : local(language, 'Watch the full video in order to unlock the test entry stage. Your furthest watched point is saved on this device.', 'टेस्ट खोलने के लिए वीडियो क्रम में पूरा देखें। सबसे आगे देखी गई जगह इस डिवाइस पर सहेजी जाती है।')}
+            </p>
+
+            <aside className="lf-theatre-judge-shortcut" aria-label={local(language, 'Judge demonstration shortcut', 'जज प्रदर्शन शॉर्टकट')}>
+              <div>
+                <strong>{local(language, 'Judge demo shortcut', 'जज डेमो शॉर्टकट')}</strong>
+                <p>{local(language, 'This visible prototype bypass saves review time. Production tutorial enforcement is demonstrated by the locked watch progress above.', 'यह स्पष्ट प्रोटोटाइप बायपास समीक्षा का समय बचाता है। प्रोडक्शन ट्यूटोरियल प्रवर्तन ऊपर लॉक की गई देखने की प्रगति द्वारा दिखाया गया है।')}</p>
+              </div>
+              <button type="button" className="button button--secondary" onClick={skipTutorialForJudgeDemo} disabled={completed}>
+                {completed ? <Check size={17} aria-hidden="true" /> : <FastForward size={17} aria-hidden="true" />}
+                {completed
+                  ? local(language, 'Tutorial already complete', 'ट्यूटोरियल पहले से पूरा')
+                  : local(language, 'Skip tutorial and continue', 'ट्यूटोरियल छोड़ें और आगे बढ़ें')}
+              </button>
+            </aside>
+
+            <div className="lf-theatre-study-box">
+              <div className="lf-theatre-study-box__top">
+                <BookOpenCheck size={18} />
+                <strong>{local(language, 'Reference question bank', 'संदर्भ प्रश्न बैंक')}</strong>
+              </div>
+              <p>{local(language, 'STALL sample question pack for traffic signs & road rules.', 'यातायात संकेतों और नियमों के लिए आधिकारिक अभ्यास सेट।')}</p>
+              <a className="button button--secondary lf-theatre-study-box__btn" href={OFFICIAL_QUESTION_BANK.source} download>
+                <Download size={15} /> {local(language, 'Download PDF', 'PDF डाउनलोड')}
+              </a>
+            </div>
+
+            <div className="lf-theatre-actions">
+              {completed ? (
+                <FlowLink className="button button--primary" href={`/mp/application/${applicationId}/test-entry`}>
+                  {local(language, 'Continue to test instructions', 'टेस्ट निर्देशों पर जाएँ')} <ArrowRight size={18} />
+                </FlowLink>
+              ) : (
+                <button className="button button--primary" disabled>
+                  {local(language, 'Watch video to unlock test', 'टेस्ट खोलने के लिए वीडियो देखें')} <ArrowRight size={18} />
+                </button>
+              )}
+              <FlowLink href={`/mp/application/${applicationId}`} className="button button--secondary">
+                <ArrowLeft size={16} /> {local(language, 'Application status', 'आवेदन स्थिति')}
+              </FlowLink>
+            </div>
+          </div>
+
+          <details className="lf-theatre-policy-note">
+            <summary>
+              <CircleHelp size={15} /> {local(language, 'Why is this video mandatory?', 'यह वीडियो अनिवार्य क्यों है?')}
+            </summary>
+            <p>
+              {local(
+                language,
+                'This prototype models tutorial completion as a required gate before the knowledge examination. It saves watch progress locally and blocks forward skipping.',
+                'यह प्रोटोटाइप ज्ञान परीक्षा से पहले ट्यूटोरियल पूरा करना आवश्यक मानता है। यह देखने की प्रगति स्थानीय रूप से सहेजता है और आगे छोड़ने से रोकता है।'
+              )}
+            </p>
+          </details>
         </div>
-        {!completed && progress.tutorial.lastPosition > 0 && <p className="learning-resume-note"><Clock3 size={17} />{local(language, `Saved at ${Math.floor(progress.tutorial.lastPosition / 60)}:${String(Math.floor(progress.tutorial.lastPosition % 60)).padStart(2, '0')}`, `वीडियो ${Math.floor(progress.tutorial.lastPosition / 60)}:${String(Math.floor(progress.tutorial.lastPosition % 60)).padStart(2, '0')} पर सहेजा गया`)}</p>}
-      </section>
-      <section className="learning-resource-card">
-        <BookOpenCheck size={24} />
-        <div><p className="eyebrow">{local(language, 'Optional study resource', 'वैकल्पिक अध्ययन सामग्री')}</p><h2>{local(language, OFFICIAL_QUESTION_BANK.label, 'आधिकारिक STALL नमूना प्रश्न बैंक — अंग्रेज़ी')}</h2><p>{local(language, 'Use it for extra practice. It is an older official sample, so confirm any time-sensitive rules or penalties on the current official portal.', 'अतिरिक्त अभ्यास के लिए इसका उपयोग करें। यह पुराना आधिकारिक नमूना है, इसलिए समय के साथ बदलने वाले नियम या दंड वर्तमान आधिकारिक पोर्टल पर जाँचें।')}</p></div>
-        <a className="button button--secondary" href={OFFICIAL_QUESTION_BANK.source} download><Download size={18} />{local(language, 'Download PDF', 'PDF डाउनलोड करें')}</a>
-      </section>
-      <details className="context-help"><summary><CircleHelp size={18} />{local(language, 'Why can’t I skip forward?', 'मैं वीडियो आगे क्यों नहीं कर सकता?')}</summary><div><p>{local(language, 'The learning stage is required before the test. You may pause, rewind, leave, and resume, but unseen sections cannot be skipped.', 'टेस्ट से पहले सीखने का चरण आवश्यक है। आप रोक सकते हैं, पीछे जा सकते हैं, बाहर जाकर फिर शुरू कर सकते हैं, लेकिन बिना देखे भाग छोड़े नहीं जा सकते।')}</p></div></details>
-      <div className="lf-actions">
-        {completed ? <FlowLink className="button button--primary" href={`/mp/application/${applicationId}/test-entry`}>
-          {local(language, 'Continue to test instructions', 'टेस्ट निर्देशों पर जाएँ')} <ArrowRight size={18} />
-        </FlowLink> : <button className="button button--primary" disabled>{local(language, 'Watch the full video to continue', 'आगे बढ़ने के लिए पूरा वीडियो देखें')} <ArrowRight size={18} /></button>}
-        <FlowLink href={`/mp/application/${applicationId}`} className="button button--secondary">
-          <ArrowLeft size={18} /> {local(language, 'Application status', 'आवेदन स्थिति')}
-        </FlowLink>
       </div>
     </>
   )
@@ -164,6 +395,21 @@ function routeForSession(applicationId: string, state: JourneyState): string {
   if (state.stage === 'interruption') return `/mp/application/${applicationId}/test-interruption`
   if (state.stage === 'result') return `/mp/application/${applicationId}/result`
   return `/mp/application/${applicationId}/test-entry`
+}
+
+function JudgePassShortcut({ language, onActivate, compact = false }: { language: Language; onActivate: () => void; compact?: boolean }) {
+  return (
+    <aside className={`judge-result-shortcut${compact ? ' judge-result-shortcut--compact' : ''}`} aria-label={local(language, 'Judge result preview control', 'जज परिणाम पूर्वावलोकन नियंत्रण')}>
+      <span className="judge-result-shortcut__icon"><ClipboardCheck size={20} aria-hidden="true" /></span>
+      <div>
+        <strong>{local(language, 'Judge review controls', 'जज समीक्षा नियंत्रण')}</strong>
+        <p>{local(language, 'Generate a passing prototype attempt through the normal scoring flow and open the result, receipt and demo licence.', 'सामान्य स्कोरिंग प्रवाह से पासिंग प्रोटोटाइप प्रयास बनाएँ और परिणाम, रसीद तथा डेमो लाइसेंस खोलें।')}</p>
+      </div>
+      <button type="button" className="button button--secondary" onClick={onActivate}>
+        <FastForward size={17} aria-hidden="true" /> {local(language, 'Preview passing result', 'पास परिणाम देखें')}
+      </button>
+    </aside>
+  )
 }
 
 export function TestEntryPage({ applicationId, onStageChange, language }: { applicationId: string; onStageChange: StageChange; language: Language }) {
@@ -201,6 +447,12 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
     setSession(next)
     onStageChange(local(language, 'LL test in progress', 'एलएल परीक्षा जारी'))
     navigatePortal(`/mp/application/${applicationId}/test`)
+  }
+  const previewPassingResult = () => {
+    const next = createPassingJudgeExamSession(applicationId, progress)
+    setSession(next)
+    onStageChange(local(language, 'Passing result preview · judge shortcut', 'पास परिणाम पूर्वावलोकन · जज शॉर्टकट'))
+    navigatePortal(`/mp/application/${applicationId}/result`)
   }
   return (
     <>
@@ -309,6 +561,7 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
           <ArrowLeft size={18} /> {local(language, 'Application status', 'आवेदन स्थिति')}
         </FlowLink>
       </div>
+      <JudgePassShortcut language={language} onActivate={previewPassingResult} />
     </>
   )
 }
@@ -409,6 +662,12 @@ export function TestPage({ applicationId, onStageChange, language }: { applicati
           ? { title: local(language, 'Improve lighting on your face', 'चेहरे पर रोशनी ठीक करें'), body: local(language, 'Turn on light or move to a brighter spot.', 'उजाले में बैठें या लाइट चालू करें।') }
           : null
   const saveAnswer = () => { if (selected !== null) submitAnswer(selected) }
+  const previewPassingResult = () => {
+    const next = createPassingJudgeExamSession(applicationId, progress)
+    setState(next)
+    onStageChange(local(language, 'Passing result preview · judge shortcut', 'पास परिणाम पूर्वावलोकन · जज शॉर्टकट'))
+    navigatePortal(`/mp/application/${applicationId}/result`)
+  }
   const answers = questionOptions(question, language)
   const savedCount = Object.keys(state.exam.answers).length
 
@@ -470,6 +729,7 @@ export function TestPage({ applicationId, onStageChange, language }: { applicati
             <div><dt>{local(language, 'Payment', 'भुगतान')}</dt><dd>{local(language, 'Confirmed', 'पुष्ट')}</dd></div>
             <div><dt>{local(language, 'Latest checkpoint', 'नवीनतम चेकपॉइंट')}</dt><dd>{savedCount === 0 ? local(language, 'No answer saved yet', 'अभी कोई उत्तर सहेजा नहीं') : local(language, `Question ${savedCount} saved`, `प्रश्न ${savedCount} सहेजा`)}</dd></div>
           </dl>
+          <JudgePassShortcut language={language} onActivate={previewPassingResult} compact />
         </aside>
       </section>
     </>

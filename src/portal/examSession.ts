@@ -1,4 +1,6 @@
-import { initialJourneyState, type JourneyEvent, type JourneyState } from '../domain/journey'
+import { fullQuestions } from '../content/questions'
+import { LL_TEST_CONFIG } from '../content/testConfig'
+import { initialJourneyState, journeyReducer, type JourneyEvent, type JourneyState } from '../domain/journey'
 import type { LLJourneyProgress } from './progress'
 
 const STORAGE_PREFIX = 'mp-ll-exam-session-v1:'
@@ -59,6 +61,38 @@ export function saveExamSession(applicationId: string, state: JourneyState): boo
 
 export function resetExamSession(applicationId: string, progress: LLJourneyProgress): JourneyState {
   const state = createExamSession(applicationId, progress)
+  saveExamSession(applicationId, state)
+  return state
+}
+
+export function createPassingJudgeExamSession(applicationId: string, progress: LLJourneyProgress): JourneyState {
+  let state = journeyReducer(createExamSession(applicationId, progress), { type: 'START_EXAM' })
+  const now = new Date().toISOString()
+  state = {
+    ...state,
+    events: [
+      ...state.events,
+      seedEvent(
+        `${applicationId}-judge-pass-${Date.now()}`,
+        'EXAM_STARTED',
+        'Judge review shortcut used',
+        'Synthetic correct answers were processed through the normal scoring reducer to preview the passing result journey',
+        now,
+        true,
+      ),
+    ],
+  }
+
+  fullQuestions.forEach((question, index) => {
+    state = journeyReducer(state, {
+      type: 'ANSWER',
+      answer: question.correct,
+      correct: true,
+      isLast: index === fullQuestions.length - 1,
+      passThreshold: LL_TEST_CONFIG.passMark,
+      triggerDemoInterruption: false,
+    })
+  })
   saveExamSession(applicationId, state)
   return state
 }

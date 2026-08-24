@@ -671,7 +671,7 @@ function IdentityStep({ draft, setDraft, errors, language }: StepProps) {
           >
             <div className="visual-identity-card__top">
               <span className="visual-identity-card__badge visual-identity-card__badge--recommended">
-                <Sparkles size={12} />
+                <CheckCircle2 size={16} />
                 {local(language, 'Recommended · Instant', 'अनुशंसित · त्वरित')}
               </span>
               <input
@@ -994,9 +994,9 @@ function PersonalStep({ draft, setDraft, errors, language }: StepProps) {
             {age !== null && (
               <span className={`age-eligibility-badge ${age >= 18 ? 'age-eligibility-badge--eligible' : 'age-eligibility-badge--restricted'}`}>
                 {age >= 18
-                  ? local(language, `✓ ${age} yrs · Eligible for all classes`, `✓ ${age} वर्ष · सभी वर्गों के लिए पात्र`)
+                  ? local(language, `${age} yrs · Eligible for all classes`, `${age} वर्ष · सभी वर्गों के लिए पात्र`)
                   : age >= 16
-                  ? local(language, `✓ ${age} yrs · Eligible for MCWOG (50cc)`, `✓ ${age} वर्ष · बिना गियर के लिए पात्र`)
+                  ? local(language, `${age} yrs · Eligible for MCWOG (50cc)`, `${age} वर्ष · बिना गियर के लिए पात्र`)
                   : local(language, `! ${age} yrs · Minimum age is 16`, `! ${age} वर्ष · न्यूनतम आयु 16 वर्ष`)}
               </span>
             )}
@@ -1547,7 +1547,7 @@ function ReviewStep({ draft, setDraft, errors, language }: StepProps) {
           <dl className="review-dossier-list">
             <div>
               <dt>{local(language, 'Identity Method', 'पहचान मार्ग')}</dt>
-              <dd>{draft.identityRoute === 'aadhaar-ekyc' ? 'Demo Aadhaar e-KYC (Verified ✓)' : 'Document Route'}</dd>
+              <dd>{draft.identityRoute === 'aadhaar-ekyc' ? 'Demo Aadhaar e-KYC (Verified )' : 'Document Route'}</dd>
             </div>
             <div>
               <dt>{local(language, 'Present Address', 'वर्तमान पता')}</dt>
@@ -1724,7 +1724,7 @@ export function ApplicationFlow({
             onClick={applyDemoData}
             title={local(language, 'Replaces current form values with synthetic demo data', 'मौजूदा मानों को सिंथेटिक डेमो डेटा से बदलता है')}
           >
-            <Sparkles size={16} aria-hidden="true" />
+            <CheckCircle2 size={16} aria-hidden="true" />
             {local(language, 'Fill demo application', 'डेमो आवेदन भरें')}
           </button>
           <span className="saved-badge">

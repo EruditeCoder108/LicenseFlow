@@ -15,6 +15,7 @@ import {
   RefreshCcw,
   RotateCw,
   ShieldCheck,
+  Sparkles,
   Signal,
   Smartphone,
   SunMedium,
@@ -173,122 +174,161 @@ export function DeviceReadinessPage({ language, applicationId, onStageChange }: 
       </section>
       {!snapshot.started ? (
         <>
-          <div className="lf-guidance-cards">
-            <div className="lf-guidance-card">
-              <div className="lf-guidance-card__image-wrap">
-                <img
-                  src="/assets/readiness-face-framing.png"
-                  alt={local(language, 'Face framing guide', 'चेहरा फ्रेमिंग गाइड')}
-                  className="lf-guidance-card__img"
-                />
-              </div>
-              <div className="lf-guidance-card__body">
-                <h3>{local(language, '1. Position & Framing', '१. सही स्थिति और फ्रेमिंग')}</h3>
-                <p>{local(language, 'Center your face within the guide oval. Ensure good frontal lighting with single occupant.', 'अपना चेहरा गाइड ओवल के बीच में रखें। चेहरे पर अच्छी रोशनी रखें और अकेले बैठें।')}</p>
-              </div>
+          <div className="lf-readiness-layout">
+            <div className="lf-readiness-layout__main">
+              <section className="lf-permission-card">
+                <div className="lf-permission-intro">
+                  <span className="lf-permission-shield"><ShieldCheck size={28} /></span>
+                  <div>
+                    <p className="eyebrow">{local(language, 'Privacy & Security Guarantee', 'गोपनीयता और सुरक्षा गारंटी')}</p>
+                    <h2>{local(language, 'Private & on-device only analysis', 'निजी और केवल डिवाइस पर विश्लेषण')}</h2>
+                    <p>{local(language, 'All biometric and camera checks run entirely inside your browser using local AI vision models. No audio or video is ever recorded, stored, or uploaded to any server.', 'सभी बायोमेट्रिक और कैमरा जाँच आपके ब्राउज़र में स्थानीय AI विज़न मॉडल द्वारा की जाती हैं। कोई भी ऑडियो या वीडियो रिकॉर्ड या अपलोड नहीं किया जाता।')}</p>
+                  </div>
+                </div>
+                <div className="lf-permission-grid">
+                  <div className="lf-permission-item">
+                    <Camera size={20} />
+                    <div>
+                      <strong>{local(language, 'Camera & Lighting', 'कैमरा और रोशनी')}</strong>
+                      <small>{local(language, 'Face framing, single occupant, ambient light', 'चेहरा फ्रेमिंग, अकेले बैठना, रोशनी')}</small>
+                    </div>
+                  </div>
+                  <div className="lf-permission-item">
+                    <Mic2 size={20} />
+                    <div>
+                      <strong>{local(language, 'Audio & Liveness', 'ऑडियो और लाइवनेस')}</strong>
+                      <small>{local(language, 'Microphone stream and natural head movement', 'माइक स्ट्रीम और सामान्य सिर की हरकत')}</small>
+                    </div>
+                  </div>
+                  <div className="lf-permission-item">
+                    <Database size={20} />
+                    <div>
+                      <strong>{local(language, 'Browser Storage', 'ब्राउज़र स्टोरेज')}</strong>
+                      <small>{local(language, 'Saves encrypted progress locally on this device', 'प्रगति इसी डिवाइस पर सुरक्षित रहती है')}</small>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {progress.readiness.status === 'passed' && (
+                <div className="lf-success-note">
+                  <CheckCircle2 size={20} />
+                  <div>
+                    <strong>{local(language, 'Device check is already complete.', 'डिवाइस जाँच पहले से पूरी है।')}</strong>
+                    <p>{local(language, 'You can continue to practice or run the check again.', 'आप अभ्यास जारी रख सकते हैं या दोबारा जाँच कर सकते हैं।')}</p>
+                  </div>
+                </div>
+              )}
+
+              {preparedIssue && (
+                <section className="prepayment-issue" role="status">
+                  <TriangleAlert size={24} />
+                  <div>
+                    <p className="eyebrow">{local(language, 'Payment paused · problem found', 'भुगतान रोका गया · समस्या मिली')}</p>
+                    <h2>{local(language, 'Camera could not start', 'कैमरा चालू नहीं हो सका')}</h2>
+                    <div className="warning-contract">
+                      <div>
+                        <strong>{local(language, 'What happened?', 'क्या हुआ?')}</strong>
+                        <p>{local(language, 'The demo found a camera problem that should be fixed before you pay.', 'डेमो में कैमरे की समस्या मिली जिसे भुगतान से पहले ठीक करना होगा।')}</p>
+                      </div>
+                      <div>
+                        <strong>{local(language, 'What happened to my application and payment?', 'मेरे आवेदन और भुगतान का क्या हुआ?')}</strong>
+                        <p>{local(language, 'Your application is saved. No fee was charged. You can check your device again now.', 'आपका आवेदन सुरक्षित है। कोई शुल्क नहीं कटा। आप अभी दोबारा जाँच कर सकते हैं।')}</p>
+                      </div>
+                    </div>
+                    <div className="lf-actions">
+                      <button className="button button--primary" onClick={() => { setPreparedIssue(false); void media.start() }}>
+                        {local(language, 'Check device again', 'डिवाइस दोबारा जाँचें')} <RefreshCcw size={18} />
+                      </button>
+                      <button className="button button--secondary" onClick={() => { setPreparedIssue(false); media.useGuidedSignals() }}>
+                        {local(language, 'Use demo simulation', 'डेमो सिमुलेशन इस्तेमाल करें')}
+                      </button>
+                    </div>
+                  </div>
+                </section>
+              )}
+
+              {!preparedIssue && (
+                <div className="lf-readiness-actions-bar">
+                  <div className="lf-readiness-actions-row">
+                    <button className="button button--primary" onClick={() => void media.start()}>
+                      {local(language, 'Start private device check', 'डिवाइस जाँच शुरू करें')} <ArrowRight size={18} />
+                    </button>
+                    <button className="button button--secondary quick-fill-btn" onClick={media.useGuidedSignals}>
+                      <CheckCircle2 size={15} />
+                      <span>{local(language, 'Use Demo Simulation', 'डेमो सिमुलेशन')}</span>
+                    </button>
+                    {progress.readiness.status === 'passed' && (
+                      <FlowLink className="button button--secondary" href={`/mp/application/${applicationId}/rehearsal`}>
+                        {local(language, 'Continue to rehearsal', 'रिहर्सल पर जाएँ')} <ArrowRight size={16} />
+                      </FlowLink>
+                    )}
+                    <FlowLink className="button button--secondary" href={`/mp/application/${applicationId}`}>
+                      <ArrowLeft size={16} /> {local(language, 'Application status', 'आवेदन स्थिति')}
+                    </FlowLink>
+                  </div>
+
+                  <details className="lf-problem-scenario-tools">
+                    <summary>
+                      <Info size={15} /> {local(language, 'Developer / Evaluation Simulation Tools', 'डेवलपर / मूल्यांकन सिमुलेशन टूल्स')}
+                    </summary>
+                    <div className="lf-problem-scenario-tools__body">
+                      <p>{local(language, 'Test how LicenceFlow protects applicants by intercepting hardware issues before fee payment:', 'जाँचें कि भुगतान से पहले कैमरा समस्या आने पर लाइसेंसफ्लो कैसे सुरक्षित रोकता है:')}</p>
+                      <button type="button" className="button button--secondary" onClick={() => setPreparedIssue(true)}>
+                        <TriangleAlert size={16} /> {local(language, 'Simulate Camera Failure Scenario', 'कैमरा विफलता का परीक्षण करें')}
+                      </button>
+                    </div>
+                  </details>
+                </div>
+              )}
             </div>
-            <div className="lf-guidance-card">
-              <div className="lf-guidance-card__image-wrap">
-                <img
-                  src="/assets/readiness-head-turn.png"
-                  alt={local(language, 'Head turn liveness guide', 'सिर घुमाने की लाइवनेस गाइड')}
-                  className="lf-guidance-card__img"
-                />
-              </div>
-              <div className="lf-guidance-card__body">
-                <h3>{local(language, '2. Active Liveness Check', '२. सक्रिय जीवंतता जाँच')}</h3>
-                <p>{local(language, 'Follow prompt to turn head gently left/right. Verifies live presence with no uploaded video.', 'स्क्रीन के निर्देशानुसार सिर हल्का सा बाएँ या दाएँ घुमाएँ। बिना वीडियो अपलोड किए पुष्टि होती है।')}</p>
+
+            <div className="lf-readiness-layout__sidebar">
+              <div className="lf-instructions-card">
+                <div className="lf-instructions-card__header">
+                  <Info size={18} />
+                  <div>
+                    <strong>{local(language, 'Visual Guidance', 'दृश्य मार्गदर्शन')}</strong>
+                    <small>{local(language, '2 quick steps during check', 'जाँच के २ त्वरित चरण')}</small>
+                  </div>
+                </div>
+
+                <div className="lf-instruction-step">
+                  <div className="lf-instruction-step__thumb-wrap">
+                    <img
+                      src="/assets/readiness-face-framing.png"
+                      alt={local(language, 'Face framing guide', 'चेहरा फ्रेमिंग गाइड')}
+                      className="lf-instruction-step__thumb"
+                    />
+                  </div>
+                  <div className="lf-instruction-step__content">
+                    <span className="step-pill">1</span>
+                    <div>
+                      <h4>{local(language, 'Position & Framing', 'सही स्थिति और फ्रेमिंग')}</h4>
+                      <p>{local(language, 'Center face within oval. Ensure clear frontal lighting with single occupant.', 'चेहरा ओवल के बीच में रखें। अच्छी रोशनी में अकेले बैठें।')}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="lf-instruction-step">
+                  <div className="lf-instruction-step__thumb-wrap">
+                    <img
+                      src="/assets/readiness-head-turn.png"
+                      alt={local(language, 'Head turn liveness guide', 'सिर घुमाने की लाइवनेस गाइड')}
+                      className="lf-instruction-step__thumb"
+                    />
+                  </div>
+                  <div className="lf-instruction-step__content">
+                    <span className="step-pill">2</span>
+                    <div>
+                      <h4>{local(language, 'Active Liveness Check', 'सक्रिय जीवंतता जाँच')}</h4>
+                      <p>{local(language, 'Turn head gently left or right when prompted to verify presence.', 'स्क्रीन के निर्देश पर सिर हल्का सा घुमाएँ।')}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-
-          <section className="lf-permission-card">
-            <div className="lf-permission-intro">
-              <span><ShieldCheck size={27} /></span>
-              <div>
-                <p className="eyebrow">{local(language, 'Privacy notice', 'गोपनीयता सूचना')}</p>
-                <h2>{local(language, 'Your camera and microphone stay on this device', 'आपका कैमरा और माइक इसी डिवाइस पर रहता है')}</h2>
-                <p>{local(language, 'This demo checks your camera, lighting, framing, a simple head turn and microphone. It does not record or upload any video or audio.', 'यह डेमो कैमरे, रोशनी, फ्रेमिंग, सिर घुमाने और माइक की जाँच करता है। यह कोई वीडियो या ऑडियो रिकॉर्ड या अपलोड नहीं करता।')}</p>
-              </div>
-            </div>
-            <div className="lf-permission-grid">
-              <div>
-                <Camera size={21} />
-                <span>
-                  <strong>{local(language, 'Camera', 'कैमरा')}</strong>
-                  <small>{local(language, 'Face, framing, light, movement', 'चेहरा, फ्रेमिंग, रोशनी, हरकत')}</small>
-                </span>
-              </div>
-              <div>
-                <Mic2 size={21} />
-                <span>
-                  <strong>{local(language, 'Microphone', 'माइक्रोफ़ोन')}</strong>
-                  <small>{local(language, 'Check stream works', 'माइक चालू होने की जाँच')}</small>
-                </span>
-              </div>
-              <div>
-                <Database size={21} />
-                <span>
-                  <strong>{local(language, 'Browser storage', 'ब्राउज़र मेमोरी')}</strong>
-                  <small>{local(language, 'Saves your progress on this device', 'प्रगति इसी डिवाइस पर सहेजी जाती है')}</small>
-                </span>
-              </div>
-            </div>
-          </section>
-          {progress.readiness.status === 'passed' && (
-            <div className="lf-success-note">
-              <CheckCircle2 size={20} />
-              <div>
-                <strong>{local(language, 'Device check is already complete.', 'डिवाइस जाँच पहले से पूरी है।')}</strong>
-                <p>{local(language, 'You can continue to practice or run the check again.', 'आप अभ्यास जारी रख सकते हैं या दोबारा जाँच कर सकते हैं।')}</p>
-              </div>
-            </div>
-          )}
-          {preparedIssue && (
-            <section className="prepayment-issue" role="status">
-              <TriangleAlert size={24} />
-              <div>
-                <p className="eyebrow">{local(language, 'Payment paused · problem found', 'भुगतान रोका गया · समस्या मिली')}</p>
-                <h2>{local(language, 'Camera could not start', 'कैमरा चालू नहीं हो सका')}</h2>
-                <div className="warning-contract">
-                  <div>
-                    <strong>{local(language, 'What happened?', 'क्या हुआ?')}</strong>
-                    <p>{local(language, 'The demo found a camera problem that should be fixed before you pay.', 'डेमो में कैमरे की समस्या मिली जिसे भुगतान से पहले ठीक करना होगा।')}</p>
-                  </div>
-                  <div>
-                    <strong>{local(language, 'What happened to my application and payment?', 'मेरे आवेदन और भुगतान का क्या हुआ?')}</strong>
-                    <p>{local(language, 'Your application is saved. No fee was charged. You can check your device again now.', 'आपका आवेदन सुरक्षित है। कोई शुल्क नहीं कटा। आप अभी दोबारा जाँच कर सकते हैं।')}</p>
-                  </div>
-                </div>
-                <div className="lf-actions">
-                  <button className="button button--primary" onClick={() => { setPreparedIssue(false); void media.start() }}>
-                    {local(language, 'Check device again', 'डिवाइस दोबारा जाँचें')} <RefreshCcw size={18} />
-                  </button>
-                  <button className="button button--secondary" onClick={() => { setPreparedIssue(false); media.useGuidedSignals() }}>
-                    {local(language, 'Use demo simulation', 'डेमो सिमुलेशन इस्तेमाल करें')}
-                  </button>
-                </div>
-              </div>
-            </section>
-          )}
-          {!preparedIssue && (
-            <div className="lf-actions lf-actions--stack">
-              <button className="button button--primary" onClick={() => void media.start()}>
-                {local(language, 'Start private device check', 'डिवाइस जाँच शुरू करें')} <ArrowRight size={18} />
-              </button>
-              <button className="button button--secondary" onClick={() => setPreparedIssue(true)}>
-                {local(language, 'Try a problem scenario', 'समस्या वाला डेमो देखें')}
-              </button>
-              <button className="button button--secondary" onClick={media.useGuidedSignals}>
-                {local(language, 'Use demo simulation', 'डेमो सिमुलेशन इस्तेमाल करें')}
-              </button>
-              {progress.readiness.status === 'passed' && (
-                <FlowLink className="text-button" href={`/mp/application/${applicationId}/rehearsal`}>
-                  {local(language, 'Continue with saved check', 'सहेजी गई जाँच से आगे बढ़ें')}
-                </FlowLink>
-              )}
-            </div>
-          )}
         </>
       ) : (
         <>

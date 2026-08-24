@@ -201,7 +201,7 @@ function UpiQrPreview({
             className="button button--secondary button--full upi-qr-card__sim-btn"
             onClick={onSimulatePay}
           >
-            <Sparkles size={16} />
+            <CheckCircle2 size={15} />
             {local(language, 'Simulate UPI App Scan & Pay', 'UPI ऐप से स्कैन और भुगतान सिमुलेट करें')}
           </button>
         </div>

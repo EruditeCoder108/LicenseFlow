@@ -921,7 +921,7 @@ function ServicesPage({ language, demoApplication }: { language: Language; demoA
               <span>{copy(language, 'Online service', 'ऑनलाइन सेवा')}</span>
             </div>
             <div className="mp-hero-badge">
-              <Sparkles size={16} />
+              <CheckCircle2 size={16} />
               <span>{copy(language, 'Aadhaar e-KYC', 'आधार e-KYC')}</span>
             </div>
             <div className="mp-hero-badge">
@@ -1355,7 +1355,7 @@ function ApplicationPage({ application, language }: { application: DemoApplicati
 
       {journey.mode === 'prepared-demo' && (
         <section className="reference-banner" style={{ margin: '0 0 20px' }}>
-          <Sparkles size={20} />
+          <CheckCircle2 size={16} />
           <div>
             <strong>{copy(language, 'Prepared review demo', 'तैयार समीक्षा डेमो')}</strong>
             <p>{copy(language, 'Prepared demo details and sample documents have been loaded so you can review the test-readiness, payment, and test experience quickly.', 'तैयार डेमो जानकारी और नमूना दस्तावेज़ लोड किए गए हैं ताकि आप डिवाइस जाँच, भुगतान और परीक्षा अनुभव की त्वरित समीक्षा कर सकें।')}</p>
