@@ -10,7 +10,7 @@ import { journeyReducer, type InterruptionKind, type JourneyEvent, type JourneyS
 import { useDeviceReadiness } from '../hooks/useDeviceReadiness'
 import { clearLicenceFlowDeviceData } from './devicePrivacy'
 import { loadApplicationDraft } from './application'
-import { createDemonstrationLicencePdf, createJourneyReceiptPdf, downloadPdf, isDemonstrationLicenceEligible, type DemonstrationLicenceData, type JourneyReceiptData } from './downloadDocuments'
+import { ageOnDate, createDemonstrationLicencePdf, createJourneyReceiptPdf, demonstrationLicenceNumber, downloadPdf, isDemonstrationLicenceEligible, type DemonstrationLicenceData, type JourneyReceiptData } from './downloadDocuments'
 import { loadExamSession, resetExamSession, saveExamSession } from './examSession'
 import { isPaymentConfirmed } from './payment'
 import { completeTutorial, loadJourneyProgress, saveJourneyProgress, startTutorial, updateTutorialWatch } from './progress'
@@ -601,6 +601,7 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
     completedAt,
     paymentReference: progress.payment.reference,
   }
+  const holderAge = licenceData.dateOfBirth ? ageOnDate(licenceData.dateOfBirth, completedAt) : null
   const receiptData: JourneyReceiptData = {
     ...licenceData,
     correctAnswers: state.exam.correctAnswers,
@@ -699,7 +700,7 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
       {!passed && <section className="retest-guidance"><RefreshCcw size={24} /><div><p className="eyebrow">{local(language, 'Next attempt', 'अगला प्रयास')}</p><h2>{local(language, 'Review first, then try again', 'पहले समीक्षा करें, फिर दोबारा प्रयास करें')}</h2><p>{local(language, 'This prototype allows an immediate retest after review. In a real service, waiting periods, fees and appointments are controlled by the current state rules.', 'यह प्रोटोटाइप समीक्षा के बाद तुरंत दोबारा टेस्ट देता है। वास्तविक सेवा में प्रतीक्षा अवधि, शुल्क और अपॉइंटमेंट वर्तमान राज्य नियमों से नियंत्रित होते हैं।')}</p></div><div className="lf-actions"><FlowLink className="button button--secondary" href={`/mp/application/${applicationId}/tutorial`}>{local(language, 'Revisit learning material', 'सीखने की सामग्री फिर देखें')}</FlowLink><button className="button button--primary" onClick={reset}>{local(language, 'Start a new prototype attempt', 'नया प्रोटोटाइप प्रयास शुरू करें')} <ArrowRight size={18} /></button></div></section>}
       {eligible ? (
         <>
-          <section className="demo-licence" aria-label="Digital Learner's Licence">
+          <section className="demo-licence" aria-label={local(language, "Demonstration Learner's Licence, not valid", 'डेमो लर्नर लाइसेंस, मान्य नहीं')}>
             <div className="demo-licence__watermark">{local(language, 'DEMO · NOT VALID', 'डेमो · मान्य नहीं')}</div>
             <header className="demo-licence__header">
               <div className="demo-licence__brand">
@@ -709,24 +710,30 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
                   className="demo-licence__logo"
                 />
                 <div>
-                  <p className="demo-licence__state">{local(language, 'Government of Madhya Pradesh · Transport Department', 'मध्य प्रदेश शासन · परिवहन विभाग')}</p>
-                  <h3 className="demo-licence__form-title">{local(language, "FORM 3 — LEARNER'S LICENCE [Rule 3(1)]", 'प्रारूप ३ — शिक्षार्थी अनुज्ञप्ति [नियम ३(१)]')}</h3>
+                  <p className="demo-licence__state">{local(language, 'LicenceFlow prototype · Madhya Pradesh demo journey', 'LicenceFlow प्रोटोटाइप · मध्य प्रदेश डेमो यात्रा')}</p>
+                  <h3 className="demo-licence__form-title">{local(language, "DEMONSTRATION LEARNER'S LICENCE · NOT VALID", 'डेमो लर्नर लाइसेंस · मान्य नहीं')}</h3>
                 </div>
               </div>
               <div className="demo-licence__ll-number">
-                <small>{local(language, 'Licence No.', 'अनुज्ञप्ति संख्या')}</small>
-                <strong>MP-04/LL/{applicationId.replace(/[^0-9]/g, '') || '002408'}/2026</strong>
+                <small>{local(language, 'Demo licence number', 'डेमो लाइसेंस संख्या')}</small>
+                <strong>{demonstrationLicenceNumber(applicationId)}</strong>
               </div>
             </header>
 
             <div className="demo-licence__body">
               <div className="demo-licence__photo-col">
                 <div className="demo-licence__photo-wrap">
-                  <UserRound size={48} />
+                  <img
+                    src="/assets/demo-applicant-photo.jpg"
+                    alt={licenceData.holderName}
+                    width={819}
+                    height={1024}
+                    className="demo-licence__photo-img"
+                  />
                   <span>{local(language, 'DIGITAL PHOTO', 'डिजिटल फोटो')}</span>
                 </div>
                 <div className="demo-licence__qr-wrap">
-                  <svg className="demo-licence__qr-svg" viewBox="0 0 100 100" aria-label="Licence QR Verification">
+                  <svg className="demo-licence__qr-svg" viewBox="0 0 100 100" role="img" aria-label={local(language, 'Decorative demo verification pattern; not scannable', 'सजावटी डेमो सत्यापन पैटर्न; स्कैन योग्य नहीं')}>
                     <rect width="100" height="100" fill="white" rx="4" />
                     <rect x="8" y="8" width="26" height="26" fill="#071a34" rx="2" />
                     <rect x="12" y="12" width="18" height="18" fill="white" rx="1" />
@@ -756,7 +763,7 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
                     <rect x="66" y="82" width="14" height="6" fill="#071a34" rx="1" />
                     <rect x="84" y="80" width="6" height="8" fill="#1d4ed8" rx="1" />
                   </svg>
-                  <small>{local(language, 'Scan to Verify Parivahan Credential', 'सत्यापन हेतु स्कैन करें')}</small>
+                  <small>{local(language, 'Decorative demo pattern · not scannable', 'सजावटी डेमो पैटर्न · स्कैन योग्य नहीं')}</small>
                 </div>
               </div>
 
@@ -772,11 +779,11 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
                   </div>
                   <div>
                     <dt>{local(language, 'Date of Birth / Age', 'जन्म तिथि / आयु')}</dt>
-                    <dd>{licenceData.dateOfBirth ? `${licenceData.dateOfBirth} (Eligible)` : local(language, '24-08-2005 (21 yrs)', '२४-०८-२००५ (२१ वर्ष)')}</dd>
+                    <dd>{licenceData.dateOfBirth ? `${licenceData.dateOfBirth}${holderAge === null ? '' : ` (${holderAge} yrs)`}` : local(language, 'Synthetic date not supplied', 'सिंथेटिक जन्मतिथि उपलब्ध नहीं')}</dd>
                   </div>
                   <div>
-                    <dt>{local(language, 'Issuing Authority', 'जारीकर्ता प्राधिकारी')}</dt>
-                    <dd>{local(language, 'RTO Bhopal (MP-04), Madhya Pradesh', 'आरटीओ भोपाल (MP-04), मध्य प्रदेश')}</dd>
+                    <dt>{local(language, 'Demo workflow region', 'डेमो कार्यप्रवाह क्षेत्र')}</dt>
+                    <dd>{local(language, 'Simulated Bhopal RTO workflow', 'सिमुलेटेड भोपाल आरटीओ कार्यप्रवाह')}</dd>
                   </div>
                   <div>
                     <dt>{local(language, 'Issue Date', 'जारी दिनांक')}</dt>
@@ -800,11 +807,30 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
                     </dd>
                   </div>
                 </dl>
+
+                <div className="demo-licence__auth-row">
+                  <div className="demo-licence__signature-box">
+                    <small>{local(language, 'Holder Signature', 'धारक के हस्ताक्षर')}</small>
+                    <img
+                      src="/assets/demo-applicant-signature.jpg"
+                      alt={local(language, 'Synthetic holder signature', 'सिंथेटिक धारक हस्ताक्षर')}
+                      width={1024}
+                      height={768}
+                      className="demo-licence__signature-img"
+                    />
+                  </div>
+                  <div className="demo-licence__seal-box">
+                    <small>{local(language, 'Prototype seal', 'प्रोटोटाइप मुहर')}</small>
+                    <span className="demo-licence__seal-badge">
+                      <ShieldCheck size={16} /> DEMO · NOT VALID
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
 
             <footer className="demo-licence__footer">
-              <p>{local(language, 'This is an electronic demonstration document generated by LicenceFlow for the Madhya Pradesh Parivahan Sarathi prototype. Not valid for actual vehicle driving on public roads.', 'यह मध्य प्रदेश परिवहन सारथी प्रोटोटाइप हेतु लाइसेंसफ्लो द्वारा निर्मित इलेक्ट्रॉनिक डेमो दस्तावेज़ है। सार्वजनिक सड़कों पर वाहन चलाने हेतु मान्य नहीं है।')}</p>
+              <p>{local(language, 'Synthetic Demonstration Document · All citizen profiles, photos, signatures and credentials are AI-generated demo samples for prototype evaluation. Any resemblance to real persons, living or dead, is purely coincidental.', 'सिंथेटिक डेमो दस्तावेज़ · सभी प्रोफ़ाइल, फ़ोटो, हस्ताक्षर और क्रेडेंशियल प्रोटोटाइप मूल्यांकन हेतु AI जनरेटेड हैं। किसी वास्तविक व्यक्ति से समानता मात्र संयोग है।')}</p>
             </footer>
           </section>
           <section className="journey-receipt" aria-labelledby="document-download-title">

@@ -3004,6 +3004,9 @@ main h1:focus { outline: none; }
 .page-header__right {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 10px;
   flex-shrink: 0;
 }
 
@@ -4462,3 +4465,305 @@ main h1:focus { outline: none; }
   }
 }
 
+
+/* ==========================================================================
+   Quick Fill Demo Data & Synthetic Media Styling
+   ========================================================================== */
+.quick-fill-btn {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 14px;
+  color: var(--navy-900);
+  background: var(--blue-50);
+  border: 1.5px solid var(--blue-600);
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(29, 78, 216, 0.12);
+  font-size: 0.84rem;
+  font-weight: 700;
+  transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.quick-fill-btn:hover {
+  background: var(--blue-100);
+  border-color: var(--blue-700);
+  box-shadow: 0 4px 12px rgba(29, 78, 216, 0.18);
+}
+
+.quick-fill-btn:disabled {
+  cursor: default;
+  opacity: .65;
+  box-shadow: none;
+}
+
+.synthetic-disclaimer-strip {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 24px;
+  padding: 10px 16px;
+  background: var(--slate-100);
+  border: 1px solid var(--slate-200);
+  border-radius: 8px;
+  color: var(--slate-600);
+  font-size: 0.76rem;
+  line-height: 1.4;
+}
+
+.synthetic-disclaimer-strip svg {
+  color: var(--slate-500);
+  flex-shrink: 0;
+}
+
+/* Upload Card Image Previews */
+.synthetic-preview--image {
+  position: relative;
+  width: 100%;
+  height: 132px;
+  padding: 0;
+  background: var(--slate-50);
+  border: 1.5px solid var(--slate-200);
+  border-radius: 8px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.synthetic-preview--image:hover {
+  border-color: var(--blue-600);
+  box-shadow: 0 4px 12px rgba(7, 26, 52, 0.08);
+}
+
+.upload-card__thumb-img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: cover;
+  display: block;
+}
+
+.upload-card__thumb-img--photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.upload-card__thumb-img--sig {
+  object-fit: contain;
+  background: white;
+  padding: 6px;
+}
+
+.upload-card__thumb-img--doc {
+  object-fit: contain;
+  background: white;
+}
+
+.synthetic-preview__zoom-hint {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: rgba(7, 26, 52, 0.85);
+  color: white;
+  font-size: 0.68rem;
+  font-weight: 700;
+  border-radius: 4px;
+  backdrop-filter: blur(4px);
+}
+
+.upload-card__file-meta {
+  display: block;
+  overflow-wrap: anywhere;
+  font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+  font-size: 0.72rem;
+  color: var(--slate-500);
+  margin-top: 4px;
+}
+
+.upload-card__details {
+  min-width: 0;
+}
+
+/* Preview Modal Lightbox */
+.preview-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(7, 26, 52, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.preview-modal-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(7, 26, 52, 0.25);
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.preview-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--slate-200);
+}
+
+.preview-modal-header strong {
+  display: block;
+  font-size: 1rem;
+  color: var(--navy-950);
+}
+
+.preview-modal-header small {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--slate-500);
+}
+
+.preview-modal-body {
+  padding: 16px;
+  background: var(--slate-50);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: auto;
+  max-height: 60vh;
+}
+
+.preview-modal-img {
+  max-width: 100%;
+  max-height: 55vh;
+  object-fit: contain;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  background: white;
+}
+
+.preview-modal-footer {
+  padding: 14px 20px;
+  border-top: 1px solid var(--slate-200);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.preview-modal-footer .button {
+  flex: 0 0 auto;
+}
+
+.subtle-disclaimer {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--slate-500);
+  line-height: 1.35;
+  flex: 1;
+}
+
+/* Digital Licence Photo & Signature Display */
+.demo-licence__photo-img {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+  border-radius: 4px;
+  display: block;
+}
+
+.demo-licence__auth-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--slate-200);
+}
+
+.demo-licence__signature-box {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.demo-licence__signature-box small {
+  font-size: 0.7rem;
+  color: var(--slate-500);
+  font-weight: 600;
+}
+
+.demo-licence__signature-img {
+  height: 38px;
+  width: auto;
+  max-width: 160px;
+  object-fit: contain;
+  background: white;
+  padding: 2px 6px;
+  border: 1px solid var(--slate-300);
+  border-radius: 4px;
+}
+
+.demo-licence__seal-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.demo-licence__seal-box small {
+  font-size: 0.7rem;
+  color: var(--slate-500);
+  font-weight: 600;
+}
+
+.demo-licence__seal-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: var(--blue-50);
+  border: 1.5px solid var(--blue-700);
+  border-radius: 6px;
+  color: var(--blue-900);
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+@media (max-width: 720px) {
+  .page-header__right {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .preview-modal-backdrop {
+    padding: 10px;
+  }
+
+  .preview-modal-footer {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .preview-modal-footer .button {
+    width: 100%;
+  }
+}

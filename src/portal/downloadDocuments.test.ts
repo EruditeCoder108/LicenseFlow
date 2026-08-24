@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createSingleImagePdf, demonstrationLicenceNumber, isDemonstrationLicenceEligible, verificationCode } from './downloadDocuments'
+import { ageOnDate, createSingleImagePdf, demonstrationLicenceNumber, isDemonstrationLicenceEligible, verificationCode } from './downloadDocuments'
 
 describe('completion document logic', () => {
   it('issues a demonstration licence only after every required outcome is complete', () => {
@@ -9,9 +9,15 @@ describe('completion document logic', () => {
   })
 
   it('uses stable, visibly synthetic document identifiers', () => {
-    expect(demonstrationLicenceNumber('MP-LL-DEMO-2408')).toMatch(/^MP-DLL-\d{10}$/)
+    expect(demonstrationLicenceNumber('MP-LL-DEMO-2408')).toMatch(/^LF-DEMO-LL-\d{10}$/)
     expect(demonstrationLicenceNumber('MP-LL-DEMO-2408')).toBe(demonstrationLicenceNumber('MP-LL-DEMO-2408'))
     expect(verificationCode('MP-LL-DEMO-2408')).toMatch(/^DEMO-\d{8}$/)
+  })
+
+  it('calculates age from the date of birth instead of printing a stale value', () => {
+    expect(ageOnDate('2002-08-14', '2026-08-13T12:00:00.000Z')).toBe(23)
+    expect(ageOnDate('2002-08-14', '2026-08-14T12:00:00.000Z')).toBe(24)
+    expect(ageOnDate('not-a-date', '2026-08-14T12:00:00.000Z')).toBeNull()
   })
 
   it('creates a structurally complete one-page PDF around a JPEG stream', () => {

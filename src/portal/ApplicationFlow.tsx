@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import {
   ArrowLeft,
   ArrowRight,
@@ -13,12 +13,13 @@ import {
   ShieldCheck,
   Sparkles,
   Upload,
-  UserRoundCheck,
   X,
+  ZoomIn,
 } from 'lucide-react'
 import {
   applicationSteps,
   createEmptyDraft,
+  fillDraftWithDemoData,
   fitnessQuestions,
   loadApplicationDraft,
   saveApplicationDraft,
@@ -373,10 +374,10 @@ function AddressFields({
       <legend>{title}</legend>
       <div className="form-grid form-grid--address">
         <div className="form-grid__col-1">
-          {addressField('house', local(language, 'House / Flat / Door No.', 'मकान / फ्लैट नंबर'), true, undefined, 'e.g. Flat 402, Block B')}
+          {addressField('house', local(language, 'House / Flat / Door No.', 'मकान / फ्लैट नंबर'), true, undefined, 'e.g. Flat 24, Shanti Heights')}
         </div>
         <div className="form-grid__col-2">
-          {addressField('street', local(language, 'Street / Area / Locality', 'सड़क / मोहल्ला / क्षेत्र'), false, undefined, 'e.g. Dhanvantri Nagar, Main Road')}
+          {addressField('street', local(language, 'Street / Area / Locality', 'सड़क / मोहल्ला / क्षेत्र'), false, undefined, 'e.g. Shanti Nagar, Civil Lines')}
         </div>
         <div className="form-grid__col-1">
           {addressField('locality', local(language, 'Village / Town / City', 'गाँव / शहर / कस्बा'), true, undefined, 'e.g. Jabalpur')}
@@ -406,7 +407,7 @@ function AddressFields({
           </div>
         </div>
         <div className="form-grid__col-1">
-          {addressField('pin', local(language, 'PIN Code', 'पिन कोड'), true, 'numeric', 'e.g. 482003')}
+          {addressField('pin', local(language, 'PIN Code', 'पिन कोड'), true, 'numeric', 'e.g. 482001')}
         </div>
       </div>
     </fieldset>
@@ -795,8 +796,8 @@ function IdentityStep({ draft, setDraft, errors, language }: StepProps) {
               <p>
                 {local(
                   language,
-                  'Click below to generate a synthetic OTP for demo applicant mobile ending in ···0042.',
-                  '···0042 पर समाप्त होने वाले डेमो मोबाइल पर OTP कोड प्राप्त करने के लिए नीचे क्लिक करें।'
+                  'Click below to generate a local-only OTP for the intentionally invalid demo number ending in ···0000.',
+                  'जानबूझकर अमान्य डेमो नंबर ···0000 के लिए स्थानीय OTP बनाने हेतु नीचे क्लिक करें।'
                 )}
               </p>
               <button
@@ -899,7 +900,7 @@ function PersonalStep({ draft, setDraft, errors, language }: StepProps) {
             setDraft={setDraft}
             errors={errors}
             autoComplete="given-name"
-            placeholder="e.g. Sambhav"
+            placeholder="e.g. Aarav"
           />
           <TextInput
             field="middleName"
@@ -918,7 +919,7 @@ function PersonalStep({ draft, setDraft, errors, language }: StepProps) {
             setDraft={setDraft}
             errors={errors}
             autoComplete="family-name"
-            placeholder="e.g. Jain"
+            placeholder="e.g. Verma"
           />
         </div>
         <div className="form-grid form-grid--relation">
@@ -952,7 +953,7 @@ function PersonalStep({ draft, setDraft, errors, language }: StepProps) {
               draft={draft}
               setDraft={setDraft}
               errors={errors}
-              placeholder="e.g. Ramesh Chandra Jain"
+              placeholder="e.g. Rajesh Verma"
             />
           </div>
         </div>
@@ -1027,7 +1028,7 @@ function PersonalStep({ draft, setDraft, errors, language }: StepProps) {
             draft={draft}
             setDraft={setDraft}
             errors={errors}
-            placeholder="e.g. Bhopal, Madhya Pradesh"
+            placeholder="e.g. Jabalpur, Madhya Pradesh"
           />
         </div>
       </fieldset>
@@ -1045,8 +1046,8 @@ function PersonalStep({ draft, setDraft, errors, language }: StepProps) {
             errors={errors}
             inputMode="tel"
             autoComplete="tel"
-            placeholder="e.g. 7024320441"
-            helper={local(language, 'Use a demo 10-digit number. No real SMS sent.', '10 अंकों का डेमो नंबर डालें। कोई असली SMS नहीं भेजा जाएगा।')}
+            placeholder="e.g. 0000000000"
+            helper={local(language, 'Use synthetic data only. The quick-fill number is intentionally invalid and no SMS is sent.', 'केवल डेमो डेटा इस्तेमाल करें। क्विक-फिल नंबर जानबूझकर अमान्य है और कोई SMS नहीं भेजा जाता।')}
           />
           <TextInput
             field="email"
@@ -1057,7 +1058,7 @@ function PersonalStep({ draft, setDraft, errors, language }: StepProps) {
             errors={errors}
             inputMode="email"
             autoComplete="email"
-            placeholder="e.g. applicant.demo@sarathi.mp.gov.in"
+            placeholder="e.g. aarav.verma@licenceflow.invalid"
           />
         </div>
         <div className="form-grid form-grid--2col">
@@ -1641,6 +1642,7 @@ export function ApplicationFlow({
 }) {
   const [draft, setDraft] = useState<LLApplicationDraft>(() => loadApplicationDraft() ?? createEmptyDraft())
   const [errors, setErrors] = useState<FieldErrors>({})
+  const [quickFillStatus, setQuickFillStatus] = useState('')
   const index = applicationSteps.indexOf(step)
   const pageCopy = (language === 'en' ? stepCopy : stepCopyHi)[step]
 
@@ -1651,6 +1653,18 @@ export function ApplicationFlow({
   useEffect(() => {
     setErrors({})
   }, [step])
+
+  const applyDemoData = () => {
+    setDraft((current) => fillDraftWithDemoData(current))
+    setErrors({})
+    setQuickFillStatus(
+      local(
+        language,
+        'Synthetic demo data filled across all seven application steps.',
+        'सभी सात आवेदन चरणों में सिंथेटिक डेमो डेटा भर दिया गया है।'
+      )
+    )
+  }
 
   const submit = (event: FormEvent) => {
     event.preventDefault()
@@ -1704,8 +1718,20 @@ export function ApplicationFlow({
           <p className="page-header__sub">{pageCopy.description}</p>
         </div>
         <div className="page-header__right">
+          <button
+            type="button"
+            className="quick-fill-btn"
+            onClick={applyDemoData}
+            title={local(language, 'Replaces current form values with synthetic demo data', 'मौजूदा मानों को सिंथेटिक डेमो डेटा से बदलता है')}
+          >
+            <Sparkles size={16} aria-hidden="true" />
+            {local(language, 'Fill demo application', 'डेमो आवेदन भरें')}
+          </button>
           <span className="saved-badge">
             <Check size={14} /> {local(language, 'Saved automatically', 'स्वतः सहेजा गया')}
+          </span>
+          <span className="visually-hidden" role="status" aria-live="polite">
+            {quickFillStatus}
           </span>
         </div>
       </header>
@@ -1746,6 +1772,16 @@ export function ApplicationFlow({
           </div>
         </form>
       </div>
+      <footer className="synthetic-disclaimer-strip">
+        <Info size={17} aria-hidden="true" />
+        <span>
+          {local(
+            language,
+            'Prototype simulation: every name, contact detail, identity response and credential in the prepared demo is fictional. No government service is contacted.',
+            'प्रोटोटाइप सिमुलेशन: तैयार डेमो में हर नाम, संपर्क विवरण, पहचान उत्तर और प्रमाण काल्पनिक है। किसी सरकारी सेवा से संपर्क नहीं होता।'
+          )}
+        </span>
+      </footer>
     </div>
   )
 }
@@ -1835,6 +1871,62 @@ export function SubmittedPage({
   )
 }
 
+type DemoUploadKind = 'document' | 'photo' | 'signature'
+
+type DemoUploadAsset = {
+  kind: DemoUploadKind
+  src: string
+  fileName: string
+  width: number
+  height: number
+  titleEn: string
+  titleHi: string
+  altEn: string
+  altHi: string
+}
+
+const demoUploadAssets: Record<DemoUploadKind, DemoUploadAsset> = {
+  document: {
+    kind: 'document',
+    src: '/assets/demo-applicant-doc.jpg',
+    fileName: 'aarav_verma_identity_demo.jpg',
+    width: 819,
+    height: 1024,
+    titleEn: 'Address and age document',
+    titleHi: 'पता और आयु दस्तावेज़',
+    altEn: 'Synthetic identity and address certificate for the demo applicant',
+    altHi: 'डेमो आवेदक का सिंथेटिक पहचान और पता प्रमाणपत्र',
+  },
+  photo: {
+    kind: 'photo',
+    src: '/assets/demo-applicant-photo.jpg',
+    fileName: 'aarav_verma_photo_demo.jpg',
+    width: 819,
+    height: 1024,
+    titleEn: 'Applicant photo',
+    titleHi: 'आवेदक का फोटो',
+    altEn: 'AI-generated portrait of the fictional demo applicant',
+    altHi: 'काल्पनिक डेमो आवेदक का AI-जनरेटेड चित्र',
+  },
+  signature: {
+    kind: 'signature',
+    src: '/assets/demo-applicant-signature.jpg',
+    fileName: 'aarav_verma_signature_demo.jpg',
+    width: 1024,
+    height: 768,
+    titleEn: 'Applicant signature',
+    titleHi: 'आवेदक के हस्ताक्षर',
+    altEn: 'Synthetic signature for the fictional demo applicant',
+    altHi: 'काल्पनिक डेमो आवेदक के सिंथेटिक हस्ताक्षर',
+  },
+}
+
+const uploadField: Record<DemoUploadKind, 'documentsUploaded' | 'photoUploaded' | 'signatureUploaded'> = {
+  document: 'documentsUploaded',
+  photo: 'photoUploaded',
+  signature: 'signatureUploaded',
+}
+
 export function UploadsPage({
   applicationId,
   onComplete,
@@ -1847,11 +1939,17 @@ export function UploadsPage({
   const [draft, setDraft] = useState<LLApplicationDraft>(
     () => loadApplicationDraft(applicationId) ?? createEmptyDraft(applicationId)
   )
+  const [previewAsset, setPreviewAsset] = useState<DemoUploadAsset | null>(null)
+  const closePreview = useCallback(() => setPreviewAsset(null), [])
   const update = (patch: Partial<LLApplicationDraft>) => {
-    const next = { ...draft, ...patch }
+    const next = { ...draft, ...patch, lastSavedAt: new Date().toISOString() }
     setDraft(next)
     saveApplicationDraft(next)
   }
+  const setAttached = (kind: DemoUploadKind, value: boolean) => {
+    update({ [uploadField[kind]]: value })
+  }
+  const attachAll = () => update({ documentsUploaded: true, photoUploaded: true, signatureUploaded: true })
   const complete = draft.documentsUploaded && draft.photoUploaded && draft.signatureUploaded
 
   return (
@@ -1878,11 +1976,15 @@ export function UploadsPage({
           </p>
           <h1>{local(language, 'Documents, photo and signature', 'दस्तावेज़, फोटो और हस्ताक्षर')}</h1>
           <p className="page-header__sub">
-            {local(language, 'Check all three items before you continue.', 'आगे बढ़ने से पहले तीनों चीजें जाँचें।')}
+            {local(language, 'Inspect the bundled synthetic files or attach all three for a faster evaluator walkthrough.', 'बंडल की गई सिंथेटिक फाइलें देखें या तेज़ डेमो के लिए तीनों एक साथ जोड़ें।')}
           </p>
         </div>
         <div className="page-header__right">
-          <span className="saved-badge">
+          <button type="button" className="quick-fill-btn" onClick={attachAll} disabled={complete}>
+            <FileCheck2 size={16} aria-hidden="true" />
+            {complete ? local(language, 'All demo files attached', 'सभी डेमो फाइलें जुड़ी हैं') : local(language, 'Attach all demo files', 'सभी डेमो फाइलें जोड़ें')}
+          </button>
+          <span className="saved-badge" role="status" aria-live="polite">
             {[draft.documentsUploaded, draft.photoUploaded, draft.signatureUploaded].filter(Boolean).length} / 3{' '}
             {local(language, 'ready', 'तैयार')}
           </span>
@@ -1892,54 +1994,54 @@ export function UploadsPage({
       <div className="upload-grid upload-grid--three">
         <UploadCard
           language={language}
-          kind="document"
-          title={local(language, 'Address and age document', 'पता और आयु दस्तावेज़')}
+          asset={demoUploadAssets.document}
           description={local(
             language,
-            'Demo document for the identity option you selected.',
-            'आपके चुने पहचान विकल्प के लिए डेमो दस्तावेज़।'
+            'Illustrative supporting document for interface testing; it is not used for biometric matching.',
+            'इंटरफेस परीक्षण हेतु उदाहरण दस्तावेज़; इसका उपयोग बायोमेट्रिक मिलान के लिए नहीं होता।'
           )}
           complete={draft.documentsUploaded}
-          onUse={() => update({ documentsUploaded: true })}
-          onReplace={() => update({ documentsUploaded: false })}
+          onPreview={() => setPreviewAsset(demoUploadAssets.document)}
+          onUse={() => setAttached('document', true)}
+          onRemove={() => setAttached('document', false)}
         />
         <UploadCard
           language={language}
-          kind="photo"
-          title={local(language, 'Applicant photo', 'आवेदक का फोटो')}
+          asset={demoUploadAssets.photo}
           description={local(
             language,
-            'Demo front-facing photo with a plain background.',
-            'सादे बैकग्राउंड वाला सामने से लिया डेमो फोटो।'
+            'AI-generated, front-facing portrait with a plain background.',
+            'सादे बैकग्राउंड वाला AI-जनरेटेड सामने का चित्र।'
           )}
           complete={draft.photoUploaded}
-          onUse={() => update({ photoUploaded: true })}
-          onReplace={() => update({ photoUploaded: false })}
+          onPreview={() => setPreviewAsset(demoUploadAssets.photo)}
+          onUse={() => setAttached('photo', true)}
+          onRemove={() => setAttached('photo', false)}
         />
         <UploadCard
           language={language}
-          kind="signature"
-          title={local(language, 'Applicant signature', 'आवेदक के हस्ताक्षर')}
+          asset={demoUploadAssets.signature}
           description={local(
             language,
-            'Demo signature on a plain light background.',
-            'सादे हल्के बैकग्राउंड पर डेमो हस्ताक्षर।'
+            'Synthetic signature used only in the demonstration licence.',
+            'सिंथेटिक हस्ताक्षर केवल डेमो लाइसेंस में इस्तेमाल होते हैं।'
           )}
           complete={draft.signatureUploaded}
-          onUse={() => update({ signatureUploaded: true })}
-          onReplace={() => update({ signatureUploaded: false })}
+          onPreview={() => setPreviewAsset(demoUploadAssets.signature)}
+          onUse={() => setAttached('signature', true)}
+          onRemove={() => setAttached('signature', false)}
         />
       </div>
 
-      <div className="formal-security-strip" style={{ marginTop: '24px' }}>
-        <Upload size={22} />
+      <div className="formal-security-strip upload-guidance">
+        <Upload size={22} aria-hidden="true" />
         <div>
-          <strong>{local(language, 'Check each item before saving.', 'सहेजने से पहले हर चीज जाँचें।')}</strong>
+          <strong>{local(language, 'Bundled samples only—there is no real upload.', 'केवल बंडल किए गए नमूने—कोई वास्तविक अपलोड नहीं।')}</strong>
           <p>
             {local(
               language,
-              'This demo uses sample files. Do not upload real identity documents.',
-              'इस डेमो में नमूना फाइलें हैं। वास्तविक पहचान दस्तावेज़ अपलोड न करें।'
+              'The images stay in this prototype and are never sent to a government service. Do not enter or upload real identity data.',
+              'ये चित्र इसी प्रोटोटाइप में रहते हैं और किसी सरकारी सेवा को नहीं भेजे जाते। वास्तविक पहचान डेटा दर्ज या अपलोड न करें।'
             )}
           </p>
         </div>
@@ -1950,56 +2052,189 @@ export function UploadsPage({
           <ArrowLeft size={18} /> {local(language, 'Application status', 'आवेदन स्थिति')}
         </FlowLink>
         <button className="button button--primary" disabled={!complete} onClick={() => onComplete(draft)}>
-          {local(language, 'Confirm all uploads', 'सभी अपलोड की पुष्टि करें')} <ArrowRight size={18} />
+          {local(language, 'Confirm demo files', 'डेमो फाइलों की पुष्टि करें')} <ArrowRight size={18} />
         </button>
       </div>
+
+      <footer className="synthetic-disclaimer-strip">
+        <Info size={17} aria-hidden="true" />
+        <span>{local(language, 'Every document, portrait, signature and credential on this page is fictional and AI-generated for prototype evaluation.', 'इस पृष्ठ का हर दस्तावेज़, चित्र, हस्ताक्षर और प्रमाण प्रोटोटाइप मूल्यांकन हेतु काल्पनिक और AI-जनरेटेड है।')}</span>
+      </footer>
+
+      {previewAsset && (
+        <UploadPreviewModal
+          asset={previewAsset}
+          language={language}
+          attached={draft[uploadField[previewAsset.kind]]}
+          onUse={() => setAttached(previewAsset.kind, true)}
+          onClose={closePreview}
+        />
+      )}
     </div>
   )
 }
 
 function UploadCard({
-  title,
+  asset,
   description,
   complete,
-  kind,
   language,
+  onPreview,
   onUse,
-  onReplace,
+  onRemove,
 }: {
-  title: string
+  asset: DemoUploadAsset
   description: string
   complete: boolean
-  kind: 'document' | 'photo' | 'signature'
   language: AppLanguage
+  onPreview: () => void
   onUse: () => void
-  onReplace: () => void
+  onRemove: () => void
 }) {
+  const title = local(language, asset.titleEn, asset.titleHi)
+  const alt = local(language, asset.altEn, asset.altHi)
   return (
     <article className={`upload-card ${complete ? 'upload-card--complete' : ''}`}>
-      <div className="synthetic-preview" aria-hidden="true">
-        {kind === 'photo' ? <UserRoundCheck size={38} /> : kind === 'document' ? <FileText size={36} /> : <span>AV</span>}
-      </div>
-      <div>
+      <button
+        type="button"
+        className="synthetic-preview synthetic-preview--image"
+        onClick={onPreview}
+        aria-label={local(language, `Open full preview of ${asset.titleEn}`, `${asset.titleHi} का पूरा पूर्वावलोकन खोलें`)}
+      >
+        <img
+          src={asset.src}
+          alt={alt}
+          width={asset.width}
+          height={asset.height}
+          className={`upload-card__thumb-img upload-card__thumb-img--${asset.kind === 'signature' ? 'sig' : asset.kind === 'document' ? 'doc' : 'photo'}`}
+        />
+        <span className="synthetic-preview__zoom-hint"><ZoomIn size={13} aria-hidden="true" /> {local(language, 'Preview', 'देखें')}</span>
+      </button>
+      <div className="upload-card__details">
         <span className="status-pill">
-          <span /> {local(language, 'Demo sample', 'डेमो नमूना')}
+          <span /> {local(language, 'Synthetic demo sample', 'सिंथेटिक डेमो नमूना')}
         </span>
         <h2>{title}</h2>
         <p>{description}</p>
+        <small className="upload-card__file-meta">{asset.fileName} · bundled JPG</small>
       </div>
       {complete ? (
         <div className="upload-card__saved">
           <div className="upload-complete">
-            <CheckCircle2 size={19} /> {local(language, 'Preview checked and saved', 'पूर्वावलोकन जाँचकर सहेजा गया')}
+            <CheckCircle2 size={19} aria-hidden="true" /> {local(language, 'Demo file attached', 'डेमो फाइल जुड़ी है')}
           </div>
-          <button type="button" className="text-button" onClick={onReplace}>
-            {local(language, 'Replace', 'बदलें')}
+          <button type="button" className="text-button" onClick={onRemove}>
+            {local(language, 'Remove', 'हटाएँ')}
           </button>
         </div>
       ) : (
         <button type="button" className="button button--secondary" onClick={onUse}>
-          {local(language, 'Preview sample', 'नमूना देखें')}
+          <FileCheck2 size={17} aria-hidden="true" /> {local(language, 'Use this demo file', 'यह डेमो फाइल इस्तेमाल करें')}
         </button>
       )}
     </article>
+  )
+}
+
+function UploadPreviewModal({
+  asset,
+  language,
+  attached,
+  onUse,
+  onClose,
+}: {
+  asset: DemoUploadAsset
+  language: AppLanguage
+  attached: boolean
+  onUse: () => void
+  onClose: () => void
+}) {
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    const previouslyFocused = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    closeButtonRef.current?.focus()
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onClose()
+        return
+      }
+      if (event.key !== 'Tab') return
+      const focusable = dialogRef.current?.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), a[href], input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])'
+      )
+      if (!focusable?.length) return
+      const first = focusable[0]
+      const last = focusable[focusable.length - 1]
+      if (!first || !last) return
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      document.body.style.overflow = previousOverflow
+      previouslyFocused?.focus()
+    }
+  }, [onClose])
+
+  const title = local(language, asset.titleEn, asset.titleHi)
+  return (
+    <div
+      className="preview-modal-backdrop"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose()
+      }}
+    >
+      <div
+        ref={dialogRef}
+        className="preview-modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="demo-preview-title"
+        aria-describedby="demo-preview-description"
+      >
+        <header className="preview-modal-header">
+          <div>
+            <strong id="demo-preview-title">{title}</strong>
+            <small>{asset.fileName}</small>
+          </div>
+          <button ref={closeButtonRef} type="button" className="icon-button" onClick={onClose} aria-label={local(language, 'Close preview', 'पूर्वावलोकन बंद करें')}>
+            <X size={20} aria-hidden="true" />
+          </button>
+        </header>
+        <div className="preview-modal-body">
+          <img className="preview-modal-img" src={asset.src} alt={local(language, asset.altEn, asset.altHi)} />
+        </div>
+        <footer className="preview-modal-footer">
+          <p id="demo-preview-description" className="subtle-disclaimer">
+            {local(language, 'Synthetic AI-generated sample. It is not a real identity document or credential.', 'सिंथेटिक AI-जनरेटेड नमूना। यह वास्तविक पहचान दस्तावेज़ या प्रमाण नहीं है।')}
+          </p>
+          <button
+            type="button"
+            className="button button--primary"
+            disabled={attached}
+            onClick={() => {
+              onUse()
+              onClose()
+            }}
+          >
+            <FileCheck2 size={17} aria-hidden="true" />
+            {attached ? local(language, 'Already attached', 'पहले से जुड़ी है') : local(language, 'Use demo file', 'डेमो फाइल इस्तेमाल करें')}
+          </button>
+        </footer>
+      </div>
+    </div>
   )
 }

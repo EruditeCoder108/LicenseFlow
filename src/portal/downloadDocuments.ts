@@ -42,11 +42,35 @@ function stableNumber(value: string): string {
 }
 
 export function demonstrationLicenceNumber(applicationId: string): string {
-  return `MP-DLL-${stableNumber(applicationId)}`
+  return `LF-DEMO-LL-${stableNumber(applicationId)}`
 }
 
 export function verificationCode(applicationId: string): string {
   return `DEMO-${stableNumber(`verify:${applicationId}`).slice(0, 8)}`
+}
+
+export function ageOnDate(dateOfBirth: string, referenceDate: string | Date): number | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateOfBirth)
+  const reference = referenceDate instanceof Date ? new Date(referenceDate) : new Date(referenceDate)
+  if (!match || Number.isNaN(reference.getTime())) return null
+
+  const birthYear = Number(match[1])
+  const birthMonth = Number(match[2])
+  const birthDay = Number(match[3])
+  const birth = new Date(Date.UTC(birthYear, birthMonth - 1, birthDay))
+  if (
+    birth.getUTCFullYear() !== birthYear ||
+    birth.getUTCMonth() !== birthMonth - 1 ||
+    birth.getUTCDate() !== birthDay ||
+    birth > reference
+  ) return null
+
+  let age = reference.getUTCFullYear() - birthYear
+  const birthdayHasPassed =
+    reference.getUTCMonth() > birthMonth - 1 ||
+    (reference.getUTCMonth() === birthMonth - 1 && reference.getUTCDate() >= birthDay)
+  if (!birthdayHasPassed) age -= 1
+  return age
 }
 
 function concatenate(parts: Uint8Array[]): Uint8Array {
@@ -167,8 +191,17 @@ function drawField(context: CanvasRenderingContext2D, label: string, value: stri
   context.font = '700 31px Arial, sans-serif'
   drawWrappedText(context, value, x, y + 42, width, 37, 2)
 }
+function loadImage(src: string): Promise<HTMLImageElement> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.crossOrigin = 'anonymous'
+    img.onload = () => resolve(img)
+    img.onerror = () => reject(new Error(`Failed to load image at ${src}`))
+    img.src = src
+  })
+}
 
-function drawLicence(data: DemonstrationLicenceData, language: DocumentLanguage): HTMLCanvasElement {
+async function drawLicence(data: DemonstrationLicenceData, language: DocumentLanguage): Promise<HTMLCanvasElement> {
   const { canvas, context } = createCanvas(1600, 1000)
   context.fillStyle = '#f6f2e8'
   context.fillRect(0, 0, canvas.width, canvas.height)
@@ -179,13 +212,13 @@ function drawLicence(data: DemonstrationLicenceData, language: DocumentLanguage)
 
   context.fillStyle = '#ffffff'
   context.font = '700 28px "Nirmala UI", Arial, sans-serif'
-  context.fillText(language === 'hi' ? 'मध्य प्रदेश परिवहन - प्रदर्शन' : 'MADHYA PRADESH TRANSPORT - DEMONSTRATION', 72, 76)
-  context.font = '800 54px "Nirmala UI", Arial, sans-serif'
-  context.fillText(language === 'hi' ? 'लर्नर लाइसेंस - प्रोटोटाइप' : "LEARNER'S LICENCE - PROTOTYPE", 72, 150)
+  context.fillText(language === 'hi' ? 'LICENCEFLOW प्रोटोटाइप · मध्य प्रदेश डेमो यात्रा' : 'LICENCEFLOW PROTOTYPE · MADHYA PRADESH DEMO JOURNEY', 72, 76)
+  context.font = '800 52px "Nirmala UI", Arial, sans-serif'
+  context.fillText(language === 'hi' ? 'डेमो लर्नर लाइसेंस · मान्य नहीं' : "DEMONSTRATION LEARNER'S LICENCE · NOT VALID", 72, 150)
   context.textAlign = 'right'
-  context.font = '700 25px Arial, sans-serif'
-  context.fillText('NOT A GOVERNMENT RECORD', 1525, 82)
-  context.fillText('NOT VALID FOR DRIVING', 1525, 125)
+  context.font = '700 24px Arial, sans-serif'
+  context.fillText('DEMO PROTOTYPE · NOT VALID', 1525, 82)
+  context.fillText('SYNTHETIC CREDENTIAL', 1525, 125)
   context.textAlign = 'left'
 
   context.save()
@@ -198,46 +231,76 @@ function drawLicence(data: DemonstrationLicenceData, language: DocumentLanguage)
   context.fillText('NOT VALID', 0, 0)
   context.restore()
 
+  // Draw Photo
   context.fillStyle = '#e7edf5'
-  context.fillRect(72, 282, 280, 350)
-  context.beginPath()
-  context.arc(212, 412, 74, 0, Math.PI * 2)
-  context.fillStyle = '#9fb1c7'
-  context.fill()
-  context.fillStyle = '#0d2854'
-  context.font = '800 54px Arial, sans-serif'
-  context.textAlign = 'center'
-  context.fillText(initials(data.holderName), 212, 431)
-  context.textAlign = 'left'
-  context.fillStyle = '#415a77'
-  context.font = '600 22px Arial, sans-serif'
-  context.fillText('FICTIONAL APPLICANT IMAGE', 90, 595)
+  context.fillRect(72, 260, 280, 340)
+  try {
+    const photo = await loadImage('/assets/demo-applicant-photo.jpg')
+    context.drawImage(photo, 72, 260, 280, 340)
+  } catch {
+    context.beginPath()
+    context.arc(212, 400, 74, 0, Math.PI * 2)
+    context.fillStyle = '#9fb1c7'
+    context.fill()
+    context.fillStyle = '#0d2854'
+    context.font = '800 54px Arial, sans-serif'
+    context.textAlign = 'center'
+    context.fillText(initials(data.holderName), 212, 419)
+    context.textAlign = 'left'
+  }
 
-  drawField(context, language === 'hi' ? 'धारक' : 'Holder', data.holderName, 410, 305, 500)
-  drawField(context, language === 'hi' ? 'डेमो एलएल नंबर' : 'Demo LL number', demonstrationLicenceNumber(data.applicationId), 410, 440, 500)
-  drawField(context, language === 'hi' ? 'आवेदन' : 'Application', data.applicationId, 410, 575, 500)
-  drawField(context, language === 'hi' ? 'वाहन वर्ग' : 'Vehicle classes', data.vehicleClasses.join(', ') || 'Not recorded', 1010, 305, 500)
-  drawField(context, language === 'hi' ? 'पूरा हुआ' : 'Completed', formatDate(data.completedAt, language), 1010, 440, 500)
-  drawField(context, language === 'hi' ? 'डेमो अवधि समाप्त' : 'Demo period ends', formatDate(addMonths(data.completedAt, 6), language), 1010, 575, 500)
+  // Draw Signature below photo
+  context.fillStyle = '#ffffff'
+  context.fillRect(72, 612, 280, 70)
+  context.strokeStyle = '#c7d2df'
+  context.lineWidth = 1.5
+  context.strokeRect(72, 612, 280, 70)
+  try {
+    const sig = await loadImage('/assets/demo-applicant-signature.jpg')
+    context.drawImage(sig, 80, 616, 264, 62)
+  } catch {
+    context.fillStyle = '#0d2854'
+    context.font = 'italic 700 24px "Brush Script MT", cursive, sans-serif'
+    context.textAlign = 'center'
+    context.fillText(data.holderName, 212, 654)
+    context.textAlign = 'left'
+  }
+
+  drawField(context, language === 'hi' ? 'धारक का नाम' : 'Licence Holder', data.holderName, 410, 285, 500)
+  drawField(context, language === 'hi' ? 'अनुज्ञप्ति संख्या' : 'Licence Number', demonstrationLicenceNumber(data.applicationId), 410, 395, 500)
+  drawField(context, language === 'hi' ? 'आवेदन संदर्भ' : 'Application Ref', data.applicationId, 410, 505, 500)
+  const age = data.dateOfBirth ? ageOnDate(data.dateOfBirth, data.completedAt) : null
+  const dateOfBirth = data.dateOfBirth
+    ? `${data.dateOfBirth}${age === null ? '' : ` (${age} yrs)`}`
+    : 'Synthetic date not supplied'
+  drawField(context, language === 'hi' ? 'जन्म तिथि' : 'Date of Birth', dateOfBirth, 410, 615, 500)
+
+  drawField(context, language === 'hi' ? 'अधिकृत वाहन वर्ग' : 'Authorized Vehicle Classes', data.vehicleClasses.join(', ') || 'MCWG, LMV', 1010, 285, 500)
+  drawField(context, language === 'hi' ? 'जारी दिनांक' : 'Issue Date', formatDate(data.completedAt, language), 1010, 395, 500)
+  drawField(context, language === 'hi' ? 'वैधता समाप्ति (६ माह)' : 'Valid Up To (6 Months)', formatDate(addMonths(data.completedAt, 6), language), 1010, 505, 500)
+  drawField(context, language === 'hi' ? 'डेमो प्राधिकारी' : 'Demo Authority', 'Simulated Bhopal RTO workflow', 1010, 615, 500)
 
   context.strokeStyle = '#c7d2df'
   context.lineWidth = 2
   context.beginPath()
-  context.moveTo(72, 700)
-  context.lineTo(1528, 700)
+  context.moveTo(72, 715)
+  context.lineTo(1528, 715)
   context.stroke()
+
   context.fillStyle = '#0d2854'
-  context.font = '700 25px Arial, sans-serif'
-  context.fillText(`Verification code: ${verificationCode(data.applicationId)}`, 72, 758)
-  context.font = '500 23px Arial, sans-serif'
+  context.font = '700 24px Arial, sans-serif'
+  context.fillText(`LicenceFlow demo verification code: ${verificationCode(data.applicationId)}`, 72, 765)
+  context.font = '500 22px Arial, sans-serif'
   context.fillStyle = '#334e6f'
-  context.fillText(`Sandbox payment reference: ${data.paymentReference ?? 'Not recorded'}`, 72, 804)
+  context.fillText(`Sandbox payment ref: ${data.paymentReference ?? 'LF-SANDBOX-24089'} · Simulated region: Bhopal`, 72, 808)
+
   context.fillStyle = '#8f1d14'
-  context.font = '800 27px Arial, sans-serif'
-  context.fillText('DEMONSTRATION DOCUMENT - NO GOVERNMENT RECORD CREATED', 72, 875)
+  context.font = '800 26px Arial, sans-serif'
+  context.fillText('DEMONSTRATION DOCUMENT · SYNTHETIC AI-GENERATED DATA · NOT A GOVT RECORD', 72, 870)
   context.fillStyle = '#415a77'
-  context.font = '500 21px Arial, sans-serif'
-  drawWrappedText(context, 'Generated locally by the LicenceFlow hackathon prototype. This file cannot establish identity, authorize driving, or replace an official Madhya Pradesh Learner\'s Licence.', 72, 920, 1450, 30, 2)
+  context.font = '500 20px Arial, sans-serif'
+  drawWrappedText(context, 'This is a simulation created for testing and interface evaluation. All details, names, photos, signatures, and credentials are fictional. Any resemblance to actual persons, living or dead, is purely coincidental.', 72, 915, 1450, 28, 2)
+
   return canvas
 }
 
@@ -302,7 +365,8 @@ async function canvasPdf(canvas: HTMLCanvasElement, pageWidth: number): Promise<
 }
 
 export async function createDemonstrationLicencePdf(data: DemonstrationLicenceData, language: DocumentLanguage): Promise<Blob> {
-  return canvasPdf(drawLicence(data, language), 800)
+  const canvas = await drawLicence(data, language)
+  return canvasPdf(canvas, 800)
 }
 
 export async function createJourneyReceiptPdf(data: JourneyReceiptData, language: DocumentLanguage): Promise<Blob> {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { applicationSteps, completedStepCount, createEmptyDraft, createPreparedDraft, saveApplicationDraft, validateApplicationStep } from './application'
+import { applicationSteps, completedStepCount, createEmptyDraft, createPreparedDraft, fillDraftWithDemoData, saveApplicationDraft, validateApplicationStep } from './application'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -40,6 +40,14 @@ describe('MP LL application validation', () => {
   it('marks a complete prepared application ready for all seven steps', () => {
     expect(applicationSteps).toHaveLength(7)
     expect(completedStepCount(createPreparedDraft())).toBe(7)
+  })
+
+  it('quick-fills a complete profile with non-routable synthetic contacts', () => {
+    const filled = fillDraftWithDemoData(createEmptyDraft('TEST'))
+    expect(filled.email).toBe('aarav.verma@licenceflow.invalid')
+    expect(filled.mobile).toBe('0000000000')
+    expect(filled.middleName).toBe('Kumar')
+    expect(completedStepCount(filled)).toBe(7)
   })
 
   it('keeps the form usable when browser storage rejects an autosave', () => {

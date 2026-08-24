@@ -113,38 +113,64 @@ export function createEmptyDraft(applicationId = `MP-LL-${String(Date.now()).sli
   }
 }
 
-export function createPreparedDraft(): LLApplicationDraft {
-  const draft = createEmptyDraft('MP-LL-DEMO-2408')
+export function getDemoApplicantPreset(): Partial<LLApplicationDraft> {
   return {
-    ...draft,
-    mode: 'prepared-demo',
     applicantCategory: 'no-licence',
     identityRoute: 'aadhaar-ekyc',
     identityConsent: true,
     identityOtpSent: true,
     identityVerified: true,
     firstName: 'Aarav',
+    middleName: 'Kumar',
     lastName: 'Verma',
-    relationName: 'Rakesh Verma',
+    relationType: 'father',
+    relationName: 'Rajesh Verma',
     gender: 'male',
-    dateOfBirth: '2002-06-14',
-    placeOfBirth: 'Bhopal',
+    dateOfBirth: '2002-08-14',
+    placeOfBirth: 'Jabalpur, Madhya Pradesh',
     education: 'Graduate',
-    mobile: '9000000042',
-    email: 'aarav.verma@example.invalid',
-    identificationMark1: 'Small mark on left forearm',
-    presentAddress: { house: '42', street: 'Demo Nagar Road', locality: 'Arera Colony', district: 'Bhopal', pin: '462016' },
+    // Intentionally non-routable demo contacts. `.invalid` is reserved for examples.
+    mobile: '0000000000',
+    email: 'aarav.verma@licenceflow.invalid',
+    identificationMark1: 'Small mole on right cheek',
+    identificationMark2: 'Scar on left forearm',
+    presentAddress: {
+      house: 'Flat 24, Shanti Heights',
+      street: 'Shanti Nagar, Civil Lines',
+      locality: 'Jabalpur',
+      district: 'Jabalpur',
+      pin: '482001',
+    },
     yearsAtAddress: '5',
     monthsAtAddress: '0',
     samePermanentAddress: true,
+    permanentAddress: emptyAddress(),
     vehicleClasses: ['MCWG', 'LMV'],
     trainedAtDrivingSchool: 'no',
     fitnessAnswers: Object.fromEntries(fitnessQuestions.map((question) => [question.id, 'no'])) as Record<string, FitnessAnswer>,
     declarationAccepted: true,
-    submittedAt: new Date().toISOString(),
     documentsUploaded: true,
     photoUploaded: true,
     signatureUploaded: true,
+  }
+}
+
+export function fillDraftWithDemoData(current: LLApplicationDraft): LLApplicationDraft {
+  const preset = getDemoApplicantPreset()
+  return {
+    ...current,
+    ...preset,
+    lastSavedAt: new Date().toISOString(),
+  }
+}
+
+export function createPreparedDraft(): LLApplicationDraft {
+  const draft = createEmptyDraft('MP-LL-DEMO-2408')
+  return {
+    ...draft,
+    ...getDemoApplicantPreset(),
+    mode: 'prepared-demo',
+    submittedAt: new Date().toISOString(),
   }
 }
 
