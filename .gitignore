@@ -9,4 +9,8 @@ coverage/
 .tmp/
 *.mp4
 *.mov
+*.wav
+*.mp3
+*.aac
+*.ogg
 images/

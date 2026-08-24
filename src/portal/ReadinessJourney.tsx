@@ -61,12 +61,32 @@ function JourneyBreadcrumbs({ language, applicationId, current }: { language: La
   )
 }
 
-function CameraPreview({ language, stream, guided }: { language: Language; stream: MediaStream | null; guided: boolean }) {
+function CameraPreview({
+  language,
+  stream,
+  guided,
+  framing,
+  faceCount,
+}: {
+  language: Language
+  stream: MediaStream | null
+  guided: boolean
+  framing?: 'idle' | 'good' | 'adjust'
+  faceCount?: number | null
+}) {
   const ref = useRef<HTMLVideoElement | null>(null)
   useEffect(() => {
     if (ref.current && stream) ref.current.srcObject = stream
     return () => { if (ref.current) ref.current.srcObject = null }
   }, [stream])
+
+  const frameTone = guided || (framing === 'good' && faceCount === 1)
+    ? 'good'
+    : faceCount === 0
+    ? 'searching'
+    : faceCount && faceCount > 1
+    ? 'multiple'
+    : 'adjust'
 
   return (
     <div className={`lf-camera-preview ${guided ? 'lf-camera-preview--guided' : ''}`}>
@@ -78,10 +98,21 @@ function CameraPreview({ language, stream, guided }: { language: Language; strea
           <span>{guided ? local(language, 'DEMO SIGNALS', 'डेमो संकेत') : local(language, 'CAMERA PREVIEW', 'कैमरा पूर्वावलोकन')}</span>
         </div>
       )}
-      <div className="lf-camera-frame" aria-hidden="true" />
+      <div className={`lf-camera-frame lf-camera-frame--${frameTone}`} aria-hidden="true">
+        <span className="lf-camera-corner lf-camera-corner--tl" />
+        <span className="lf-camera-corner lf-camera-corner--tr" />
+        <span className="lf-camera-corner lf-camera-corner--bl" />
+        <span className="lf-camera-corner lf-camera-corner--br" />
+      </div>
       <div className="lf-camera-label">
         <Camera size={15} />
-        {guided ? local(language, 'Simulated camera conditions', 'सिम्युलेट की गई कैमरा स्थितियाँ') : local(language, 'Private camera check', 'निजी कैमरा जाँच')}
+        {guided
+          ? local(language, 'Simulated camera conditions', 'सिम्युलेट की गई कैमरा स्थितियाँ')
+          : faceCount === 1 && framing === 'good'
+          ? local(language, 'Live camera · Face aligned', 'लाइव कैमरा · चेहरा संरेखित')
+          : faceCount === 0
+          ? local(language, 'Live camera · Align face inside oval', 'लाइव कैमरा · चेहरा ओवल के अंदर रखें')
+          : local(language, 'Private camera check', 'निजी कैमरा जाँच')}
       </div>
     </div>
   )
@@ -142,6 +173,35 @@ export function DeviceReadinessPage({ language, applicationId, onStageChange }: 
       </section>
       {!snapshot.started ? (
         <>
+          <div className="lf-guidance-cards">
+            <div className="lf-guidance-card">
+              <div className="lf-guidance-card__image-wrap">
+                <img
+                  src="/assets/readiness-face-framing.png"
+                  alt={local(language, 'Face framing guide', 'चेहरा फ्रेमिंग गाइड')}
+                  className="lf-guidance-card__img"
+                />
+              </div>
+              <div className="lf-guidance-card__body">
+                <h3>{local(language, '1. Position & Framing', '१. सही स्थिति और फ्रेमिंग')}</h3>
+                <p>{local(language, 'Center your face within the guide oval. Ensure good frontal lighting with single occupant.', 'अपना चेहरा गाइड ओवल के बीच में रखें। चेहरे पर अच्छी रोशनी रखें और अकेले बैठें।')}</p>
+              </div>
+            </div>
+            <div className="lf-guidance-card">
+              <div className="lf-guidance-card__image-wrap">
+                <img
+                  src="/assets/readiness-head-turn.png"
+                  alt={local(language, 'Head turn liveness guide', 'सिर घुमाने की लाइवनेस गाइड')}
+                  className="lf-guidance-card__img"
+                />
+              </div>
+              <div className="lf-guidance-card__body">
+                <h3>{local(language, '2. Active Liveness Check', '२. सक्रिय जीवंतता जाँच')}</h3>
+                <p>{local(language, 'Follow prompt to turn head gently left/right. Verifies live presence with no uploaded video.', 'स्क्रीन के निर्देशानुसार सिर हल्का सा बाएँ या दाएँ घुमाएँ। बिना वीडियो अपलोड किए पुष्टि होती है।')}</p>
+              </div>
+            </div>
+          </div>
+
           <section className="lf-permission-card">
             <div className="lf-permission-intro">
               <span><ShieldCheck size={27} /></span>
@@ -242,29 +302,42 @@ export function DeviceReadinessPage({ language, applicationId, onStageChange }: 
           )}
           <section className="lf-readiness-lab">
             <div className="lf-camera-column">
-              <CameraPreview language={language} stream={media.stream} guided={snapshot.guided} />
+              <CameraPreview
+                language={language}
+                stream={media.stream}
+                guided={snapshot.guided}
+                framing={snapshot.framing}
+                faceCount={snapshot.faceCount}
+              />
               <div className="lf-head-turn">
-                <span className={snapshot.headTurnComplete ? 'complete' : ''}><RotateCw size={22} /></span>
+                <div className="lf-head-turn__thumb-wrap">
+                  <img
+                    src="/assets/readiness-head-turn.png"
+                    alt="Head turn liveness check"
+                    className="lf-head-turn__thumb"
+                  />
+                </div>
+                <span className={snapshot.headTurnComplete ? 'complete' : ''}><RotateCw size={20} /></span>
                 <div>
                   <strong>
                     {snapshot.guided
                       ? local(language, 'Demo head turn signal ready', 'डेमो सिर घुमाने का संकेत तैयार')
                       : snapshot.headTurnComplete
-                      ? local(language, 'Liveness check passed', 'सक्रियता जाँच पूरी हुई')
+                      ? local(language, 'Liveness check passed (Verified)', 'सक्रियता जाँच पूरी हुई (सत्यापित)')
                       : snapshot.headTurnStep === 'center_waiting'
-                      ? local(language, 'Look straight at the camera', 'कैमरे के सीधे सामने देखें')
+                      ? local(language, 'Step 1: Look straight at camera', 'चरण १: कैमरे के सीधे सामने देखें')
                       : snapshot.headTurnDirection === 'left'
-                      ? local(language, 'Turn your face gently to the LEFT', 'चेहरा धीरे से बाईं ओर घुमाएँ')
-                      : local(language, 'Turn your face gently to the RIGHT', 'चेहरा धीरे से दाईं ओर घुमाएँ')}
+                      ? local(language, 'Step 2: Turn gently to the LEFT', 'चरण २: चेहरा धीरे से बाईं ओर घुमाएँ')
+                      : local(language, 'Step 2: Turn gently to the RIGHT', 'चरण २: चेहरा धीरे से दाईं ओर घुमाएँ')}
                   </strong>
                   <small>
                     {snapshot.guided
                       ? local(language, 'Movement is simulated in this mode.', 'इस मोड में हरकत सिम्युलेटेड है।')
                       : snapshot.headTurnComplete
-                      ? local(language, 'Movement verified across frames.', 'हरकत सफलता पूर्वक जाँची गई।')
+                      ? local(language, 'Movement verified across multiple frames.', 'हरकत सफलता पूर्वक जाँची गई।')
                       : snapshot.headTurnStep === 'center_waiting'
                       ? local(language, 'Hold your head centered for a moment...', 'कुछ क्षण के लिए चेहरा सीधा रखें...')
-                      : local(language, 'Hold the turn for a brief moment.', 'थोड़ी देर के लिए सिर इसी स्थिति में रखें।')}
+                      : local(language, 'Hold the turn for 5 frames...', '५ फ्रेम के लिए सिर इसी स्थिति में रखें...')}
                   </small>
                 </div>
               </div>

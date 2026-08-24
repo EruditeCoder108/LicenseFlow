@@ -3796,6 +3796,596 @@ main h1:focus { outline: none; }
   font-weight: 700;
 }
 
+/* ==========================================================================
+   Device Readiness & Visual Guidance Enhancements
+   ========================================================================== */
+.lf-guidance-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.lf-guidance-card {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+  background: white;
+  border: 1.5px solid var(--slate-200);
+  border-radius: 12px;
+  box-shadow: var(--shadow-sm);
+  transition: all 180ms ease;
+}
+
+.lf-guidance-card:hover {
+  border-color: var(--blue-600);
+  box-shadow: 0 4px 12px rgba(7, 26, 52, 0.05);
+}
+
+.lf-guidance-card__image-wrap {
+  width: 100%;
+  height: 95px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  overflow: hidden;
+  border-radius: 8px;
+  background: var(--slate-50);
+}
+
+.lf-guidance-card__img {
+  max-width: 100%;
+  max-height: 90px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.lf-guidance-card__body h3 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+  color: var(--navy-950);
+  font-weight: 700;
+}
+
+.lf-guidance-card__body p {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--slate-600);
+  line-height: 1.45;
+}
+
+.lf-head-turn__thumb-wrap {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--blue-50);
+  border: 1px solid var(--blue-200);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.lf-head-turn__thumb {
+  max-width: 100%;
+  max-height: 38px;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.lf-camera-frame--good {
+  border: 2.5px solid #16a34a !important;
+  box-shadow: 0 0 16px rgba(22, 163, 74, 0.35), inset 0 0 16px rgba(22, 163, 74, 0.15);
+}
+
+.lf-camera-frame--searching {
+  border: 2px dashed #f59e0b !important;
+}
+
+.lf-camera-frame--multiple {
+  border: 2.5px solid #dc2626 !important;
+  box-shadow: 0 0 16px rgba(220, 38, 38, 0.4);
+}
+
+.lf-camera-frame--adjust {
+  border: 2px dashed rgba(255, 255, 255, 0.8) !important;
+}
+
+.lf-camera-corner {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border-color: rgba(255, 255, 255, 0.85);
+  border-style: solid;
+  pointer-events: none;
+}
+.lf-camera-corner--tl { top: -4px; left: -4px; border-width: 3px 0 0 3px; border-top-left-radius: 4px; }
+.lf-camera-corner--tr { top: -4px; right: -4px; border-width: 3px 3px 0 0; border-top-right-radius: 4px; }
+.lf-camera-corner--bl { bottom: -4px; left: -4px; border-width: 0 0 3px 3px; border-bottom-left-radius: 4px; }
+.lf-camera-corner--br { bottom: -4px; right: -4px; border-width: 0 3px 3px 0; border-bottom-right-radius: 4px; }
+
+/* ==========================================================================
+   Payment & Gateway Polish
+   ========================================================================== */
+.payment-security-guarantee {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 16px;
+  padding: 14px 16px;
+  background: var(--blue-50);
+  border: 1.5px solid var(--blue-200);
+  border-radius: 9px;
+}
+
+.payment-security-guarantee__img-wrap {
+  width: 60px;
+  height: 60px;
+  flex: 0 0 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.payment-security-guarantee__img {
+  max-width: 100%;
+  max-height: 56px;
+  object-fit: contain;
+  display: block;
+}
+
+.payment-security-guarantee strong {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--navy-950);
+  margin-bottom: 2px;
+}
+
+.payment-security-guarantee small {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--slate-600);
+  line-height: 1.35;
+}
+
+.upi-qr-card {
+  margin: 14px 0 18px;
+  padding: 16px;
+  background: white;
+  border: 1.5px solid var(--blue-300);
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(7, 26, 52, 0.04);
+}
+
+.upi-qr-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--slate-200);
+  margin-bottom: 14px;
+}
+
+.upi-qr-card__header strong {
+  display: block;
+  font-size: 0.95rem;
+  color: var(--navy-950);
+}
+
+.upi-qr-card__header small {
+  color: var(--slate-600);
+  font-size: 0.8rem;
+}
+
+.upi-qr-card__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  background: var(--blue-700);
+  color: white;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.upi-qr-card__content {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+}
+
+.upi-qr-card__qr-wrap {
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  background: white;
+  border: 1px solid var(--slate-300);
+  border-radius: 8px;
+}
+
+.upi-qr-card__svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.upi-qr-card__details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.upi-qr-card__vpa {
+  margin: 0;
+  font-family: monospace;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--blue-800);
+  background: var(--blue-50);
+  padding: 4px 8px;
+  border-radius: 5px;
+  width: fit-content;
+}
+
+.upi-qr-card__amount {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--navy-950);
+}
+
+.upi-qr-card__apps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.upi-qr-card__apps span {
+  padding: 2px 7px;
+  background: var(--slate-100);
+  border: 1px solid var(--slate-200);
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--slate-700);
+}
+
+.upi-qr-card__sim-btn {
+  margin-top: 4px;
+  font-size: 0.82rem;
+}
+
+.journey-contract__shield-wrap {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.journey-contract__shield-img {
+  max-width: 100%;
+  max-height: 42px;
+  object-fit: contain;
+  display: block;
+}
+
+/* ==========================================================================
+   Interruption Recovery Polish
+   ========================================================================== */
+.interruption-card__checkpoint-hero {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+  margin-bottom: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--slate-200);
+}
+
+.interruption-card__checkpoint-img-wrap {
+  width: 100px;
+  height: 100px;
+  flex: 0 0 100px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--amber-50);
+  border: 1.5px solid #fedf89;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.interruption-card__checkpoint-img {
+  max-width: 100%;
+  max-height: 92px;
+  object-fit: contain;
+  display: block;
+}
+
+.interruption-card__header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.interruption-card__header-text h1 {
+  font-size: clamp(1.4rem, 2.8vw, 1.85rem) !important;
+  line-height: 1.25 !important;
+}
+
+.interruption-card__detail {
+  font-size: 0.98rem;
+  color: var(--slate-700);
+  line-height: 1.5;
+  margin: 12px 0 18px;
+}
+
+.interruption-card__principles {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 18px;
+  padding: 14px 16px;
+  background: var(--blue-50);
+  border-left: 4px solid var(--blue-700);
+  border-radius: 0 8px 8px 0;
+}
+
+.interruption-card__principles svg {
+  color: var(--blue-700);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.interruption-card__principles strong {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--navy-950);
+  margin-bottom: 3px;
+}
+
+.interruption-card__principles p {
+  margin: 0;
+  font-size: 0.84rem;
+  color: var(--slate-600);
+  line-height: 1.45;
+}
+
+/* ==========================================================================
+   Digital Learner's Licence Card (Parivahan Form 3)
+   ========================================================================== */
+.demo-licence {
+  position: relative;
+  overflow: hidden;
+  margin: 24px 0;
+  padding: 24px 28px;
+  color: var(--navy-950);
+  background: linear-gradient(135deg, #f8fbff 0%, #edf4fc 100%);
+  border: 2px solid var(--navy-900);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px rgba(7, 26, 52, 0.08);
+}
+
+.demo-licence__watermark {
+  position: absolute;
+  right: -32px;
+  top: 26px;
+  padding: 6px 36px;
+  color: white;
+  background: #b91c1c;
+  transform: rotate(35deg);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+  z-index: 10;
+}
+
+.demo-licence__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding-bottom: 16px;
+  border-bottom: 2px solid var(--navy-900);
+}
+
+.demo-licence__brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.demo-licence__logo {
+  height: 38px;
+  width: auto;
+  object-fit: contain;
+  display: block;
+}
+
+.demo-licence__state {
+  margin: 0 0 2px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--blue-800);
+}
+
+.demo-licence__form-title {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--navy-950);
+  font-weight: 800;
+}
+
+.demo-licence__ll-number {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.demo-licence__ll-number small {
+  font-size: 0.74rem;
+  color: var(--slate-500);
+  font-weight: 600;
+}
+
+.demo-licence__ll-number strong {
+  font-size: 1.05rem;
+  color: var(--blue-900);
+  font-family: monospace;
+  letter-spacing: 0.04em;
+}
+
+.demo-licence__body {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr);
+  gap: 24px;
+  margin: 20px 0 16px;
+  align-items: start;
+}
+
+.demo-licence__photo-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: center;
+}
+
+.demo-licence__photo-wrap {
+  width: 120px;
+  height: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: white;
+  border: 1.5px solid var(--slate-300);
+  border-radius: 6px;
+  color: var(--slate-400);
+}
+
+.demo-licence__photo-wrap span {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--slate-500);
+}
+
+.demo-licence__qr-wrap {
+  width: 120px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.demo-licence__qr-svg {
+  width: 80px;
+  height: 80px;
+  background: white;
+  padding: 4px;
+  border: 1px solid var(--slate-300);
+  border-radius: 4px;
+  display: block;
+}
+
+.demo-licence__qr-wrap small {
+  font-size: 0.65rem;
+  color: var(--slate-500);
+  line-height: 1.25;
+}
+
+.demo-licence__info-col {
+  min-width: 0;
+}
+
+.demo-licence__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 20px;
+  margin: 0;
+}
+
+.demo-licence__grid dt {
+  font-size: 0.74rem;
+  color: var(--slate-500);
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+
+.demo-licence__grid dd {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--navy-950);
+  font-weight: 600;
+}
+
+.demo-licence__grid-full {
+  grid-column: 1 / -1;
+  padding-top: 8px;
+  border-top: 1px solid var(--slate-200);
+}
+
+.demo-licence__classes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.demo-licence__class-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: white;
+  border: 1.5px solid var(--blue-300);
+  border-radius: 6px;
+}
+
+.demo-licence__class-pill strong {
+  font-size: 0.82rem;
+  color: var(--blue-900);
+}
+
+.demo-licence__class-pill small {
+  font-size: 0.72rem;
+  color: var(--slate-600);
+}
+
+.demo-licence__footer {
+  padding-top: 12px;
+  border-top: 1px dashed var(--slate-300);
+}
+
+.demo-licence__footer p {
+  margin: 0;
+  font-size: 0.72rem;
+  color: var(--slate-500);
+  line-height: 1.4;
+  text-align: center;
+}
+
 @media (max-width: 900px) {
   .application-flow__body {
     grid-template-columns: 1fr;
@@ -3806,6 +4396,33 @@ main h1:focus { outline: none; }
   }
   .vehicle-card-3d-grid {
     grid-template-columns: 1fr;
+  }
+  .lf-guidance-cards {
+    grid-template-columns: 1fr;
+  }
+  .upi-qr-card__content {
+    grid-template-columns: 1fr;
+  }
+  .interruption-card__checkpoint-hero {
+    flex-direction: column;
+    text-align: center;
+    align-items: center;
+  }
+  .demo-licence__header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .demo-licence__ll-number {
+    align-items: flex-start;
+    text-align: left;
+  }
+  .demo-licence__body {
+    grid-template-columns: 1fr;
+  }
+  .demo-licence__photo-col {
+    flex-direction: row;
+    justify-content: center;
   }
   .form-grid--3col, .form-grid--2col, .form-grid--address {
     grid-template-columns: 1fr;
@@ -3837,4 +4454,11 @@ main h1:focus { outline: none; }
   .review-dossier-list {
     grid-template-columns: 1fr;
   }
+  .demo-licence__grid {
+    grid-template-columns: 1fr;
+  }
+  .demo-licence__photo-col {
+    flex-direction: column;
+  }
 }
+

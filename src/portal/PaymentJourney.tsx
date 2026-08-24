@@ -12,10 +12,12 @@ import {
   IndianRupee,
   Landmark,
   LockKeyhole,
+  QrCode,
   ReceiptText,
   RefreshCcw,
   ShieldCheck,
   Smartphone,
+  Sparkles,
   TriangleAlert,
   XCircle,
 } from 'lucide-react'
@@ -109,6 +111,105 @@ function readinessGuard(language: Language, applicationId: string, progress: LLJ
   )
 }
 
+function UpiQrPreview({
+  language,
+  total,
+  onSimulatePay,
+}: {
+  language: Language
+  total: number
+  onSimulatePay: () => void
+}) {
+  return (
+    <div className="upi-qr-card">
+      <div className="upi-qr-card__header">
+        <div>
+          <strong>{local(language, 'Scan with Any UPI App', 'किसी भी UPI ऐप से स्कैन करें')}</strong>
+          <small>{local(language, 'Instant demo settlement · Zero duplicate charge', 'त्वरित डेमो भुगतान · कोई दोहरा शुल्क नहीं')}</small>
+        </div>
+        <span className="upi-qr-card__badge"><QrCode size={13} /> UPI QR</span>
+      </div>
+      <div className="upi-qr-card__content">
+        <div className="upi-qr-card__qr-wrap">
+          <svg className="upi-qr-card__svg" viewBox="0 0 160 160" aria-label="UPI QR Code">
+            <rect width="160" height="160" fill="white" rx="8" />
+            <rect x="12" y="12" width="40" height="40" fill="#071a34" rx="4" />
+            <rect x="18" y="18" width="28" height="28" fill="white" rx="2" />
+            <rect x="24" y="24" width="16" height="16" fill="#1d4ed8" rx="2" />
+            <rect x="108" y="12" width="40" height="40" fill="#071a34" rx="4" />
+            <rect x="114" y="18" width="28" height="28" fill="white" rx="2" />
+            <rect x="120" y="24" width="16" height="16" fill="#1d4ed8" rx="2" />
+            <rect x="12" y="108" width="40" height="40" fill="#071a34" rx="4" />
+            <rect x="18" y="114" width="28" height="28" fill="white" rx="2" />
+            <rect x="24" y="120" width="16" height="16" fill="#1d4ed8" rx="2" />
+            <rect x="60" y="16" width="10" height="10" fill="#071a34" rx="1" />
+            <rect x="76" y="16" width="10" height="10" fill="#1d4ed8" rx="1" />
+            <rect x="92" y="16" width="8" height="8" fill="#071a34" rx="1" />
+            <rect x="60" y="32" width="8" height="12" fill="#071a34" rx="1" />
+            <rect x="74" y="30" width="12" height="8" fill="#071a34" rx="1" />
+            <rect x="90" y="32" width="10" height="14" fill="#1d4ed8" rx="1" />
+            <rect x="16" y="60" width="10" height="10" fill="#1d4ed8" rx="1" />
+            <rect x="32" y="60" width="8" height="12" fill="#071a34" rx="1" />
+            <rect x="46" y="60" width="10" height="8" fill="#071a34" rx="1" />
+            <rect x="16" y="76" width="14" height="10" fill="#071a34" rx="1" />
+            <rect x="36" y="78" width="8" height="8" fill="#1d4ed8" rx="1" />
+            <rect x="48" y="74" width="8" height="14" fill="#071a34" rx="1" />
+            <rect x="16" y="92" width="8" height="8" fill="#071a34" rx="1" />
+            <rect x="30" y="92" width="14" height="8" fill="#1d4ed8" rx="1" />
+            <rect x="48" y="92" width="8" height="10" fill="#071a34" rx="1" />
+            <rect x="64" y="64" width="32" height="32" fill="#071a34" rx="6" />
+            <circle cx="80" cy="80" r="11" fill="#2563eb" />
+            <text x="80" y="84" textAnchor="middle" fill="white" fontSize="10" fontWeight="900" fontFamily="sans-serif">₹</text>
+            <rect x="60" y="104" width="12" height="10" fill="#071a34" rx="1" />
+            <rect x="78" y="102" width="8" height="12" fill="#1d4ed8" rx="1" />
+            <rect x="92" y="104" width="10" height="8" fill="#071a34" rx="1" />
+            <rect x="108" y="60" width="10" height="12" fill="#071a34" rx="1" />
+            <rect x="124" y="62" width="12" height="8" fill="#1d4ed8" rx="1" />
+            <rect x="140" y="60" width="8" height="10" fill="#071a34" rx="1" />
+            <rect x="108" y="78" width="12" height="10" fill="#1d4ed8" rx="1" />
+            <rect x="126" y="76" width="8" height="12" fill="#071a34" rx="1" />
+            <rect x="138" y="78" width="10" height="8" fill="#071a34" rx="1" />
+            <rect x="60" y="122" width="10" height="12" fill="#1d4ed8" rx="1" />
+            <rect x="76" y="120" width="12" height="8" fill="#071a34" rx="1" />
+            <rect x="94" y="122" width="8" height="14" fill="#071a34" rx="1" />
+            <rect x="60" y="140" width="14" height="8" fill="#071a34" rx="1" />
+            <rect x="80" y="138" width="8" height="10" fill="#1d4ed8" rx="1" />
+            <rect x="94" y="140" width="10" height="8" fill="#071a34" rx="1" />
+            <rect x="108" y="108" width="10" height="10" fill="#071a34" rx="1" />
+            <rect x="124" y="108" width="14" height="8" fill="#1d4ed8" rx="1" />
+            <rect x="142" y="108" width="6" height="12" fill="#071a34" rx="1" />
+            <rect x="108" y="124" width="14" height="8" fill="#1d4ed8" rx="1" />
+            <rect x="128" y="122" width="8" height="14" fill="#071a34" rx="1" />
+            <rect x="140" y="126" width="8" height="8" fill="#071a34" rx="1" />
+            <rect x="108" y="140" width="8" height="8" fill="#071a34" rx="1" />
+            <rect x="122" y="140" width="12" height="8" fill="#1d4ed8" rx="1" />
+            <rect x="138" y="138" width="10" height="10" fill="#071a34" rx="1" />
+          </svg>
+        </div>
+        <div className="upi-qr-card__details">
+          <p className="upi-qr-card__vpa">parivahan.mptransport@sbi</p>
+          <p className="upi-qr-card__amount">{money(total, language)}</p>
+          <div className="upi-qr-card__apps">
+            <span>GPay</span>
+            <span>PhonePe</span>
+            <span>Paytm</span>
+            <span>BHIM</span>
+            <span>CRED</span>
+          </div>
+          <button
+            type="button"
+            className="button button--secondary button--full upi-qr-card__sim-btn"
+            onClick={onSimulatePay}
+          >
+            <Sparkles size={16} />
+            {local(language, 'Simulate UPI App Scan & Pay', 'UPI ऐप से स्कैन और भुगतान सिमुलेट करें')}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function PaymentPage({ language, applicationId }: { language: Language; applicationId: string }) {
   const [progress, setProgress] = useState<LLJourneyProgress>(() => loadJourneyProgress(applicationId))
   const [method, setMethod] = useState<PaymentMethod>('upi')
@@ -174,6 +275,16 @@ export function PaymentPage({ language, applicationId }: { language: Language; a
     navigatePortal(`/mp/application/${applicationId}/payment/redirect`)
   }
 
+  const instantUpiPay = () => {
+    let current = progress
+    if (current.payment.status === 'declined' || current.payment.status === 'cancelled') current = preparePaymentRetry(current)
+    const started = startSyntheticPayment(current, 'upi', paymentAttemptId())
+    const completed = finishSyntheticPayment(started, 'confirmed')
+    saveJourneyProgress(completed)
+    setProgress(completed)
+    navigatePortal(`/mp/application/${applicationId}/payment/return`)
+  }
+
   const total = feeTotal()
   return (
     <>
@@ -223,6 +334,20 @@ export function PaymentPage({ language, applicationId }: { language: Language; a
             <span>{local(language, 'Total amount', 'कुल राशि')}</span>
             <strong>{money(total, language)}</strong>
           </div>
+
+          <div className="payment-security-guarantee">
+            <div className="payment-security-guarantee__img-wrap">
+              <img
+                src="/assets/payment-shield.png"
+                alt="SafePay Guarantee"
+                className="payment-security-guarantee__img"
+              />
+            </div>
+            <div>
+              <strong>{local(language, 'Parivahan SafePay Guarantee', 'परिवहन सेफ़पे गारंटी')}</strong>
+              <small>{local(language, 'Protected against duplicate charges · Instant digital receipt · Device-verified', 'दोहरे शुल्क से सुरक्षा · तुरंत डिजिटल रसीद · डिवाइस सत्यापित')}</small>
+            </div>
+          </div>
         </section>
 
         <section className="payment-methods" aria-labelledby="payment-method-title">
@@ -231,9 +356,9 @@ export function PaymentPage({ language, applicationId }: { language: Language; a
           <fieldset>
             <legend className="visually-hidden">{local(language, 'Payment method', 'भुगतान का तरीका')}</legend>
             {([
-              ['upi', Smartphone, 'UPI', local(language, 'Pay via UPI (GPay, PhonePe, Paytm)', 'UPI से भुगतान करें (GPay, PhonePe, Paytm)')],
+              ['upi', Smartphone, 'UPI (QR / App)', local(language, 'Instant Pay via UPI QR, GPay, PhonePe, Paytm', 'UPI QR, GPay, PhonePe, Paytm से तुरंत भुगतान')],
               ['card', CreditCard, local(language, 'Debit or Credit Card', 'डेबिट या क्रेडिट कार्ड'), local(language, 'Visa, Mastercard, RuPay', 'वीज़ा, मास्टरकार्ड, रुपे')],
-              ['net-banking', Landmark, local(language, 'Net Banking', 'नेट बैंकिंग'), local(language, 'All major Indian banks', 'सभी प्रमुख भारतीय बैंक')],
+              ['net-banking', Landmark, local(language, 'Net Banking', 'नेट बैंकिंग'), local(language, 'All major Indian banks (SBI, HDFC, ICICI, etc.)', 'सभी प्रमुख भारतीय बैंक (SBI, HDFC, ICICI)')],
             ] as const).map(([value, Icon, title, detail]) => (
               <label className={`payment-method ${method === value ? 'payment-method--selected' : ''}`} key={value}>
                 <input type="radio" name="payment-method" value={value} checked={method === value} onChange={() => setMethod(value)} />
@@ -245,6 +370,15 @@ export function PaymentPage({ language, applicationId }: { language: Language; a
               </label>
             ))}
           </fieldset>
+
+          {method === 'upi' && (
+            <UpiQrPreview
+              language={language}
+              total={total}
+              onSimulatePay={instantUpiPay}
+            />
+          )}
+
           <details className="context-help">
             <summary><TriangleAlert size={18} /> {local(language, 'What if the payment screen does not return?', 'अगर भुगतान के बाद स्क्रीन वापस न आए?')}</summary>
             <div>
@@ -261,19 +395,25 @@ export function PaymentPage({ language, applicationId }: { language: Language; a
         </section>
       </div>
       <div className="journey-contract" aria-label={local(language, 'What is safe right now', 'अभी क्या सुरक्षित है')}>
-        <ShieldCheck size={21} />
+        <div className="journey-contract__shield-wrap">
+          <img
+            src="/assets/payment-shield.png"
+            alt="Payment Protection"
+            className="journey-contract__shield-img"
+          />
+        </div>
         <div>
           <strong>{local(language, 'What is safe right now', 'अभी क्या सुरक्षित है')}</strong>
           <ul>
-            <li>{local(language, 'Application saved', 'आवेदन सहेजा गया')}</li>
-            <li>{local(language, 'No fee charged yet', 'अभी कोई शुल्क नहीं कटा')}</li>
+            <li>{local(language, 'Application saved securely on this device', 'आवेदन इस डिवाइस पर सुरक्षित सहेजा गया')}</li>
+            <li>{local(language, 'No fee charged until authorized in sandbox', 'सैंडबॉक्स में अनुमति से पहले कोई शुल्क नहीं कटेगा')}</li>
             <li>{local(language, 'Device check and practice complete', 'डिवाइस जाँच और अभ्यास पूरा हुआ')}</li>
           </ul>
         </div>
       </div>
       <div className="lf-actions">
         <button className="button button--primary" disabled={!confirmed || paymentBlocksNewAttempt(progress.payment)} onClick={begin}>
-          {local(language, 'Pay now', 'अभी भुगतान करें')} <ExternalLink size={18} />
+          {local(language, 'Pay now via Gateway', 'गेटवे से भुगतान करें')} <ExternalLink size={18} />
         </button>
         <FlowLink className="button button--secondary" href={`/mp/application/${applicationId}`}>
           <ArrowLeft size={18} /> {local(language, 'Back to application status', 'आवेदन स्थिति पर लौटें')}
@@ -452,12 +592,18 @@ export function PaymentReturnPage({ language, applicationId, onStageChange }: { 
         <h1 tabIndex={-1}>{title}</h1>
         <p>{body}</p>
         <div className="journey-contract">
-          <ShieldCheck size={20} />
+          <div className="journey-contract__shield-wrap">
+            <img
+              src="/assets/payment-shield.png"
+              alt="Security shield"
+              className="journey-contract__shield-img"
+            />
+          </div>
           <div>
             <strong>{local(language, 'What is safe right now', 'अभी क्या सुरक्षित है')}</strong>
             <ul>
-              <li>{local(language, 'Application saved', 'आवेदन सहेजा गया')}</li>
-              <li>{confirmed ? local(language, 'Payment confirmed once', 'भुगतान एक बार पुष्ट') : uncertain ? local(language, 'Protected from duplicate payment', 'दोहरे भुगतान से सुरक्षित') : local(language, 'No charge made in this demo', 'इस डेमो में कोई शुल्क नहीं कटा')}</li>
+              <li>{local(language, 'Application saved securely', 'आवेदन सुरक्षित सहेजा गया')}</li>
+              <li>{confirmed ? local(language, 'Payment confirmed once (Protected)', 'भुगतान एक बार पुष्ट (सुरक्षित)') : uncertain ? local(language, 'Protected from duplicate payment', 'दोहरे भुगतान से सुरक्षित') : local(language, 'No charge made in this demo', 'इस डेमो में कोई शुल्क नहीं कटा')}</li>
               <li>{local(language, 'Device check and practice remain passed', 'डिवाइस जाँच और अभ्यास पूरा हुआ')}</li>
             </ul>
           </div>

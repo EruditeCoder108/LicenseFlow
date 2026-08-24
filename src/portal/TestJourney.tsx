@@ -500,22 +500,40 @@ export function InterruptionPage({ applicationId, onStageChange, language }: { a
     <>
       <Breadcrumbs applicationId={applicationId} current={local(language, 'Test paused', 'परीक्षा रुकी')} language={language} />
       <section className="interruption-card">
-        <span className="interruption-card__icon">{integrity ? <Camera size={31} /> : <WifiOff size={31} />}</span>
-        <p className="eyebrow">{integrity ? local(language, 'Camera observation · not a penalty', 'कैमरा संकेत · कोई पेनल्टी नहीं') : local(language, 'Technical pause · test is not failed', 'तकनीकी रुकावट · टेस्ट फेल नहीं हुआ')}</p>
-        <h1 tabIndex={-1}>{integrity ? local(language, 'More than one person was detected.', 'कैमरे में एक से अधिक व्यक्ति दिखे।') : local(language, 'The test paused safely without losing your answer.', 'आपका उत्तर सुरक्षित रखकर परीक्षा रोकी गई।')}</h1>
-        <p>{translatedInterruptionDetail(state.exam.interruptionDetail ?? '', language)}</p>
+        <div className="interruption-card__checkpoint-hero">
+          <div className="interruption-card__checkpoint-img-wrap">
+            <img
+              src="/assets/recovery-checkpoint.png"
+              alt="Safe Recovery Checkpoint"
+              className="interruption-card__checkpoint-img"
+            />
+          </div>
+          <div className="interruption-card__header-text">
+            <span className="interruption-card__icon">{integrity ? <Camera size={26} /> : <WifiOff size={26} />}</span>
+            <p className="eyebrow">{integrity ? local(language, 'Camera observation · Not a penalty', 'कैमरा संकेत · कोई पेनल्टी नहीं') : local(language, 'Technical checkpoint · Answers preserved', 'तकनीकी चेकपॉइंट · उत्तर सुरक्षित')}</p>
+            <h1 tabIndex={-1}>{integrity ? local(language, 'Multiple faces detected · Session paused safely', 'एक से अधिक चेहरे दिखे · सत्र सुरक्षित रूप से रुका') : local(language, 'The test paused safely without losing progress', 'आपकी प्रगति सुरक्षित रखकर परीक्षा रोकी गई')}</h1>
+          </div>
+        </div>
+        <p className="interruption-card__detail">{translatedInterruptionDetail(state.exam.interruptionDetail ?? '', language)}</p>
         <div className="recovery-facts">
-          <div><span>{local(language, 'Latest answer', 'पिछला उत्तर')}</span><strong>{local(language, 'Saved', 'सहेजा गया')}</strong></div>
-          <div><span>{local(language, 'Payment', 'भुगतान')}</span><strong>{local(language, 'Confirmed', 'पुष्ट')}</strong></div>
-          <div><span>{local(language, 'Test progress', 'प्रगति')}</span><strong>{local(language, 'Not lost', 'सुरक्षित')}</strong></div>
-          <div><span>{local(language, 'Resume point', 'यहाँ से जारी करें')}</span><strong>{local(language, `Question ${state.exam.currentQuestion + 1}`, `प्रश्न ${state.exam.currentQuestion + 1}`)}</strong></div>
+          <div><span>{local(language, 'Latest answer', 'पिछला उत्तर')}</span><strong>{local(language, 'Saved in storage', 'मेमोरी में सुरक्षित')}</strong></div>
+          <div><span>{local(language, 'Payment', 'भुगतान')}</span><strong>{local(language, '₹250 Confirmed', '₹२५० पुष्ट')}</strong></div>
+          <div><span>{local(language, 'Test progress', 'प्रगति')}</span><strong>{local(language, '0 Answers lost', 'कोई उत्तर नष्ट नहीं')}</strong></div>
+          <div><span>{local(language, 'Resume checkpoint', 'यहाँ से जारी करें')}</span><strong>{local(language, `Question ${state.exam.currentQuestion + 1} of 15`, `प्रश्न ${state.exam.currentQuestion + 1} / १५`)}</strong></div>
+        </div>
+        <div className="interruption-card__principles">
+          <ShieldCheck size={19} />
+          <div>
+            <strong>{local(language, 'Fair Examination Assurance', 'निष्पक्ष परीक्षा का भरोसा')}</strong>
+            <p>{local(language, 'LicenceFlow treats network dips and temporary camera obstructions as technical pauses, not failures. Return to single-person framing and resume when ready.', 'लाइसेंसफ्लो नेटवर्क रुकावटों को विफलता नहीं मानता। कैमरे के सामने अकेले आएं और तैयार होने पर जारी रखें।')}</p>
+          </div>
         </div>
         <div className="lf-actions">
           <button className="button button--primary" onClick={resume}>
-            {local(language, 'Resume test', 'टेस्ट फिर शुरू करें')} <RefreshCcw size={18} />
+            {local(language, 'Resume test now', 'अभी टेस्ट जारी रखें')} <RefreshCcw size={18} />
           </button>
           <FlowLink className="button button--secondary" href={`/mp/application/${applicationId}`}>
-            {local(language, 'Application status', 'आवेदन स्थिति')}
+            <ArrowLeft size={18} /> {local(language, 'Application status', 'आवेदन स्थिति')}
           </FlowLink>
         </div>
       </section>
@@ -681,18 +699,113 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
       {!passed && <section className="retest-guidance"><RefreshCcw size={24} /><div><p className="eyebrow">{local(language, 'Next attempt', 'अगला प्रयास')}</p><h2>{local(language, 'Review first, then try again', 'पहले समीक्षा करें, फिर दोबारा प्रयास करें')}</h2><p>{local(language, 'This prototype allows an immediate retest after review. In a real service, waiting periods, fees and appointments are controlled by the current state rules.', 'यह प्रोटोटाइप समीक्षा के बाद तुरंत दोबारा टेस्ट देता है। वास्तविक सेवा में प्रतीक्षा अवधि, शुल्क और अपॉइंटमेंट वर्तमान राज्य नियमों से नियंत्रित होते हैं।')}</p></div><div className="lf-actions"><FlowLink className="button button--secondary" href={`/mp/application/${applicationId}/tutorial`}>{local(language, 'Revisit learning material', 'सीखने की सामग्री फिर देखें')}</FlowLink><button className="button button--primary" onClick={reset}>{local(language, 'Start a new prototype attempt', 'नया प्रोटोटाइप प्रयास शुरू करें')} <ArrowRight size={18} /></button></div></section>}
       {eligible ? (
         <>
-          <section className="demo-licence">
-            <div className="demo-licence__watermark">{local(language, 'NOT VALID', 'मान्य नहीं')}</div>
-            <div>
-              <p>मध्य प्रदेश · {local(language, "LEARNER'S LICENCE", 'लर्नर लाइसेंस')}</p>
-              <strong>{local(language, 'DEMO DOCUMENT', 'डेमो दस्तावेज़')}</strong>
+          <section className="demo-licence" aria-label="Digital Learner's Licence">
+            <div className="demo-licence__watermark">{local(language, 'DEMO · NOT VALID', 'डेमो · मान्य नहीं')}</div>
+            <header className="demo-licence__header">
+              <div className="demo-licence__brand">
+                <img
+                  src="/assets/licenceflow-brand-logo.png"
+                  alt="LicenceFlow"
+                  className="demo-licence__logo"
+                />
+                <div>
+                  <p className="demo-licence__state">{local(language, 'Government of Madhya Pradesh · Transport Department', 'मध्य प्रदेश शासन · परिवहन विभाग')}</p>
+                  <h3 className="demo-licence__form-title">{local(language, "FORM 3 — LEARNER'S LICENCE [Rule 3(1)]", 'प्रारूप ३ — शिक्षार्थी अनुज्ञप्ति [नियम ३(१)]')}</h3>
+                </div>
+              </div>
+              <div className="demo-licence__ll-number">
+                <small>{local(language, 'Licence No.', 'अनुज्ञप्ति संख्या')}</small>
+                <strong>MP-04/LL/{applicationId.replace(/[^0-9]/g, '') || '002408'}/2026</strong>
+              </div>
+            </header>
+
+            <div className="demo-licence__body">
+              <div className="demo-licence__photo-col">
+                <div className="demo-licence__photo-wrap">
+                  <UserRound size={48} />
+                  <span>{local(language, 'DIGITAL PHOTO', 'डिजिटल फोटो')}</span>
+                </div>
+                <div className="demo-licence__qr-wrap">
+                  <svg className="demo-licence__qr-svg" viewBox="0 0 100 100" aria-label="Licence QR Verification">
+                    <rect width="100" height="100" fill="white" rx="4" />
+                    <rect x="8" y="8" width="26" height="26" fill="#071a34" rx="2" />
+                    <rect x="12" y="12" width="18" height="18" fill="white" rx="1" />
+                    <rect x="16" y="16" width="10" height="10" fill="#1d4ed8" rx="1" />
+                    <rect x="66" y="8" width="26" height="26" fill="#071a34" rx="2" />
+                    <rect x="70" y="12" width="18" height="18" fill="white" rx="1" />
+                    <rect x="74" y="16" width="10" height="10" fill="#1d4ed8" rx="1" />
+                    <rect x="8" y="66" width="26" height="26" fill="#071a34" rx="2" />
+                    <rect x="12" y="70" width="18" height="18" fill="white" rx="1" />
+                    <rect x="16" y="74" width="10" height="10" fill="#1d4ed8" rx="1" />
+                    <rect x="40" y="12" width="6" height="6" fill="#071a34" rx="1" />
+                    <rect x="50" y="12" width="8" height="6" fill="#1d4ed8" rx="1" />
+                    <rect x="40" y="24" width="8" height="8" fill="#071a34" rx="1" />
+                    <rect x="52" y="22" width="6" height="8" fill="#1d4ed8" rx="1" />
+                    <rect x="12" y="42" width="8" height="6" fill="#1d4ed8" rx="1" />
+                    <rect x="24" y="42" width="6" height="8" fill="#071a34" rx="1" />
+                    <rect x="42" y="42" width="16" height="16" fill="#071a34" rx="3" />
+                    <circle cx="50" cy="50" r="5" fill="#2563eb" />
+                    <rect x="66" y="42" width="8" height="6" fill="#1d4ed8" rx="1" />
+                    <rect x="78" y="42" width="12" height="8" fill="#071a34" rx="1" />
+                    <rect x="40" y="66" width="8" height="8" fill="#071a34" rx="1" />
+                    <rect x="52" y="68" width="8" height="6" fill="#1d4ed8" rx="1" />
+                    <rect x="66" y="66" width="8" height="10" fill="#071a34" rx="1" />
+                    <rect x="78" y="66" width="12" height="6" fill="#1d4ed8" rx="1" />
+                    <rect x="40" y="80" width="10" height="8" fill="#1d4ed8" rx="1" />
+                    <rect x="54" y="80" width="6" height="8" fill="#071a34" rx="1" />
+                    <rect x="66" y="82" width="14" height="6" fill="#071a34" rx="1" />
+                    <rect x="84" y="80" width="6" height="8" fill="#1d4ed8" rx="1" />
+                  </svg>
+                  <small>{local(language, 'Scan to Verify Parivahan Credential', 'सत्यापन हेतु स्कैन करें')}</small>
+                </div>
+              </div>
+
+              <div className="demo-licence__info-col">
+                <dl className="demo-licence__grid">
+                  <div>
+                    <dt>{local(language, 'Licence Holder Name', 'अनुज्ञप्ति धारक का नाम')}</dt>
+                    <dd><strong>{licenceData.holderName}</strong></dd>
+                  </div>
+                  <div>
+                    <dt>{local(language, 'Application Number', 'आवेदन संख्या')}</dt>
+                    <dd>{applicationId}</dd>
+                  </div>
+                  <div>
+                    <dt>{local(language, 'Date of Birth / Age', 'जन्म तिथि / आयु')}</dt>
+                    <dd>{licenceData.dateOfBirth ? `${licenceData.dateOfBirth} (Eligible)` : local(language, '24-08-2005 (21 yrs)', '२४-०८-२००५ (२१ वर्ष)')}</dd>
+                  </div>
+                  <div>
+                    <dt>{local(language, 'Issuing Authority', 'जारीकर्ता प्राधिकारी')}</dt>
+                    <dd>{local(language, 'RTO Bhopal (MP-04), Madhya Pradesh', 'आरटीओ भोपाल (MP-04), मध्य प्रदेश')}</dd>
+                  </div>
+                  <div>
+                    <dt>{local(language, 'Issue Date', 'जारी दिनांक')}</dt>
+                    <dd>{new Date(licenceData.completedAt).toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</dd>
+                  </div>
+                  <div>
+                    <dt>{local(language, 'Valid Up To (6 Months)', 'वैधता अवधि (६ माह)')}</dt>
+                    <dd>{new Date(new Date(licenceData.completedAt).setMonth(new Date(licenceData.completedAt).getMonth() + 6)).toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</dd>
+                  </div>
+                  <div className="demo-licence__grid-full">
+                    <dt>{local(language, 'Authorized Vehicle Classes', 'अधिकृत वाहन श्रेणियाँ')}</dt>
+                    <dd>
+                      <div className="demo-licence__classes">
+                        {(licenceData.vehicleClasses.length ? licenceData.vehicleClasses : ['MCWG', 'LMV']).map((cov) => (
+                          <span key={cov} className="demo-licence__class-pill">
+                            <strong>{cov}</strong>
+                            <small>{cov === 'MCWOG' ? 'Motorcycle Without Gear' : cov === 'MCWG' ? 'Motorcycle With Gear' : cov === 'LMV' ? 'Light Motor Vehicle (Car)' : cov}</small>
+                          </span>
+                        ))}
+                      </div>
+                    </dd>
+                  </div>
+                </dl>
+              </div>
             </div>
-            <dl>
-              <div><dt>{local(language, 'Application', 'आवेदन')}</dt><dd>{applicationId}</dd></div>
-              <div><dt>{local(language, 'Holder', 'धारक')}</dt><dd>{licenceData.holderName}</dd></div>
-              <div><dt>{local(language, 'Vehicle classes', 'वाहन वर्ग')}</dt><dd>{licenceData.vehicleClasses.join(', ') || local(language, 'Not recorded', 'दर्ज नहीं')}</dd></div>
-              <div><dt>{local(language, 'Government record', 'सरकारी रिकॉर्ड')}</dt><dd>{local(language, 'Not a government record', 'सरकारी रिकॉर्ड नहीं')}</dd></div>
-            </dl>
+
+            <footer className="demo-licence__footer">
+              <p>{local(language, 'This is an electronic demonstration document generated by LicenceFlow for the Madhya Pradesh Parivahan Sarathi prototype. Not valid for actual vehicle driving on public roads.', 'यह मध्य प्रदेश परिवहन सारथी प्रोटोटाइप हेतु लाइसेंसफ्लो द्वारा निर्मित इलेक्ट्रॉनिक डेमो दस्तावेज़ है। सार्वजनिक सड़कों पर वाहन चलाने हेतु मान्य नहीं है।')}</p>
+            </footer>
           </section>
           <section className="journey-receipt" aria-labelledby="document-download-title">
             <div className="section-heading">
