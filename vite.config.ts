@@ -7,8 +7,8 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 const sitesWorkerEntry: Plugin = {
   name: 'licenceflow-sites-worker-entry',
   apply: 'build',
-  writeBundle(options) {
-    const outputDirectory = options.dir ?? 'dist'
+  writeBundle() {
+    const outputDirectory = 'dist'
     const workerSource = `const withSiteHeaders = (response, path) => {
   const headers = new Headers(response.headers);
   headers.set('X-Content-Type-Options', 'nosniff');
@@ -66,6 +66,7 @@ export default defineConfig({
     },
   },
   build: {
+    outDir: 'dist/client',
     target: 'es2022',
   },
 })
