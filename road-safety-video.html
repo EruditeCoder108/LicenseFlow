@@ -1,0 +1,1640 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Road Safety Education — Driver Training (Chunks 1 &amp; 2: Scenes 01A, 02A, 03A &amp; 04A)</title>
+  <style>
+    :root {
+      --bg-page: #0a0d14;
+      --bg-player: #111722;
+      --bg-control: #161f2e;
+      --bg-control-hover: #222f46;
+      --border-color: #27354a;
+      --border-highlight: #38bdf8;
+      --text-main: #f1f5f9;
+      --text-sub: #94a3b8;
+      --text-muted: #64748b;
+      --brand-blue: #2563eb;
+      --brand-cyan: #06b6d4;
+      --brand-green: #10b981;
+      --brand-amber: #f59e0b;
+      --brand-red: #ef4444;
+      --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html, body {
+      min-height: 100vh;
+      background: var(--bg-page);
+      color: var(--text-main);
+      font-family: var(--font-family);
+      line-height: 1.5;
+    }
+
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 16px;
+      overflow-x: hidden;
+    }
+
+    .video-card {
+      width: 100%;
+      max-width: 1360px;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg-player);
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.04);
+      overflow: hidden;
+    }
+
+    /* Video Player Canvas Shell */
+    .stage-shell {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      background: #090d14;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      user-select: none;
+    }
+
+    .stage-shell:fullscreen {
+      width: 100vw;
+      height: 100vh;
+      border-radius: 0;
+      background: #000000;
+    }
+
+    .stage-shell:fullscreen #video-stage {
+      width: min(100vw, calc(100vh * 16 / 9));
+      height: min(100vh, calc(100vw * 9 / 16));
+    }
+
+    #video-stage {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+
+    /* Controls Bar */
+    .controls-wrapper {
+      background: var(--bg-control);
+      border-top: 1px solid var(--border-color);
+      padding: 16px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .scrubber-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      width: 100%;
+    }
+
+    .time-readout {
+      font-variant-numeric: tabular-nums;
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text-sub);
+      min-width: 48px;
+      text-align: center;
+      letter-spacing: 0.5px;
+    }
+
+    .time-readout.active {
+      color: var(--brand-cyan);
+    }
+
+    .scrubber-container {
+      position: relative;
+      flex: 1;
+      display: flex;
+      align-items: center;
+    }
+
+    /* Timeline Markers */
+    .scene-jump-bar {
+      position: absolute;
+      top: -20px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      pointer-events: none;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      color: var(--text-muted);
+    }
+
+    .scene-jump-btn {
+      pointer-events: auto;
+      cursor: pointer;
+      transition: color 0.15s ease;
+    }
+
+    .scene-jump-btn:hover {
+      color: var(--brand-cyan);
+    }
+
+    input[type="range"].scrubber-input {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 8px;
+      border-radius: 4px;
+      background: #2a384d;
+      outline: none;
+      cursor: pointer;
+      position: relative;
+      z-index: 2;
+    }
+
+    input[type="range"].scrubber-input:focus-visible {
+      box-shadow: 0 0 0 2px var(--border-highlight);
+    }
+
+    input[type="range"].scrubber-input::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #38bdf8;
+      border: 3px solid #ffffff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+      cursor: grab;
+      transition: transform 0.1s ease, background 0.1s ease;
+    }
+
+    input[type="range"].scrubber-input::-webkit-slider-thumb:hover {
+      transform: scale(1.2);
+      background: #7dd3fc;
+    }
+
+    input[type="range"].scrubber-input:active::-webkit-slider-thumb {
+      cursor: grabbing;
+      transform: scale(1.25);
+    }
+
+    input[type="range"].scrubber-input::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #38bdf8;
+      border: 3px solid #ffffff;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+      cursor: grab;
+    }
+
+    /* Actions & Navigation */
+    .actions-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .actions-left, .actions-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    button.btn-ctrl {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      height: 40px;
+      padding: 0 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--bg-player);
+      color: var(--text-main);
+      font-size: 13px;
+      font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      touch-action: manipulation;
+    }
+
+    button.btn-ctrl.icon-btn {
+      width: 40px;
+      padding: 0;
+    }
+
+    button.btn-ctrl:hover {
+      background: var(--bg-control-hover);
+      border-color: #475569;
+      color: #ffffff;
+    }
+
+    button.btn-ctrl:focus-visible {
+      outline: 2px solid var(--border-highlight);
+      outline-offset: 2px;
+    }
+
+    button.btn-ctrl svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    button.btn-ctrl[aria-pressed="true"] {
+      background: #0d3852;
+      border-color: var(--brand-cyan);
+      color: #38bdf8;
+    }
+
+    .scene-pill {
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      background: #1b2637;
+      color: var(--text-sub);
+      border: 1px solid #2e3e56;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .scene-pill:hover {
+      background: #2b3b54;
+      color: #f8fafc;
+    }
+
+    .scene-pill.active {
+      background: rgba(6, 182, 212, 0.15);
+      border-color: var(--brand-cyan);
+      color: #38bdf8;
+    }
+
+    /* Shortcut Footer */
+    .footer-bar {
+      padding: 12px 22px;
+      background: var(--bg-player);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-muted);
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .keys-list {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .kbd-shortcut {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 4px;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      font-family: monospace;
+      font-size: 11px;
+      font-weight: bold;
+    }
+
+    .status-indicator {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      color: var(--brand-green);
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--brand-green);
+      box-shadow: 0 0 10px var(--brand-green);
+    }
+
+    @media (max-width: 900px) {
+      body { padding: 8px; }
+      .controls-wrapper { padding: 12px 14px; }
+      .footer-bar { display: none; }
+      .scene-jump-bar { display: none; }
+      .scene-pill { font-size: 11px; padding: 4px 8px; }
+    }
+  </style>
+</head>
+<body>
+
+  <main class="video-card" role="region" aria-label="Road Safety Driver Training Video">
+    <!-- SVG 1920x1080 Full HD Canvas Stage -->
+    <div class="stage-shell" id="stage-shell">
+      <svg id="video-stage" viewBox="0 0 1920 1080" role="img" aria-labelledby="video-title video-desc">
+        <title id="video-title">Road Safety Driver Training — Chunks 1 &amp; 2 (00:00–00:32)</title>
+        <desc id="video-desc">Interactive 32-second road safety driver education covering Hazard Perception (01A), Keep-Left Rule (02A), Safe Overtaking (03A), and Intersections &amp; Right of Way (04A).</desc>
+
+        <!-- Reusable SVG Design System Definitions -->
+        <defs>
+          <!-- Vehicle Shadows & Elevation Filters -->
+          <filter id="filter-car-shadow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="0" dy="12" stdDeviation="14" flood-color="#000000" flood-opacity="0.55"/>
+          </filter>
+
+          <filter id="filter-card-shadow" x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#000000" flood-opacity="0.45"/>
+          </filter>
+
+          <filter id="filter-glow-cyan" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="8" result="blur"/>
+            <feMerge>
+              <feMergeNode in="blur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+
+          <filter id="filter-glow-amber" x="-40%" y="-40%" width="180%" height="180%">
+            <feGaussianBlur stdDeviation="7" result="blur"/>
+            <feMerge>
+              <feMergeNode in="blur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+
+          <filter id="filter-sign-shadow" x="-30%" y="-30%" width="160%" height="160%">
+            <feDropShadow dx="3" dy="6" stdDeviation="6" flood-color="#000000" flood-opacity="0.4"/>
+          </filter>
+
+          <!-- Gradients -->
+          <linearGradient id="grad-windshield" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stop-color="#bae6fd" stop-opacity="0.95"/>
+            <stop offset="60%" stop-color="#0284c7" stop-opacity="0.85"/>
+            <stop offset="100%" stop-color="#0369a1" stop-opacity="0.95"/>
+          </linearGradient>
+
+          <radialGradient id="grad-headlight-beam" cx="50%" cy="100%" r="90%">
+            <stop offset="0%" stop-color="#fef08a" stop-opacity="0.45"/>
+            <stop offset="60%" stop-color="#fef08a" stop-opacity="0.15"/>
+            <stop offset="100%" stop-color="#fef08a" stop-opacity="0"/>
+          </radialGradient>
+
+          <linearGradient id="grad-card-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stop-color="#141c2b" stop-opacity="0.96"/>
+            <stop offset="100%" stop-color="#0c121e" stop-opacity="0.98"/>
+          </linearGradient>
+
+          <linearGradient id="grad-driver-vision" cx="50%" cy="100%" r="100%">
+            <stop offset="0%" stop-color="#38bdf8" stop-opacity="0.30"/>
+            <stop offset="70%" stop-color="#06b6d4" stop-opacity="0.08"/>
+            <stop offset="100%" stop-color="#06b6d4" stop-opacity="0"/>
+          </linearGradient>
+
+          <!-- ========================================== -->
+          <!-- SVG SYMBOLS DESIGN SYSTEM                  -->
+          <!-- ========================================== -->
+
+          <!-- 1. Detailed Top-Down Vehicle -->
+          <symbol id="symbol-vehicle" viewBox="-65 -115 130 230">
+            <!-- Shadow Base -->
+            <rect x="-56" y="-106" width="112" height="212" rx="36" fill="#000000" opacity="0.35"/>
+            <!-- 4 Wheels with tire treads -->
+            <rect x="-63" y="-76" width="14" height="40" rx="4" fill="#0f172a"/>
+            <rect x="49" y="-76" width="14" height="40" rx="4" fill="#0f172a"/>
+            <rect x="-63" y="36" width="14" height="40" rx="4" fill="#0f172a"/>
+            <rect x="49" y="36" width="14" height="40" rx="4" fill="#0f172a"/>
+            <!-- Car Body Metallic Base -->
+            <rect x="-54" y="-104" width="108" height="208" rx="34" fill="currentColor"/>
+            <!-- Roof / Cabin Contour -->
+            <rect x="-44" y="-56" width="88" height="116" rx="18" fill="#090d16" opacity="0.4"/>
+            <!-- Front Windshield -->
+            <path d="M-40 -50 Q0 -68 40 -50 L36 -12 Q0 -22 -36 -12 Z" fill="url(#grad-windshield)"/>
+            <!-- Rear Windshield -->
+            <path d="M-36 34 Q0 44 36 34 L38 58 Q0 72 -38 58 Z" fill="#0f172a" opacity="0.8"/>
+            <!-- Side Mirrors -->
+            <path d="M-54 -44 L-64 -38 L-64 -28 L-54 -32 Z" fill="currentColor"/>
+            <path d="M54 -44 L64 -38 L64 -28 L54 -32 Z" fill="currentColor"/>
+            <!-- Front Headlights (Warm White) -->
+            <rect x="-42" y="-100" width="24" height="9" rx="4" fill="#fef08a"/>
+            <rect x="18" y="-100" width="24" height="9" rx="4" fill="#fef08a"/>
+            <!-- Rear Taillights (Standard Red) -->
+            <rect x="-42" y="91" width="24" height="9" rx="4" fill="#ef4444"/>
+            <rect x="18" y="91" width="24" height="9" rx="4" fill="#ef4444"/>
+            <!-- Bonnet / Trunk Highlights -->
+            <line x1="0" y1="-102" x2="0" y2="-72" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.25"/>
+            <line x1="0" y1="64" x2="0" y2="98" stroke="#ffffff" stroke-width="2" stroke-linecap="round" opacity="0.25"/>
+          </symbol>
+
+          <!-- 2. Detailed Heavy Commercial Truck/Bus -->
+          <symbol id="symbol-truck" viewBox="-75 -160 150 320">
+            <!-- Ground Shadow -->
+            <rect x="-65" y="-150" width="130" height="300" rx="16" fill="#000000" opacity="0.4"/>
+            <!-- Dual Rear & Front Wheels -->
+            <rect x="-74" y="-120" width="16" height="48" rx="4" fill="#0f172a"/>
+            <rect x="58" y="-120" width="16" height="48" rx="4" fill="#0f172a"/>
+            <rect x="-74" y="60" width="16" height="48" rx="4" fill="#0f172a"/>
+            <rect x="58" y="60" width="16" height="48" rx="4" fill="#0f172a"/>
+            <rect x="-74" y="105" width="16" height="48" rx="4" fill="#0f172a"/>
+            <rect x="58" y="105" width="16" height="48" rx="4" fill="#0f172a"/>
+            <!-- Cargo Box / Container -->
+            <rect x="-62" y="-50" width="124" height="195" rx="8" fill="#475569"/>
+            <rect x="-56" y="-44" width="112" height="183" rx="4" fill="#334155"/>
+            <!-- Cabin Front -->
+            <rect x="-62" y="-150" width="124" height="95" rx="14" fill="#b45309"/>
+            <!-- Truck Windshield -->
+            <path d="M-52 -136 H52 L46 -95 H-46 Z" fill="url(#grad-windshield)"/>
+            <!-- Mirrors -->
+            <rect x="-72" y="-130" width="10" height="24" rx="2" fill="#1e293b"/>
+            <rect x="62" y="-130" width="10" height="24" rx="2" fill="#1e293b"/>
+            <!-- Amber Roof Warning Clearance Lights -->
+            <circle cx="-42" cy="-145" r="4" fill="#fbbf24"/>
+            <circle cx="0" cy="-145" r="4" fill="#fbbf24"/>
+            <circle cx="42" cy="-145" r="4" fill="#fbbf24"/>
+            <!-- Truck Taillights -->
+            <rect x="-56" y="142" width="24" height="8" rx="2" fill="#ef4444"/>
+            <rect x="32" y="142" width="24" height="8" rx="2" fill="#ef4444"/>
+          </symbol>
+
+          <!-- 3. Authentic Top-Down Bicycle & Cyclist -->
+          <symbol id="symbol-cyclist" viewBox="-50 -90 100 180">
+            <ellipse cx="0" cy="0" rx="34" ry="70" fill="#000000" opacity="0.3"/>
+            <rect x="-6" y="-80" width="12" height="56" rx="4" fill="#1e293b"/>
+            <line x1="0" y1="-80" x2="0" y2="-24" stroke="#64748b" stroke-width="2"/>
+            <rect x="-6" y="24" width="12" height="56" rx="4" fill="#1e293b"/>
+            <line x1="0" y1="24" x2="0" y2="80" stroke="#64748b" stroke-width="2"/>
+            <path d="M0 -46 L0 36 M-30 -46 H30 M-30 -46 L-34 -34 M30 -46 L34 -34" fill="none" stroke="#10b981" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M-28 -34 L-16 -4 L16 -4 L28 -34" fill="none" stroke="#047857" stroke-width="14" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M-12 -12 L12 -12" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
+            <circle cx="0" cy="-6" r="17" fill="#f59e0b"/>
+            <path d="M-10 -16 Q0 -22 10 -16 Z" fill="#b45309"/>
+          </symbol>
+
+          <!-- 4. Realistic Top-Down Pedestrian -->
+          <symbol id="symbol-pedestrian-walker" viewBox="-50 -60 100 120">
+            <ellipse cx="2" cy="8" rx="32" ry="20" fill="#000000" opacity="0.35"/>
+            <path d="M-28 6 L-16 -12 L16 -12 L28 6" fill="none" stroke="#e2e8f0" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+            <ellipse cx="0" cy="4" rx="16" ry="18" fill="#1d4ed8"/>
+            <circle cx="0" cy="-14" r="17" fill="#475569"/>
+            <circle cx="0" cy="-16" r="14" fill="#334155"/>
+            <ellipse cx="-12" cy="32" rx="7" ry="13" fill="#0f172a"/>
+            <ellipse cx="12" cy="-22" rx="7" ry="13" fill="#0f172a"/>
+          </symbol>
+
+          <!-- 5. OFFICIAL INDIAN ROAD SIGNS (IRC STANDARD) -->
+
+          <!-- A: Mandatory Keep-Left Circular Sign -->
+          <symbol id="sign-irc-keep-left" viewBox="-60 -60 120 120">
+            <circle cx="0" cy="0" r="58" fill="#ffffff"/>
+            <circle cx="0" cy="0" r="52" fill="#1d4ed8"/>
+            <path d="M18 -26 L-14 6 L-8 12 L-32 16 L-24 -8 L-18 -2 L14 -30 Z" fill="#ffffff"/>
+            <line x1="-20" y1="8" x2="-4" y2="-8" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+          </symbol>
+
+          <!-- B: Cautionary Pedestrian Crossing Warning Sign -->
+          <symbol id="sign-irc-pedestrian-warning" viewBox="-65 -60 130 120">
+            <path d="M0 -52 L56 46 H-56 Z" fill="#dc2626" stroke="#ffffff" stroke-width="4" stroke-linejoin="round"/>
+            <path d="M0 -40 L44 38 H-44 Z" fill="#ffffff" stroke-linejoin="round"/>
+            <circle cx="0" cy="-18" r="6" fill="#0f172a"/>
+            <path d="M0 -10 L0 10 L-8 30 M0 10 L8 30 M-10 0 L10 -4" stroke="#0f172a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+            <line x1="-24" y1="32" x2="24" y2="32" stroke="#0f172a" stroke-width="4" stroke-dasharray="8 6"/>
+          </symbol>
+
+          <!-- C: Cautionary Cyclist Warning Sign -->
+          <symbol id="sign-irc-cyclist-warning" viewBox="-65 -60 130 120">
+            <path d="M0 -52 L56 46 H-56 Z" fill="#dc2626" stroke="#ffffff" stroke-width="4" stroke-linejoin="round"/>
+            <path d="M0 -40 L44 38 H-44 Z" fill="#ffffff" stroke-linejoin="round"/>
+            <circle cx="-16" cy="18" r="10" fill="none" stroke="#0f172a" stroke-width="3.5"/>
+            <circle cx="16" cy="18" r="10" fill="none" stroke="#0f172a" stroke-width="3.5"/>
+            <path d="M-16 18 L-4 2 L12 2 L16 18 M-4 2 L4 18 M-4 -6 H4" fill="none" stroke="#0f172a" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </symbol>
+
+          <!-- D: Regulatory Give Way Inverted Triangle (IRC Section 2) -->
+          <symbol id="sign-irc-give-way" viewBox="-65 -60 130 120">
+            <path d="M0 52 L-56 -46 H56 Z" fill="#dc2626" stroke="#ffffff" stroke-width="4" stroke-linejoin="round"/>
+            <path d="M0 38 L-44 -36 H44 Z" fill="#ffffff" stroke-linejoin="round"/>
+            <text x="0" y="-8" text-anchor="middle" fill="#dc2626" font-size="14" font-weight="900" letter-spacing="1">GIVE</text>
+            <text x="0" y="10" text-anchor="middle" fill="#dc2626" font-size="14" font-weight="900" letter-spacing="1">WAY</text>
+          </symbol>
+
+          <!-- E: Regulatory Stop Octagon Sign (IRC Section 2) -->
+          <symbol id="sign-irc-stop" viewBox="-60 -60 120 120">
+            <polygon points="-24 -58 24 -58 58 -24 58 24 24 58 -24 58 -58 24 -58 -24" fill="#ffffff"/>
+            <polygon points="-22 -54 22 -54 54 -22 54 22 22 54 -22 54 -54 22 -54 -22" fill="#dc2626"/>
+            <text x="0" y="10" text-anchor="middle" fill="#ffffff" font-size="24" font-weight="900" letter-spacing="2">STOP</text>
+          </symbol>
+
+          <!-- F: Regulatory No-Overtaking Sign (IRC Section 2) -->
+          <symbol id="sign-irc-no-overtaking" viewBox="-60 -60 120 120">
+            <circle cx="0" cy="0" r="58" fill="#ffffff"/>
+            <circle cx="0" cy="0" r="52" fill="#dc2626"/>
+            <circle cx="0" cy="0" r="42" fill="#ffffff"/>
+            <!-- Left Car (Black) & Right Car (Red Passing) -->
+            <rect x="-24" y="-12" width="16" height="24" rx="4" fill="#0f172a"/>
+            <rect x="8" y="-12" width="16" height="24" rx="4" fill="#dc2626"/>
+            <!-- Red Slash -->
+            <line x1="-34" y1="-34" x2="34" y2="34" stroke="#dc2626" stroke-width="8" stroke-linecap="round"/>
+          </symbol>
+
+          <!-- G: Roundabout / Rotary Mandatory Sign (IRC Section 2) -->
+          <symbol id="sign-irc-roundabout" viewBox="-60 -60 120 120">
+            <circle cx="0" cy="0" r="58" fill="#ffffff"/>
+            <circle cx="0" cy="0" r="52" fill="#1d4ed8"/>
+            <!-- 3 Clockwise Rotary Arrows -->
+            <path d="M0 -34 A34 34 0 0 1 30 16 L22 16 L34 30 L46 16 L38 16 A42 42 0 0 0 0 -42 Z" fill="#ffffff"/>
+            <path d="M30 16 A34 34 0 0 1 -28 20 L-22 12 L-40 10 L-32 30 L-28 20 A42 42 0 0 0 38 20 Z" fill="#ffffff"/>
+            <path d="M-28 20 A34 34 0 0 1 -2 -34 L-2 -26 L-16 -38 L-2 -50 L-2 -42 A42 42 0 0 0 -36 12 Z" fill="#ffffff"/>
+          </symbol>
+
+          <!-- 6. Directional Lane Arrow -->
+          <symbol id="symbol-lane-arrow-up" viewBox="-30 -60 60 120">
+            <path d="M0 -50 L26 -14 H11 V50 H-11 V-14 H-26 Z" fill="#ffffff" opacity="0.9"/>
+          </symbol>
+
+          <!-- 7. Safety Shield Emblem -->
+          <symbol id="symbol-safety-shield" viewBox="-40 -45 80 90">
+            <path d="M0 -40 C24 -40 36 -28 36 -10 C36 22 18 36 0 44 C-18 36 -36 22 -36 -10 C-36 -28 -24 -40 0 -40 Z" fill="#0284c7" stroke="#38bdf8" stroke-width="3"/>
+            <path d="M-12 -2 L-4 8 L16 -12" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+          </symbol>
+        </defs>
+
+        <!-- Canvas Background -->
+        <rect width="1920" height="1080" fill="#090d14"/>
+
+        <!-- ========================================== -->
+        <!-- SHARED ROAD CANVAS INFRASTRUCTURE          -->
+        <!-- ========================================== -->
+        <g id="road-canvas">
+          <!-- Sidewalk / Grass Verge -->
+          <rect x="0" y="0" width="1920" height="1080" fill="#141a24"/>
+          <rect x="300" y="0" width="1320" height="1080" fill="#1a2520"/>
+          
+          <!-- Paved Kerb Borders -->
+          <rect x="360" y="0" width="50" height="1080" fill="#475569"/>
+          <rect x="1510" y="0" width="50" height="1080" fill="#475569"/>
+
+          <!-- High-Quality Asphalt Carriageway (2-Lane Undivided Indian Road) -->
+          <rect x="410" y="0" width="1100" height="1080" fill="#242c38"/>
+
+          <!-- Outer Edge White Thermoplast Lines (Solid Continuous) -->
+          <rect x="420" y="0" width="12" height="1080" fill="#f8fafc"/>
+          <rect x="1488" y="0" width="12" height="1080" fill="#f8fafc"/>
+
+          <!-- Center Broken White Line (Standard 2-Lane Overtaking Allowed) -->
+          <line id="road-center-dashed" x1="960" y1="0" x2="960" y2="1080" stroke="#f8fafc" stroke-width="12" stroke-dasharray="64 54"/>
+
+          <!-- Center Continuous Solid Line (No-Overtaking Zone in 03A) -->
+          <line id="road-center-solid" x1="960" y1="0" x2="960" y2="1080" stroke="#fbbf24" stroke-width="12" opacity="0"/>
+
+          <!-- Zebra Pedestrian Crossing & Stop Line (Active in Scene 01A) -->
+          <g id="road-zebra-crossing" opacity="1">
+            <rect x="410" y="240" width="1100" height="170" fill="#1e242e"/>
+            <g fill="#f8fafc">
+              <rect x="435" y="255" width="70" height="140" rx="2"/>
+              <rect x="540" y="255" width="70" height="140" rx="2"/>
+              <rect x="645" y="255" width="70" height="140" rx="2"/>
+              <rect x="750" y="255" width="70" height="140" rx="2"/>
+              <rect x="855" y="255" width="70" height="140" rx="2"/>
+              <rect x="960" y="255" width="70" height="140" rx="2"/>
+              <rect x="1065" y="255" width="70" height="140" rx="2"/>
+              <rect x="1170" y="255" width="70" height="140" rx="2"/>
+              <rect x="1275" y="255" width="70" height="140" rx="2"/>
+              <rect x="1380" y="255" width="70" height="140" rx="2"/>
+              <rect x="1485" y="255" width="20" height="140" rx="2"/>
+            </g>
+            <rect x="420" y="430" width="540" height="14" fill="#ffffff"/>
+            <text x="690" y="475" text-anchor="middle" fill="#94a3b8" font-size="16" font-weight="800" letter-spacing="3">STOP LINE</text>
+          </g>
+
+          <!-- T-Junction / Give Way Road Markings (Active in Scene 04A) -->
+          <g id="road-intersection-markings" opacity="0">
+            <!-- Transverse Give Way Double Dashed Line -->
+            <line x1="420" y1="480" x2="960" y2="480" stroke="#f8fafc" stroke-width="10" stroke-dasharray="24 16"/>
+            <line x1="420" y1="505" x2="960" y2="505" stroke="#f8fafc" stroke-width="10" stroke-dasharray="24 16"/>
+            <!-- Painted Road Give-Way Triangle -->
+            <polygon points="690 580 650 660 730 660" fill="none" stroke="#f8fafc" stroke-width="8"/>
+            <text x="690" y="720" text-anchor="middle" fill="#94a3b8" font-size="18" font-weight="900" letter-spacing="4">GIVE WAY</text>
+          </g>
+        </g>
+
+        <!-- ========================================== -->
+        <!-- SCENE 01A: HAZARD SCANNING & AWARENESS     -->
+        <!-- Timeline: 00:00 – 00:07.50                -->
+        <!-- ========================================== -->
+        <g id="scene-01a">
+          <!-- Roadside Warning Signs -->
+          <g id="signpost-cyclist-warning" transform="translate(340, 680)" filter="url(#filter-sign-shadow)">
+            <line x1="0" y1="0" x2="0" y2="40" stroke="#64748b" stroke-width="6"/>
+            <use href="#sign-irc-cyclist-warning" x="-45" y="-55" width="90" height="85"/>
+          </g>
+
+          <g id="signpost-pedestrian-warning" transform="translate(1580, 280)" filter="url(#filter-sign-shadow)">
+            <line x1="0" y1="0" x2="0" y2="40" stroke="#64748b" stroke-width="6"/>
+            <use href="#sign-irc-pedestrian-warning" x="-45" y="-55" width="90" height="85"/>
+          </g>
+
+          <!-- Driver Sight Beam / Active Scanning Field -->
+          <g id="driver-scanning-group" opacity="0">
+            <path id="headlight-beam-left" d="M650 820 L520 400 L700 400 Z" fill="url(#grad-headlight-beam)"/>
+            <path id="headlight-beam-right" d="M730 820 L680 400 L860 400 Z" fill="url(#grad-headlight-beam)"/>
+            <path id="scanning-arc" d="M690 820 L400 240 L980 240 Z" fill="url(#grad-driver-vision)"/>
+
+            <line id="focus-line-cyclist" x1="690" y1="820" x2="490" y2="620" stroke="#10b981" stroke-width="3" stroke-dasharray="8 6"/>
+            <circle id="focus-ring-cyclist" cx="490" cy="620" r="16" fill="none" stroke="#10b981" stroke-width="3" filter="url(#filter-glow-cyan)"/>
+            
+            <line id="focus-line-lead" x1="690" y1="820" x2="690" y2="460" stroke="#f59e0b" stroke-width="3" stroke-dasharray="8 6"/>
+            <circle id="focus-ring-lead" cx="690" cy="460" r="16" fill="none" stroke="#f59e0b" stroke-width="3" filter="url(#filter-glow-amber)"/>
+
+            <line id="focus-line-pedestrian" x1="690" y1="820" x2="1140" y2="320" stroke="#ef4444" stroke-width="3" stroke-dasharray="8 6"/>
+            <circle id="focus-ring-pedestrian" cx="1140" cy="320" r="16" fill="none" stroke="#ef4444" stroke-width="3"/>
+          </g>
+
+          <!-- Distance & Gap Brackets -->
+          <g id="dimension-bracket-cyclist" opacity="0">
+            <line x1="535" y1="620" x2="630" y2="620" stroke="#10b981" stroke-width="3"/>
+            <line x1="535" y1="610" x2="535" y2="630" stroke="#10b981" stroke-width="3"/>
+            <line x1="630" y1="610" x2="630" y2="630" stroke="#10b981" stroke-width="3"/>
+            <rect x="540" y="582" width="85" height="26" rx="4" fill="#047857"/>
+            <text x="582" y="600" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="800">1.5m GAP</text>
+          </g>
+
+          <g id="dimension-bracket-lead" opacity="0">
+            <line x1="770" y1="780" x2="770" y2="520" stroke="#f59e0b" stroke-width="3"/>
+            <line x1="760" y1="780" x2="780" y2="780" stroke="#f59e0b" stroke-width="3"/>
+            <line x1="760" y1="520" x2="780" y2="520" stroke="#f59e0b" stroke-width="3"/>
+            <rect x="785" y="635" width="125" height="32" rx="6" fill="#78350f" stroke="#fbbf24" stroke-width="1.5"/>
+            <text x="847" y="656" text-anchor="middle" fill="#ffffff" font-size="13" font-weight="800">2-SEC BUFFER</text>
+          </g>
+
+          <!-- Actors -->
+          <g id="actor-01a-ego" transform="translate(690, 880) scale(1.18)" filter="url(#filter-car-shadow)" color="#2563eb">
+            <use href="#symbol-vehicle" x="-65" y="-115" width="130" height="230"/>
+            <rect x="-60" y="125" width="120" height="26" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
+            <text x="0" y="143" text-anchor="middle" fill="#38bdf8" font-size="13" font-weight="800" letter-spacing="1">YOUR VEHICLE</text>
+          </g>
+
+          <g id="actor-01a-lead" transform="translate(690, 480) scale(1.05)" filter="url(#filter-car-shadow)" color="#f59e0b">
+            <use href="#symbol-vehicle" x="-65" y="-115" width="130" height="230"/>
+            <g id="lead-car-brake-glow" opacity="0">
+              <circle cx="-42" cy="95" r="18" fill="#ef4444" opacity="0.6" filter="url(#filter-glow-amber)"/>
+              <circle cx="18" cy="95" r="18" fill="#ef4444" opacity="0.6" filter="url(#filter-glow-amber)"/>
+            </g>
+          </g>
+
+          <g id="actor-01a-cyclist" transform="translate(485, 680) scale(0.9)">
+            <use href="#symbol-cyclist" x="-50" y="-90" width="100" height="180"/>
+          </g>
+
+          <g id="actor-01a-pedestrian" transform="translate(1160, 325) scale(0.95)">
+            <use href="#symbol-pedestrian-walker" x="-50" y="-60" width="100" height="120"/>
+          </g>
+
+          <!-- Pedagogical Cards -->
+          <g id="card-01a-scanning" transform="translate(40, 520)" opacity="0" filter="url(#filter-card-shadow)">
+            <rect width="340" height="210" rx="16" fill="url(#grad-card-bg)" stroke="#38bdf8" stroke-width="2"/>
+            <rect x="0" y="0" width="8" height="210" rx="4" fill="#06b6d4"/>
+            <g transform="translate(24, 28)">
+              <rect x="0" y="0" width="130" height="22" rx="4" fill="rgba(6, 182, 212, 0.2)"/>
+              <text x="8" y="15" fill="#38bdf8" font-size="11" font-weight="800" letter-spacing="1.5">DRIVER PERCEPTION</text>
+              <text x="0" y="48" fill="#ffffff" font-size="22" font-weight="800">Scan 12–15s Ahead</text>
+              <text x="0" y="80" fill="#cbd5e1" font-size="14" font-weight="400">Do not fixate on the bumper</text>
+              <text x="0" y="102" fill="#cbd5e1" font-size="14" font-weight="400">in front of you.</text>
+              <text x="0" y="132" fill="#94a3b8" font-size="13" font-weight="600">✓ Spot pedestrians early</text>
+              <text x="0" y="154" fill="#94a3b8" font-size="13" font-weight="600">✓ Anticipate braking vehicles</text>
+            </g>
+          </g>
+
+          <g id="card-01a-buffers" transform="translate(1540, 520)" opacity="0" filter="url(#filter-card-shadow)">
+            <rect width="340" height="210" rx="16" fill="url(#grad-card-bg)" stroke="#10b981" stroke-width="2"/>
+            <rect x="0" y="0" width="8" height="210" rx="4" fill="#10b981"/>
+            <g transform="translate(24, 28)">
+              <rect x="0" y="0" width="135" height="22" rx="4" fill="rgba(16, 185, 129, 0.2)"/>
+              <text x="8" y="15" fill="#34d399" font-size="11" font-weight="800" letter-spacing="1.5">SAFETY MARGINS</text>
+              <text x="0" y="48" fill="#ffffff" font-size="22" font-weight="800">Create Buffer Zones</text>
+              <text x="0" y="80" fill="#cbd5e1" font-size="14" font-weight="400">Vulnerable road users have</text>
+              <text x="0" y="102" fill="#cbd5e1" font-size="14" font-weight="400">no protective metal shell.</text>
+              <text x="0" y="132" fill="#34d399" font-size="13" font-weight="700">✓ 1.5m minimum for cyclists</text>
+              <text x="0" y="154" fill="#34d399" font-size="13" font-weight="700">✓ Yield &amp; stop at zebra lines</text>
+            </g>
+          </g>
+
+          <!-- 01A Hero Overlay -->
+          <g id="hero-overlay-01a" opacity="1">
+            <rect width="1920" height="1080" fill="#080c14" opacity="0.92"/>
+            <g transform="translate(960, 360)">
+              <circle r="120" fill="rgba(6, 182, 212, 0.1)"/>
+              <circle r="90" fill="none" stroke="#06b6d4" stroke-width="6" filter="url(#filter-glow-cyan)"/>
+              <use href="#symbol-safety-shield" x="-40" y="-45" width="80" height="90"/>
+            </g>
+            <text x="960" y="560" text-anchor="middle" fill="#38bdf8" font-size="20" font-weight="800" letter-spacing="4">MODULE 1 · SCENE 01A</text>
+            <text x="960" y="630" text-anchor="middle" fill="#ffffff" font-size="64" font-weight="900" letter-spacing="-1">SAFE DRIVING STARTS WITH AWARENESS</text>
+            <text x="960" y="695" text-anchor="middle" fill="#94a3b8" font-size="28" font-weight="500" letter-spacing="0.5">See Early · Anticipate Hazards · Protect Vulnerable Users</text>
+            <g transform="translate(960, 780)">
+              <rect x="-190" y="-24" width="380" height="48" rx="24" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+              <circle cx="-150" cy="0" r="6" fill="#10b981"/>
+              <text x="12" y="7" text-anchor="middle" fill="#e2e8f0" font-size="15" font-weight="700">FOUNDATION OF DEFENSIVE DRIVING</text>
+            </g>
+          </g>
+        </g>
+
+        <!-- ========================================== -->
+        <!-- SCENE 02A: KEEP TO THE LEFT (INDIA LHT)     -->
+        <!-- Timeline: 00:07.50 – 00:16.00              -->
+        <!-- ========================================== -->
+        <g id="scene-02a" opacity="0">
+          <g id="road-lane-arrows-02a">
+            <use href="#symbol-lane-arrow-up" x="690" y="320" width="60" height="120"/>
+            <use href="#symbol-lane-arrow-up" x="690" y="760" width="60" height="120"/>
+            <g transform="translate(1230, 360) rotate(180)">
+              <use href="#symbol-lane-arrow-up" x="-30" y="-60" width="60" height="120"/>
+            </g>
+            <g transform="translate(1230, 800) rotate(180)">
+              <use href="#symbol-lane-arrow-up" x="-30" y="-60" width="60" height="120"/>
+            </g>
+          </g>
+
+          <g id="signpost-keep-left" transform="translate(330, 520)" filter="url(#filter-sign-shadow)">
+            <line x1="0" y1="0" x2="0" y2="60" stroke="#64748b" stroke-width="8"/>
+            <use href="#sign-irc-keep-left" x="-50" y="-60" width="100" height="100"/>
+            <rect x="-65" y="45" width="130" height="26" rx="4" fill="#0f172a" stroke="#3b82f6" stroke-width="1.5"/>
+            <text x="0" y="62" text-anchor="middle" fill="#38bdf8" font-size="11" font-weight="800">MANDATORY SIGN</text>
+          </g>
+
+          <g id="actor-02a-ego" transform="translate(690, 890) scale(1.18)" filter="url(#filter-car-shadow)" color="#2563eb">
+            <use href="#symbol-vehicle" x="-65" y="-115" width="130" height="230"/>
+            <rect x="-60" y="125" width="120" height="26" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
+            <text x="0" y="143" text-anchor="middle" fill="#38bdf8" font-size="13" font-weight="800" letter-spacing="1">YOUR VEHICLE</text>
+          </g>
+
+          <g id="actor-02a-oncoming" transform="translate(1230, 150) rotate(180) scale(1.18)" filter="url(#filter-car-shadow)" color="#64748b">
+            <use href="#symbol-vehicle" x="-65" y="-115" width="130" height="230"/>
+            <rect x="-70" y="125" width="140" height="26" rx="6" fill="#1e293b" stroke="#94a3b8" stroke-width="1.5"/>
+            <text x="0" y="143" text-anchor="middle" fill="#cbd5e1" font-size="12" font-weight="800" letter-spacing="1">ONCOMING TRAFFIC</text>
+          </g>
+
+          <g id="banner-02a-header" transform="translate(960, 95)" opacity="0" filter="url(#filter-card-shadow)">
+            <rect x="-360" y="-45" width="720" height="90" rx="18" fill="url(#grad-card-bg)" stroke="#38bdf8" stroke-width="2"/>
+            <g transform="translate(-300, 0)">
+              <use href="#sign-irc-keep-left" x="-28" y="-28" width="56" height="56"/>
+            </g>
+            <text x="24" y="-8" text-anchor="middle" fill="#38bdf8" font-size="13" font-weight="800" letter-spacing="3">RULE OF THE ROAD REGULATIONS (INDIA)</text>
+            <text x="24" y="24" text-anchor="middle" fill="#ffffff" font-size="26" font-weight="900">ALWAYS KEEP TO THE LEFT OF THE ROAD</text>
+          </g>
+
+          <g id="pill-02a-left-lane" transform="translate(690, 970)" opacity="0">
+            <rect x="-150" y="-22" width="300" height="44" rx="22" fill="#047857" stroke="#34d399" stroke-width="2" filter="url(#filter-card-shadow)"/>
+            <text x="0" y="6" text-anchor="middle" fill="#ffffff" font-size="14" font-weight="800" letter-spacing="1">✓ YOUR DESIGNATED LANE (LEFT)</text>
+          </g>
+
+          <g id="pill-02a-right-lane" transform="translate(1230, 970)" opacity="0">
+            <rect x="-150" y="-22" width="300" height="44" rx="22" fill="#1e293b" stroke="#64748b" stroke-width="1.5" filter="url(#filter-card-shadow)"/>
+            <text x="0" y="6" text-anchor="middle" fill="#cbd5e1" font-size="14" font-weight="700" letter-spacing="1">ONCOMING LANE (PASS RIGHT)</text>
+          </g>
+
+          <g id="card-02a-core-rule" transform="translate(40, 480)" opacity="0" filter="url(#filter-card-shadow)">
+            <rect width="340" height="230" rx="16" fill="url(#grad-card-bg)" stroke="#38bdf8" stroke-width="2"/>
+            <rect x="0" y="0" width="8" height="230" rx="4" fill="#38bdf8"/>
+            <g transform="translate(24, 28)">
+              <rect x="0" y="0" width="130" height="22" rx="4" fill="rgba(56, 189, 248, 0.2)"/>
+              <text x="8" y="15" fill="#38bdf8" font-size="11" font-weight="800" letter-spacing="1.5">SECTION 2 RULE</text>
+              <text x="0" y="50" fill="#ffffff" font-size="22" font-weight="800">Drive on the Left</text>
+              <text x="0" y="82" fill="#cbd5e1" font-size="14" font-weight="400">All vehicular traffic in India</text>
+              <text x="0" y="104" fill="#cbd5e1" font-size="14" font-weight="400">must drive on the left side</text>
+              <text x="0" y="126" fill="#cbd5e1" font-size="14" font-weight="400">of two-way carriageways.</text>
+              <text x="0" y="158" fill="#34d399" font-size="13" font-weight="700">✓ Oncoming vehicles pass on</text>
+              <text x="0" y="178" fill="#34d399" font-size="13" font-weight="700">   your RIGHT side safely.</text>
+            </g>
+          </g>
+
+          <g id="card-02a-overtake-rule" transform="translate(1540, 480)" opacity="0" filter="url(#filter-card-shadow)">
+            <rect width="340" height="230" rx="16" fill="url(#grad-card-bg)" stroke="#f59e0b" stroke-width="2"/>
+            <rect x="0" y="0" width="8" height="230" rx="4" fill="#f59e0b"/>
+            <g transform="translate(24, 28)">
+              <rect x="0" y="0" width="145" height="22" rx="4" fill="rgba(245, 158, 11, 0.2)"/>
+              <text x="8" y="15" fill="#fbbf24" font-size="11" font-weight="800" letter-spacing="1.5">OVERTAKING DISCIPLINE</text>
+              <text x="0" y="50" fill="#ffffff" font-size="22" font-weight="800">Overtake on the Right</text>
+              <text x="0" y="82" fill="#cbd5e1" font-size="14" font-weight="400">Never attempt to overtake</text>
+              <text x="0" y="104" fill="#cbd5e1" font-size="14" font-weight="400">from the left (undertaking).</text>
+              <text x="0" y="136" fill="#ef4444" font-size="13" font-weight="700">✗ No overtaking on bends</text>
+              <text x="0" y="158" fill="#34d399" font-size="13" font-weight="700">✓ Check mirrors &amp; signal right</text>
+              <text x="0" y="178" fill="#34d399" font-size="13" font-weight="700">✓ Pass only when road is clear</text>
+            </g>
+          </g>
+        </g>
+
+        <!-- ========================================== -->
+        <!-- SCENE 03A: SAFE OVERTAKING & NO-PASSING    -->
+        <!-- Timeline: 00:16.00 – 00:24.00              -->
+        <!-- ========================================== -->
+        <g id="scene-03a" opacity="0">
+          <!-- Roadside Regulatory No-Overtaking Sign Post -->
+          <g id="signpost-no-overtaking" transform="translate(330, 480)" filter="url(#filter-sign-shadow)">
+            <line x1="0" y1="0" x2="0" y2="60" stroke="#64748b" stroke-width="8"/>
+            <use href="#sign-irc-no-overtaking" x="-50" y="-60" width="100" height="100"/>
+            <rect x="-70" y="45" width="140" height="26" rx="4" fill="#0f172a" stroke="#ef4444" stroke-width="1.5"/>
+            <text x="0" y="62" text-anchor="middle" fill="#f87171" font-size="11" font-weight="800">NO OVERTAKING</text>
+          </g>
+
+          <!-- Dynamic Trajectory Path Guides for Right-Side Overtake -->
+          <path id="overtaking-path" d="M690 920 C690 750, 1180 750, 1180 520 C1180 350, 690 350, 690 180" fill="none" stroke="#38bdf8" stroke-width="6" stroke-dasharray="16 12" opacity="0.6"/>
+
+          <!-- 03A Slow Heavy Truck Being Passed -->
+          <g id="actor-03a-truck" transform="translate(690, 520) scale(1.15)" filter="url(#filter-car-shadow)">
+            <use href="#symbol-truck" x="-75" y="-160" width="150" height="320"/>
+            <rect x="-65" y="165" width="130" height="24" rx="4" fill="#1e293b" stroke="#f59e0b" stroke-width="1.5"/>
+            <text x="0" y="182" text-anchor="middle" fill="#fbbf24" font-size="12" font-weight="800">HEAVY VEHICLE</text>
+          </g>
+
+          <!-- 03A Blue Ego Car Executing 4-Step Overtaking -->
+          <g id="actor-03a-ego" transform="translate(690, 920) scale(1.18)" filter="url(#filter-car-shadow)" color="#2563eb">
+            <use href="#symbol-vehicle" x="-65" y="-115" width="130" height="230"/>
+            <!-- Flashing Turn Indicators -->
+            <g id="ego-blinker-right" opacity="0">
+              <circle cx="56" cy="-100" r="14" fill="#fbbf24" filter="url(#filter-glow-amber)"/>
+              <circle cx="56" cy="91" r="14" fill="#fbbf24" filter="url(#filter-glow-amber)"/>
+            </g>
+            <g id="ego-blinker-left" opacity="0">
+              <circle cx="-56" cy="-100" r="14" fill="#fbbf24" filter="url(#filter-glow-amber)"/>
+              <circle cx="-56" cy="91" r="14" fill="#fbbf24" filter="url(#filter-glow-amber)"/>
+            </g>
+          </g>
+
+          <!-- 03A Overhead Header Banner -->
+          <g id="banner-03a-header" transform="translate(960, 95)" opacity="0" filter="url(#filter-card-shadow)">
+            <rect x="-360" y="-45" width="720" height="90" rx="18" fill="url(#grad-card-bg)" stroke="#38bdf8" stroke-width="2"/>
+            <g transform="translate(-300, 0)">
+              <use href="#sign-irc-no-overtaking" x="-28" y="-28" width="56" height="56"/>
+            </g>
+            <text x="24" y="-8" text-anchor="middle" fill="#38bdf8" font-size="13" font-weight="800" letter-spacing="3">RULE 3 · OVERTAKING PROTOCOL</text>
+            <text x="24" y="24" text-anchor="middle" fill="#ffffff" font-size="26" font-weight="900">OVERTAKE ONLY FROM THE RIGHT</text>
+          </g>
+
+          <!-- 03A Educational Step Indicator Cards -->
+          <g id="card-03a-steps" transform="translate(40, 480)" opacity="0" filter="url(#filter-card-shadow)">
+            <rect width="340" height="240" rx="16" fill="url(#grad-card-bg)" stroke="#38bdf8" stroke-width="2"/>
+            <rect x="0" y="0" width="8" height="240" rx="4" fill="#38bdf8"/>
+            <g transform="translate(24, 26)">
+              <rect x="0" y="0" width="135" height="22" rx="4" fill="rgba(56, 189, 248, 0.2)"/>
+              <text x="8" y="15" fill="#38bdf8" font-size="11" font-weight="800" letter-spacing="1.5">THE 4-STEP RULE (MSM)</text>
+              <text x="0" y="48" fill="#ffffff" font-size="20" font-weight="800">Mirror · Signal · Pass</text>
+              <text x="0" y="80" fill="#cbd5e1" font-size="13" font-weight="600">1. Check Rear &amp; Side Mirrors</text>
+              <text x="0" y="104" fill="#cbd5e1" font-size="13" font-weight="600">2. Signal Right Indicator</text>
+              <text x="0" y="128" fill="#cbd5e1" font-size="13" font-weight="600">3. Pass cleanly on the RIGHT</text>
+              <text x="0" y="152" fill="#cbd5e1" font-size="13" font-weight="600">4. Signal Left &amp; Return smoothly</text>
+              <text x="0" y="186" fill="#34d399" font-size="12" font-weight="700">✓ Maintain 1.5m passing gap</text>
+            </g>
+          </g>
+
+          <g id="card-03a-prohibited" transform="translate(1540, 480)" opacity="0" filter="url(#filter-card-shadow)">
+            <rect width="340" height="240" rx="16" fill="url(#grad-card-bg)" stroke="#ef4444" stroke-width="2"/>
+            <rect x="0" y="0" width="8" height="240" rx="4" fill="#ef4444"/>
+            <g transform="translate(24, 26)">
+              <rect x="0" y="0" width="145" height="22" rx="4" fill="rgba(239, 68, 68, 0.2)"/>
+              <text x="8" y="15" fill="#f87171" font-size="11" font-weight="800" letter-spacing="1.5">PROHIBITED ZONES</text>
+              <text x="0" y="48" fill="#ffffff" font-size="20" font-weight="800">Never Overtake Here</text>
+              <text x="0" y="80" fill="#ef4444" font-size="13" font-weight="700">✗ Blind curves &amp; sharp bends</text>
+              <text x="0" y="104" fill="#ef4444" font-size="13" font-weight="700">✗ Pedestrian zebra crossings</text>
+              <text x="0" y="128" fill="#ef4444" font-size="13" font-weight="700">✗ Narrow bridges &amp; culverts</text>
+              <text x="0" y="152" fill="#ef4444" font-size="13" font-weight="700">✗ Solid yellow/white center line</text>
+              <text x="0" y="186" fill="#fbbf24" font-size="12" font-weight="700">⚠ Undertaking on left is ILLEGAL</text>
+            </g>
+          </g>
+        </g>
+
+        <!-- ========================================== -->
+        <!-- SCENE 04A: INTERSECTIONS & RIGHT OF WAY    -->
+        <!-- Timeline: 00:24.00 – 00:32.00              -->
+        <!-- ========================================== -->
+        <g id="scene-04a" opacity="0">
+          <!-- Crossroad T-Junction Roadside Signs -->
+          <g id="signpost-give-way" transform="translate(330, 520)" filter="url(#filter-sign-shadow)">
+            <line x1="0" y1="0" x2="0" y2="60" stroke="#64748b" stroke-width="8"/>
+            <use href="#sign-irc-give-way" x="-50" y="-60" width="100" height="100"/>
+            <rect x="-60" y="45" width="120" height="26" rx="4" fill="#0f172a" stroke="#dc2626" stroke-width="1.5"/>
+            <text x="0" y="62" text-anchor="middle" fill="#f87171" font-size="11" font-weight="800">GIVE WAY</text>
+          </g>
+
+          <g id="signpost-roundabout" transform="translate(1590, 520)" filter="url(#filter-sign-shadow)">
+            <line x1="0" y1="0" x2="0" y2="60" stroke="#64748b" stroke-width="8"/>
+            <use href="#sign-irc-roundabout" x="-50" y="-60" width="100" height="100"/>
+            <rect x="-65" y="45" width="130" height="26" rx="4" fill="#0f172a" stroke="#3b82f6" stroke-width="1.5"/>
+            <text x="0" y="62" text-anchor="middle" fill="#38bdf8" font-size="11" font-weight="800">ROTARY RULE</text>
+          </g>
+
+          <!-- 04A Actors -->
+          <!-- 1. Blue Ego Car approaching Give-Way Line and Yielding -->
+          <g id="actor-04a-ego" transform="translate(690, 880) scale(1.18)" filter="url(#filter-car-shadow)" color="#2563eb">
+            <use href="#symbol-vehicle" x="-65" y="-115" width="130" height="230"/>
+            <rect x="-60" y="125" width="120" height="26" rx="6" fill="#1e293b" stroke="#3b82f6" stroke-width="1.5"/>
+            <text x="0" y="143" text-anchor="middle" fill="#38bdf8" font-size="13" font-weight="800" letter-spacing="1">YOUR VEHICLE</text>
+          </g>
+
+          <!-- 2. Priority Amber Car Approaching From The RIGHT (Has Right of Way) -->
+          <g id="actor-04a-priority" transform="translate(1480, 420) rotate(-90) scale(1.18)" filter="url(#filter-car-shadow)" color="#f59e0b">
+            <use href="#symbol-vehicle" x="-65" y="-115" width="130" height="230"/>
+            <rect x="-75" y="125" width="150" height="26" rx="6" fill="#78350f" stroke="#fbbf24" stroke-width="1.5"/>
+            <text x="0" y="143" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="900">PRIORITY FROM RIGHT</text>
+          </g>
+
+          <!-- Yielding Visual Guide Beam to Right-Hand Approach -->
+          <g id="guide-priority-right" opacity="0">
+            <line x1="690" y1="580" x2="1180" y2="420" stroke="#fbbf24" stroke-width="4" stroke-dasharray="10 8" filter="url(#filter-glow-amber)"/>
+            <circle cx="1180" cy="420" r="18" fill="none" stroke="#fbbf24" stroke-width="3"/>
+            <rect x="780" y="470" width="220" height="32" rx="6" fill="#78350f" stroke="#fbbf24" stroke-width="1.5"/>
+            <text x="890" y="491" text-anchor="middle" fill="#ffffff" font-size="12" font-weight="900">YIELD TO VEHICLE ON RIGHT</text>
+          </g>
+
+          <!-- 04A Overhead Header Banner -->
+          <g id="banner-04a-header" transform="translate(960, 95)" opacity="0" filter="url(#filter-card-shadow)">
+            <rect x="-360" y="-45" width="720" height="90" rx="18" fill="url(#grad-card-bg)" stroke="#38bdf8" stroke-width="2"/>
+            <g transform="translate(-300, 0)">
+              <use href="#sign-irc-give-way" x="-28" y="-28" width="56" height="56"/>
+            </g>
+            <text x="24" y="-8" text-anchor="middle" fill="#38bdf8" font-size="13" font-weight="800" letter-spacing="3">RULE 4 · INTERSECTIONS &amp; ROTARIES</text>
+            <text x="24" y="24" text-anchor="middle" fill="#ffffff" font-size="26" font-weight="900">GIVE WAY TO TRAFFIC ON YOUR RIGHT</text>
+          </g>
+
+          <!-- 04A Educational Cards -->
+          <g id="card-04a-right-of-way" transform="translate(40, 480)" opacity="0" filter="url(#filter-card-shadow)">
+            <rect width="340" height="230" rx="16" fill="url(#grad-card-bg)" stroke="#38bdf8" stroke-width="2"/>
+            <rect x="0" y="0" width="8" height="230" rx="4" fill="#38bdf8"/>
+            <g transform="translate(24, 28)">
+              <rect x="0" y="0" width="140" height="22" rx="4" fill="rgba(56, 189, 248, 0.2)"/>
+              <text x="8" y="15" fill="#38bdf8" font-size="11" font-weight="800" letter-spacing="1.5">INTERSECTION LAW</text>
+              <text x="0" y="50" fill="#ffffff" font-size="22" font-weight="800">Priority to the Right</text>
+              <text x="0" y="82" fill="#cbd5e1" font-size="14" font-weight="400">At uncontrolled junctions,</text>
+              <text x="0" y="104" fill="#cbd5e1" font-size="14" font-weight="400">always give way to vehicles</text>
+              <text x="0" y="126" fill="#cbd5e1" font-size="14" font-weight="400">approaching from your RIGHT.</text>
+              <text x="0" y="158" fill="#34d399" font-size="13" font-weight="700">✓ Slow down before line</text>
+              <text x="0" y="178" fill="#34d399" font-size="13" font-weight="700">✓ Stop &amp; proceed when clear</text>
+            </g>
+          </g>
+
+          <g id="card-04a-roundabouts" transform="translate(1540, 480)" opacity="0" filter="url(#filter-card-shadow)">
+            <rect width="340" height="230" rx="16" fill="url(#grad-card-bg)" stroke="#10b981" stroke-width="2"/>
+            <rect x="0" y="0" width="8" height="230" rx="4" fill="#10b981"/>
+            <g transform="translate(24, 28)">
+              <rect x="0" y="0" width="135" height="22" rx="4" fill="rgba(16, 185, 129, 0.2)"/>
+              <text x="8" y="15" fill="#34d399" font-size="11" font-weight="800" letter-spacing="1.5">ROUNDABOUT RULE</text>
+              <text x="0" y="50" fill="#ffffff" font-size="22" font-weight="800">Circulating Priority</text>
+              <text x="0" y="82" fill="#cbd5e1" font-size="14" font-weight="400">Vehicles already inside the</text>
+              <text x="0" y="104" fill="#cbd5e1" font-size="14" font-weight="400">rotary have right of way.</text>
+              <text x="0" y="136" fill="#34d399" font-size="13" font-weight="700">✓ Circle clockwise in India</text>
+              <text x="0" y="158" fill="#34d399" font-size="13" font-weight="700">✓ Keep left &amp; signal exit</text>
+              <text x="0" y="178" fill="#34d399" font-size="13" font-weight="700">✓ Never cut across lanes</text>
+            </g>
+          </g>
+
+          <!-- Complete Module Summary Outro Card (00:30.50 - 00:32.00) -->
+          <g id="summary-overlay-04a" opacity="0">
+            <rect width="1920" height="1080" fill="#080c14" opacity="0.94"/>
+            <g transform="translate(960, 360)">
+              <circle r="120" fill="rgba(16, 185, 129, 0.12)"/>
+              <circle r="90" fill="none" stroke="#10b981" stroke-width="6" filter="url(#filter-glow-cyan)"/>
+              <use href="#symbol-safety-shield" x="-40" y="-45" width="80" height="90"/>
+            </g>
+            <text x="960" y="550" text-anchor="middle" fill="#34d399" font-size="20" font-weight="800" letter-spacing="4">MODULES 01A–04A MASTERED</text>
+            <text x="960" y="620" text-anchor="middle" fill="#ffffff" font-size="58" font-weight="900" letter-spacing="-1">4 CORE PILLARS OF ROAD SAFETY</text>
+            
+            <g transform="translate(960, 710)">
+              <text x="-480" y="0" fill="#38bdf8" font-size="18" font-weight="700">1. Hazard Perception</text>
+              <text x="-160" y="0" fill="#34d399" font-size="18" font-weight="700">2. Keep to the Left</text>
+              <text x="140" y="0" fill="#fbbf24" font-size="18" font-weight="700">3. Pass on Right Only</text>
+              <text x="440" y="0" fill="#f87171" font-size="18" font-weight="700">4. Yield to the Right</text>
+            </g>
+            
+            <g transform="translate(960, 800)">
+              <rect x="-240" y="-22" width="480" height="44" rx="22" fill="#1e293b" stroke="#334155" stroke-width="1.5"/>
+              <text x="0" y="6" text-anchor="middle" fill="#e2e8f0" font-size="14" font-weight="700">FULL 32-SECOND LESSON VERIFIED</text>
+            </g>
+          </g>
+        </g>
+
+        <!-- Dynamic Timecode Tag (Bottom Right) -->
+        <g id="timecode-display" transform="translate(1870, 1040)">
+          <text x="0" y="0" text-anchor="end" fill="#64748b" font-size="14" font-weight="800" font-family="monospace">TIMELINE · 00:00–00:32</text>
+        </g>
+
+        <!-- Stage Timeline Progress Bar Line -->
+        <rect id="stage-progress-fill" x="0" y="1070" width="0" height="10" fill="#06b6d4"/>
+      </svg>
+    </div>
+
+    <!-- Master-Clock Playback Controller -->
+    <section class="controls-wrapper" aria-label="Video Playback Controls">
+      <!-- Progress Bar & Time Readouts -->
+      <div class="scrubber-row">
+        <span class="time-readout active" id="time-current">00:00</span>
+        <div class="scrubber-container">
+          <div class="scene-jump-bar">
+            <span class="scene-jump-btn" data-time="0" title="Jump to 01A: Awareness (00:00)">01A · Awareness (00:00)</span>
+            <span class="scene-jump-btn" data-time="7.5" title="Jump to 02A: Keep Left (00:07.5)">02A · Keep Left (00:07.5)</span>
+            <span class="scene-jump-btn" data-time="16.0" title="Jump to 03A: Overtaking (00:16.0)">03A · Overtaking (00:16.0)</span>
+            <span class="scene-jump-btn" data-time="24.0" title="Jump to 04A: Right of Way (00:24.0)">04A · Right of Way (00:24.0)</span>
+            <span class="scene-jump-btn" data-time="32.0" title="End of Video (00:32.0)">End (00:32)</span>
+          </div>
+          <input 
+            type="range" 
+            id="scrubber-range" 
+            class="scrubber-input" 
+            min="0" 
+            max="32" 
+            step="0.01" 
+            value="0" 
+            aria-label="Timeline position in seconds"
+          >
+        </div>
+        <span class="time-readout" id="time-total">00:32</span>
+      </div>
+
+      <!-- Action Buttons Row -->
+      <div class="actions-row">
+        <!-- Left Controls: Play/Pause, Restart, Scene Jumpers -->
+        <div class="actions-left">
+          <button id="btn-play-pause" class="btn-ctrl icon-btn" type="button" aria-label="Pause animation" title="Play / Pause (Space)">
+            <svg id="icon-pause" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
+            <svg id="icon-play" viewBox="0 0 24 24" aria-hidden="true" style="display: none;"><polygon points="6 4 20 12 6 20 6 4" fill="currentColor"/></svg>
+          </button>
+
+          <button id="btn-restart" class="btn-ctrl icon-btn" type="button" aria-label="Restart from 00:00" title="Restart (R)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          </button>
+
+          <button id="btn-scene-01a" class="scene-pill active" type="button">01A: Awareness</button>
+          <button id="btn-scene-02a" class="scene-pill" type="button">02A: Keep Left</button>
+          <button id="btn-scene-03a" class="scene-pill" type="button">03A: Overtaking</button>
+          <button id="btn-scene-04a" class="scene-pill" type="button">04A: Right of Way</button>
+        </div>
+
+        <!-- Right Controls: Loop, Fullscreen -->
+        <div class="actions-right">
+          <button id="btn-loop" class="btn-ctrl icon-btn" type="button" aria-label="Toggle loop playback" aria-pressed="true" title="Toggle Loop (L)">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>
+          </button>
+
+          <button id="btn-fullscreen" class="btn-ctrl icon-btn" type="button" aria-label="Enter fullscreen" title="Fullscreen (F)">
+            <svg id="icon-fs-enter" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+            <svg id="icon-fs-exit" viewBox="0 0 24 24" aria-hidden="true" style="display: none;"><path d="M4 14h6v6m10-10h-6V4m0 6l7-7M10 14l-7 7"/></svg>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Footer Shortcuts & Live State -->
+    <footer class="footer-bar">
+      <div class="keys-list">
+        <span><kbd class="kbd-shortcut">Space</kbd> Play / Pause</span>
+        <span><kbd class="kbd-shortcut">R</kbd> Restart</span>
+        <span><kbd class="kbd-shortcut">L</kbd> Loop</span>
+        <span><kbd class="kbd-shortcut">F</kbd> Fullscreen</span>
+        <span><kbd class="kbd-shortcut">←</kbd> / <kbd class="kbd-shortcut">→</kbd> Scrub ±1s</span>
+      </div>
+      <div class="status-indicator">
+        <span class="pulse-dot"></span>
+        <span id="active-scene-text">01A: Hazard Awareness Active</span>
+      </div>
+    </footer>
+  </main>
+
+  <!-- Master-Clock Deterministic Animation Engine -->
+  <script>
+    (() => {
+      'use strict';
+
+      // -------------------------------------------------------------
+      // 1. CONSTANTS & TIMELINE SPECIFICATION (32.0s DURATION)
+      // -------------------------------------------------------------
+      const TOTAL_DURATION = 32.0; // Chunks 1 & 2 in seconds
+      const SCENE_01A_START = 0.0;
+      const SCENE_02A_START = 7.5;
+      const SCENE_03A_START = 16.0;
+      const SCENE_04A_START = 24.0;
+
+      // DOM Element References
+      const stageShell = document.getElementById('stage-shell');
+      const scrubber = document.getElementById('scrubber-range');
+      const timeCurrent = document.getElementById('time-current');
+      const progressBar = document.getElementById('stage-progress-fill');
+      const sceneStatusText = document.getElementById('active-scene-text');
+
+      // Buttons & Icons
+      const btnPlayPause = document.getElementById('btn-play-pause');
+      const iconPlay = document.getElementById('icon-play');
+      const iconPause = document.getElementById('icon-pause');
+      const btnRestart = document.getElementById('btn-restart');
+      const btnLoop = document.getElementById('btn-loop');
+      const btnFullscreen = document.getElementById('btn-fullscreen');
+      const iconFsEnter = document.getElementById('icon-fs-enter');
+      const iconFsExit = document.getElementById('icon-fs-exit');
+
+      const btnScene01a = document.getElementById('btn-scene-01a');
+      const btnScene02a = document.getElementById('btn-scene-02a');
+      const btnScene03a = document.getElementById('btn-scene-03a');
+      const btnScene04a = document.getElementById('btn-scene-04a');
+
+      // Road markings
+      const roadZebraCrossing = document.getElementById('road-zebra-crossing');
+      const roadCenterDashed = document.getElementById('road-center-dashed');
+      const roadCenterSolid = document.getElementById('road-center-solid');
+      const roadIntersectionMarkings = document.getElementById('road-intersection-markings');
+
+      // Scene 01A Elements
+      const scene01aGroup = document.getElementById('scene-01a');
+      const heroOverlay01a = document.getElementById('hero-overlay-01a');
+      const driverScanningGroup = document.getElementById('driver-scanning-group');
+      const scanningArc = document.getElementById('scanning-arc');
+      const actor01aEgo = document.getElementById('actor-01a-ego');
+      const actor01aLead = document.getElementById('actor-01a-lead');
+      const leadBrakeGlow = document.getElementById('lead-car-brake-glow');
+      const actor01aCyclist = document.getElementById('actor-01a-cyclist');
+      const actor01aPedestrian = document.getElementById('actor-01a-pedestrian');
+      const focusLineCyclist = document.getElementById('focus-line-cyclist');
+      const focusRingCyclist = document.getElementById('focus-ring-cyclist');
+      const focusLineLead = document.getElementById('focus-line-lead');
+      const focusRingLead = document.getElementById('focus-ring-lead');
+      const focusLinePedestrian = document.getElementById('focus-line-pedestrian');
+      const focusRingPedestrian = document.getElementById('focus-ring-pedestrian');
+      const bracketCyclist = document.getElementById('dimension-bracket-cyclist');
+      const bracketLead = document.getElementById('dimension-bracket-lead');
+      const card01aScanning = document.getElementById('card-01a-scanning');
+      const card01aBuffers = document.getElementById('card-01a-buffers');
+
+      // Scene 02A Elements
+      const scene02aGroup = document.getElementById('scene-02a');
+      const banner02aHeader = document.getElementById('banner-02a-header');
+      const actor02aEgo = document.getElementById('actor-02a-ego');
+      const actor02aOncoming = document.getElementById('actor-02a-oncoming');
+      const pill02aLeft = document.getElementById('pill-02a-left-lane');
+      const pill02aRight = document.getElementById('pill-02a-right-lane');
+      const card02aCoreRule = document.getElementById('card-02a-core-rule');
+      const card02aOvertakeRule = document.getElementById('card-02a-overtake-rule');
+
+      // Scene 03A Elements
+      const scene03aGroup = document.getElementById('scene-03a');
+      const banner03aHeader = document.getElementById('banner-03a-header');
+      const actor03aTruck = document.getElementById('actor-03a-truck');
+      const actor03aEgo = document.getElementById('actor-03a-ego');
+      const egoBlinkerRight = document.getElementById('ego-blinker-right');
+      const egoBlinkerLeft = document.getElementById('ego-blinker-left');
+      const card03aSteps = document.getElementById('card-03a-steps');
+      const card03aProhibited = document.getElementById('card-03a-prohibited');
+
+      // Scene 04A Elements
+      const scene04aGroup = document.getElementById('scene-04a');
+      const banner04aHeader = document.getElementById('banner-04a-header');
+      const actor04aEgo = document.getElementById('actor-04a-ego');
+      const actor04aPriority = document.getElementById('actor-04a-priority');
+      const guidePriorityRight = document.getElementById('guide-priority-right');
+      const card04aRightOfWay = document.getElementById('card-04a-right-of-way');
+      const card04aRoundabouts = document.getElementById('card-04a-roundabouts');
+      const summaryOverlay04a = document.getElementById('summary-overlay-04a');
+
+      // -------------------------------------------------------------
+      // 2. MATHEMATICAL EASING & INTERPOLATION ENGINE
+      // -------------------------------------------------------------
+      const clamp = (val, min = 0, max = 1) => Math.max(min, Math.min(max, val));
+      const mix = (a, b, t) => a + (b - a) * t;
+
+      const easeInOutCubic = t => {
+        const c = clamp(t);
+        return c < 0.5 ? 4 * c * c * c : 1 - Math.pow(-2 * c + 2, 3) / 2;
+      };
+
+      const easeOutCubic = t => 1 - Math.pow(1 - clamp(t), 3);
+
+      const fadeWindow = (t, start, enterEnd, exitStart, end) => {
+        if (t < start || t > end) return 0;
+        if (t < enterEnd) return easeOutCubic((t - start) / (enterEnd - start));
+        if (t <= exitStart) return 1;
+        return 1 - easeOutCubic((t - exitStart) / (end - exitStart));
+      };
+
+      const setOpacity = (elem, val) => {
+        if (elem) elem.setAttribute('opacity', clamp(val).toFixed(3));
+      };
+
+      const setTransform = (elem, x, y, rot = 0, scale = 1) => {
+        if (elem) elem.setAttribute('transform', `translate(${x.toFixed(1)}, ${y.toFixed(1)}) rotate(${rot.toFixed(1)}) scale(${scale.toFixed(3)})`);
+      };
+
+      const formatTime = seconds => {
+        const s = Math.max(0, Math.min(TOTAL_DURATION, Math.floor(seconds)));
+        return `00:${String(s).padStart(2, '0')}`;
+      };
+
+      // -------------------------------------------------------------
+      // 3. MASTER-CLOCK DETERMINISTIC RENDER FUNCTION (0.0s - 32.0s)
+      // -------------------------------------------------------------
+      function render(t) {
+        const now = clamp(t, 0, TOTAL_DURATION);
+
+        // Progress bar & scrubber UI sync
+        progressBar.setAttribute('width', ((now / TOTAL_DURATION) * 1920).toFixed(1));
+        if (!isUserDragging) {
+          scrubber.value = now.toFixed(2);
+        }
+        timeCurrent.textContent = formatTime(now);
+
+        // Active scene status chips
+        const pills = [
+          { btn: btnScene01a, active: now < SCENE_02A_START, text: '01A: Hazard Awareness Active' },
+          { btn: btnScene02a, active: now >= SCENE_02A_START && now < SCENE_03A_START, text: '02A: Keep-Left Rule Active' },
+          { btn: btnScene03a, active: now >= SCENE_03A_START && now < SCENE_04A_START, text: '03A: Safe Overtaking Active' },
+          { btn: btnScene04a, active: now >= SCENE_04A_START, text: '04A: Right of Way Active' }
+        ];
+
+        pills.forEach(p => {
+          if (p.active) {
+            p.btn.classList.add('active');
+            sceneStatusText.textContent = p.text;
+          } else {
+            p.btn.classList.remove('active');
+          }
+        });
+
+        // Road markings context switching
+        setOpacity(roadZebraCrossing, now < 8.0 ? 1 : 0);
+        setOpacity(roadIntersectionMarkings, now >= 23.5 ? 1 : 0);
+        setOpacity(roadCenterDashed, (now >= 16.0 && now <= 18.0) ? (18.0 - now) / 2.0 : (now > 18.0 && now < 23.5 ? 0 : 1));
+        setOpacity(roadCenterSolid, (now >= 17.5 && now < 23.5) ? fadeWindow(now, 17.5, 18.5, 23.0, 23.5) : 0);
+
+        // =========================================================
+        // SCENE 01A: HAZARD SCANNING & AWARENESS (00:00 – 00:07.50)
+        // =========================================================
+        const scene01aOpacity = fadeWindow(now, 0, 0.2, 7.2, 7.6);
+        setOpacity(scene01aGroup, scene01aOpacity);
+
+        if (scene01aOpacity > 0) {
+          const heroOpacity = now <= 1.4 ? 1 : 1 - easeOutCubic((now - 1.4) / 0.5);
+          setOpacity(heroOverlay01a, heroOpacity);
+
+          const egoProgress = easeInOutCubic((now - 1.5) / 5.5);
+          const egoY = mix(890, 680, egoProgress);
+          const egoX = 690;
+          setTransform(actor01aEgo, egoX, egoY, 0, 1.18);
+
+          const leadProgress = easeInOutCubic((now - 1.5) / 5.2);
+          const leadY = mix(510, 430, leadProgress);
+          setTransform(actor01aLead, 690, leadY, 0, 1.05);
+          setOpacity(leadBrakeGlow, fadeWindow(now, 3.2, 3.8, 6.4, 7.0));
+
+          const cyclistProgress = easeInOutCubic((now - 1.6) / 5.4);
+          const cyclistY = mix(720, 500, cyclistProgress);
+          setTransform(actor01aCyclist, 485, cyclistY, 0, 0.9);
+
+          const pedProgress = easeInOutCubic((now - 2.5) / 4.4);
+          const pedX = mix(1380, 1050, pedProgress);
+          const pedY = 325;
+          setTransform(actor01aPedestrian, pedX, pedY, 0, 0.95);
+
+          const scanOpacity = fadeWindow(now, 1.8, 2.4, 6.8, 7.3);
+          setOpacity(driverScanningGroup, scanOpacity);
+
+          if (scanOpacity > 0) {
+            const egoNoseY = egoY - 90;
+            scanningArc.setAttribute('d', `M${egoX} ${egoNoseY} L${egoX - 320} ${egoNoseY - 500} L${egoX + 320} ${egoNoseY - 500} Z`);
+
+            focusLineCyclist.setAttribute('x1', egoX);
+            focusLineCyclist.setAttribute('y1', egoNoseY);
+            focusLineCyclist.setAttribute('x2', 485);
+            focusLineCyclist.setAttribute('y2', cyclistY);
+            focusRingCyclist.setAttribute('cx', 485);
+            focusRingCyclist.setAttribute('cy', cyclistY);
+
+            focusLineLead.setAttribute('x1', egoX);
+            focusLineLead.setAttribute('y1', egoNoseY);
+            focusLineLead.setAttribute('x2', 690);
+            focusLineLead.setAttribute('y2', leadY + 80);
+            focusRingLead.setAttribute('cx', 690);
+            focusRingLead.setAttribute('cy', leadY + 80);
+
+            focusLinePedestrian.setAttribute('x1', egoX);
+            focusLinePedestrian.setAttribute('y1', egoNoseY);
+            focusLinePedestrian.setAttribute('x2', pedX);
+            focusLinePedestrian.setAttribute('y2', pedY);
+            focusRingPedestrian.setAttribute('cx', pedX);
+            focusRingPedestrian.setAttribute('cy', pedY);
+          }
+
+          setOpacity(bracketCyclist, fadeWindow(now, 2.5, 3.0, 6.4, 6.9));
+          bracketCyclist.setAttribute('transform', `translate(0, ${(cyclistY - 620).toFixed(1)})`);
+
+          setOpacity(bracketLead, fadeWindow(now, 2.8, 3.3, 6.4, 6.9));
+          bracketLead.setAttribute('transform', `translate(0, ${(leadY - 480).toFixed(1)})`);
+
+          setOpacity(card01aScanning, fadeWindow(now, 2.2, 2.7, 4.5, 4.9));
+          setOpacity(card01aBuffers, fadeWindow(now, 4.9, 5.4, 6.8, 7.3));
+        }
+
+        // =========================================================
+        // SCENE 02A: KEEP TO THE LEFT (00:07.50 – 00:16.00)
+        // =========================================================
+        const scene02aOpacity = fadeWindow(now, 7.3, 7.8, 15.6, 16.0);
+        setOpacity(scene02aGroup, scene02aOpacity);
+
+        if (scene02aOpacity > 0) {
+          setOpacity(banner02aHeader, fadeWindow(now, 7.8, 8.3, 14.8, 15.4));
+
+          const keepMotion = easeInOutCubic((now - 8.0) / 6.6);
+          const keepEgoY = mix(920, 420, keepMotion);
+          setTransform(actor02aEgo, 690, keepEgoY, 0, 1.18);
+
+          const oncomingY = mix(120, 720, keepMotion);
+          setTransform(actor02aOncoming, 1230, oncomingY, 180, 1.18);
+
+          setOpacity(pill02aLeft, fadeWindow(now, 8.4, 8.9, 14.6, 15.2));
+          setOpacity(pill02aRight, fadeWindow(now, 8.8, 9.3, 14.6, 15.2));
+
+          setOpacity(card02aCoreRule, fadeWindow(now, 8.2, 8.7, 11.6, 12.1));
+          setOpacity(card02aOvertakeRule, fadeWindow(now, 12.2, 12.7, 15.2, 15.6));
+        }
+
+        // =========================================================
+        // SCENE 03A: SAFE OVERTAKING DISCIPLINE (00:16.00 – 00:24.00)
+        // =========================================================
+        const scene03aOpacity = fadeWindow(now, 15.8, 16.3, 23.6, 24.0);
+        setOpacity(scene03aGroup, scene03aOpacity);
+
+        if (scene03aOpacity > 0) {
+          setOpacity(banner03aHeader, fadeWindow(now, 16.2, 16.7, 23.2, 23.7));
+
+          // Truck moves steadily forward in left lane: y=520 -> y=440
+          const truckY = mix(560, 420, easeInOutCubic((now - 16.0) / 7.5));
+          setTransform(actor03aTruck, 690, truckY, 0, 1.15);
+
+          // Ego Car MSM (Mirror-Signal-Manoeuvre) Multi-Stage Trajectory:
+          // Phase 1 (16.0 - 18.0s): Follow behind truck (x=690, y=920 -> 820)
+          // Phase 2 (18.0 - 20.2s): Signal Right & Pull out into right lane (x: 690 -> 1180, y: 820 -> 560)
+          // Phase 3 (20.2 - 21.8s): Accelerate past truck on the right (x: 1180, y: 560 -> 340)
+          // Phase 4 (21.8 - 23.8s): Signal Left & Return safely to left lane (x: 1180 -> 690, y: 340 -> 160)
+          let ego3X = 690;
+          let ego3Y = 920;
+          let ego3Rot = 0;
+          let blinkRight = 0;
+          let blinkLeft = 0;
+
+          if (now < 18.0) {
+            ego3Y = mix(920, 820, easeInOutCubic((now - 16.0) / 2.0));
+          } else if (now < 20.2) {
+            const p = easeInOutCubic((now - 18.0) / 2.2);
+            ego3X = mix(690, 1180, p);
+            ego3Y = mix(820, 560, p);
+            ego3Rot = Math.sin(p * Math.PI) * 12; // Slight right yaw then straighten
+            // Flashing Right Blinker
+            blinkRight = (Math.sin(now * 16) > 0) ? 1 : 0;
+          } else if (now < 21.8) {
+            const p = easeInOutCubic((now - 20.2) / 1.6);
+            ego3X = 1180;
+            ego3Y = mix(560, 340, p);
+            ego3Rot = 0;
+          } else {
+            const p = easeInOutCubic((now - 21.8) / 2.0);
+            ego3X = mix(1180, 690, p);
+            ego3Y = mix(340, 160, p);
+            ego3Rot = -Math.sin(p * Math.PI) * 12; // Slight left yaw then straighten
+            // Flashing Left Blinker
+            blinkLeft = (Math.sin(now * 16) > 0) ? 1 : 0;
+          }
+
+          setTransform(actor03aEgo, ego3X, ego3Y, ego3Rot, 1.18);
+          setOpacity(egoBlinkerRight, blinkRight);
+          setOpacity(egoBlinkerLeft, blinkLeft);
+
+          // Educational Cards
+          setOpacity(card03aSteps, fadeWindow(now, 16.5, 17.0, 20.0, 20.5));
+          setOpacity(card03aProhibited, fadeWindow(now, 20.6, 21.1, 23.5, 23.9));
+        }
+
+        // =========================================================
+        // SCENE 04A: INTERSECTIONS & RIGHT OF WAY (00:24.00 – 00:32.00)
+        // =========================================================
+        const scene04aOpacity = fadeWindow(now, 23.8, 24.3, 32.0, 32.0);
+        setOpacity(scene04aGroup, scene04aOpacity);
+
+        if (scene04aOpacity > 0) {
+          setOpacity(banner04aHeader, fadeWindow(now, 24.2, 24.7, 30.5, 31.0));
+
+          // Blue Ego Car drives up and decelerates to a stop at the Give-Way Line (y: 880 -> 610)
+          let ego4Y = 880;
+          if (now < 27.5) {
+            ego4Y = mix(880, 610, easeInOutCubic((now - 24.0) / 3.5));
+          } else if (now >= 29.5) {
+            // Once right vehicle passes, Ego moves smoothly into junction
+            ego4Y = mix(610, 360, easeInOutCubic((now - 29.5) / 2.3));
+          } else {
+            ego4Y = 610; // Holds at stop line
+          }
+          setTransform(actor04aEgo, 690, ego4Y, 0, 1.18);
+
+          // Priority Amber Car travels from right to left across junction: x=1480 -> x=420 between 26.0s and 29.5s
+          const priorityProgress = easeInOutCubic((now - 25.8) / 3.8);
+          const priorityX = mix(1520, 380, priorityProgress);
+          setTransform(actor04aPriority, priorityX, 420, -90, 1.18);
+
+          // Yielding indicator beam (26.0s -> 29.2s)
+          setOpacity(guidePriorityRight, fadeWindow(now, 25.8, 26.4, 29.0, 29.6));
+
+          // Educational Cards
+          setOpacity(card04aRightOfWay, fadeWindow(now, 24.5, 25.0, 27.8, 28.3));
+          setOpacity(card04aRoundabouts, fadeWindow(now, 28.4, 28.9, 30.8, 31.2));
+
+          // Final Comprehensive Outro (30.8s -> 32.0s)
+          setOpacity(summaryOverlay04a, fadeWindow(now, 30.8, 31.3, 32.0, 32.0));
+        }
+      }
+
+      // -------------------------------------------------------------
+      // 4. PLAYBACK CONTROLLER & ANIMATION LOOP
+      // -------------------------------------------------------------
+      const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      let isPlaying = !prefersReducedMotion;
+      let isLooping = true;
+      let currentTime = 0;
+      let lastTimestamp = performance.now();
+      let isUserDragging = false;
+
+      function updatePlayButtonUI() {
+        if (isPlaying) {
+          iconPlay.style.display = 'none';
+          iconPause.style.display = 'block';
+          btnPlayPause.setAttribute('aria-label', 'Pause animation');
+        } else {
+          iconPlay.style.display = 'block';
+          iconPause.style.display = 'none';
+          btnPlayPause.setAttribute('aria-label', 'Play animation');
+        }
+      }
+
+      function togglePlayPause() {
+        isPlaying = !isPlaying;
+        lastTimestamp = performance.now();
+        updatePlayButtonUI();
+      }
+
+      function restartPlayback() {
+        currentTime = 0;
+        isPlaying = true;
+        lastTimestamp = performance.now();
+        render(0);
+        updatePlayButtonUI();
+      }
+
+      function seekTo(timeInSeconds) {
+        currentTime = clamp(timeInSeconds, 0, TOTAL_DURATION);
+        render(currentTime);
+      }
+
+      // Main requestAnimationFrame Tick
+      function animationTick(nowTimestamp) {
+        const delta = Math.min((nowTimestamp - lastTimestamp) / 1000, 0.1);
+        lastTimestamp = nowTimestamp;
+
+        if (isPlaying && !isUserDragging) {
+          currentTime += delta;
+          if (currentTime >= TOTAL_DURATION) {
+            if (isLooping) {
+              currentTime = currentTime % TOTAL_DURATION;
+            } else {
+              currentTime = TOTAL_DURATION;
+              isPlaying = false;
+              updatePlayButtonUI();
+            }
+          }
+        }
+
+        render(currentTime);
+        requestAnimationFrame(animationTick);
+      }
+
+      // -------------------------------------------------------------
+      // 5. EVENT LISTENERS & INTERACTION HANDLERS
+      // -------------------------------------------------------------
+      btnPlayPause.addEventListener('click', togglePlayPause);
+      btnRestart.addEventListener('click', restartPlayback);
+
+      btnLoop.addEventListener('click', () => {
+        isLooping = !isLooping;
+        btnLoop.setAttribute('aria-pressed', String(isLooping));
+      });
+
+      async function toggleFullscreen() {
+        try {
+          if (!document.fullscreenElement) {
+            if (stageShell.requestFullscreen) {
+              await stageShell.requestFullscreen();
+            }
+          } else {
+            if (document.exitFullscreen) {
+              await document.exitFullscreen();
+            }
+          }
+        } catch (err) {
+          console.warn('Fullscreen request error:', err);
+        }
+      }
+
+      btnFullscreen.addEventListener('click', toggleFullscreen);
+
+      document.addEventListener('fullscreenchange', () => {
+        const isFs = Boolean(document.fullscreenElement);
+        iconFsEnter.style.display = isFs ? 'none' : 'block';
+        iconFsExit.style.display = isFs ? 'block' : 'none';
+        btnFullscreen.setAttribute('aria-label', isFs ? 'Exit fullscreen' : 'Enter fullscreen');
+      });
+
+      // Scrubber Events
+      scrubber.addEventListener('pointerdown', () => {
+        isUserDragging = true;
+      });
+
+      scrubber.addEventListener('input', e => {
+        seekTo(parseFloat(e.target.value));
+      });
+
+      scrubber.addEventListener('change', e => {
+        isUserDragging = false;
+        seekTo(parseFloat(e.target.value));
+        lastTimestamp = performance.now();
+      });
+
+      window.addEventListener('pointerup', () => {
+        if (isUserDragging) {
+          isUserDragging = false;
+          lastTimestamp = performance.now();
+        }
+      });
+
+      // Scene Quick Jump Buttons
+      btnScene01a.addEventListener('click', () => seekTo(SCENE_01A_START));
+      btnScene02a.addEventListener('click', () => seekTo(SCENE_02A_START));
+      btnScene03a.addEventListener('click', () => seekTo(SCENE_03A_START));
+      btnScene04a.addEventListener('click', () => seekTo(SCENE_04A_START));
+
+      document.querySelectorAll('.scene-jump-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const targetTime = parseFloat(btn.getAttribute('data-time'));
+          if (!isNaN(targetTime)) seekTo(targetTime);
+        });
+      });
+
+      // Keyboard Shortcuts
+      document.addEventListener('keydown', e => {
+        if (e.target instanceof HTMLInputElement) return;
+
+        switch (e.code) {
+          case 'Space':
+            e.preventDefault();
+            togglePlayPause();
+            break;
+          case 'KeyR':
+            e.preventDefault();
+            restartPlayback();
+            break;
+          case 'KeyL':
+            e.preventDefault();
+            btnLoop.click();
+            break;
+          case 'KeyF':
+            e.preventDefault();
+            toggleFullscreen();
+            break;
+          case 'ArrowLeft':
+            e.preventDefault();
+            seekTo(currentTime - 1.0);
+            break;
+          case 'ArrowRight':
+            e.preventDefault();
+            seekTo(currentTime + 1.0);
+            break;
+        }
+      });
+
+      // Initial Render & Start Loop
+      render(0);
+      updatePlayButtonUI();
+      requestAnimationFrame(animationTick);
+    })();
+  </script>
+</body>
+</html>

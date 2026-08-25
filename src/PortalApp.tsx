@@ -1824,7 +1824,8 @@ function PortalApp() {
     savePreference('mp-portal-text-scale', textScale)
   }, [textScale])
   useEffect(() => {
-    window.scrollTo({ top: 0, behavior: 'instant' })
+    const prefersReducedMotion = typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    window.scrollTo({ top: 0, behavior: prefersReducedMotion ? 'instant' : 'smooth' })
     window.requestAnimationFrame(() => document.querySelector<HTMLElement>('main h1')?.focus({ preventScroll: true }))
   }, [pathname])
 

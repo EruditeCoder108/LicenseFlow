@@ -1,0 +1,557 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Road Safety Video Demo — 16 Seconds</title>
+  <style>
+    :root {
+      --page: #171b22;
+      --panel: #242a33;
+      --panel-border: #3b4350;
+      --text: #f7f8fa;
+      --muted-text: #b9c0ca;
+      --focus: #74c5cc;
+      --blue: #2f78e8;
+      --teal: #319aa3;
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body { min-height: 100%; }
+
+    body {
+      margin: 0;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+      overflow-x: hidden;
+      background: var(--page);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .player {
+      width: min(100%, 1440px);
+    }
+
+    .stage-shell {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      overflow: hidden;
+      border: 1px solid var(--panel-border);
+      background: #f5f2ed;
+    }
+
+    .stage-shell:fullscreen {
+      display: grid;
+      place-items: center;
+      border: 0;
+      background: #11151b;
+    }
+
+    .stage-shell:fullscreen #video-stage {
+      width: min(100vw, calc(100vh * 16 / 9));
+      height: min(100vh, calc(100vw * 9 / 16));
+    }
+
+    #video-stage {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: #f5f2ed;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: auto auto 1fr auto auto;
+      align-items: center;
+      gap: 10px;
+      min-height: 64px;
+      padding: 10px 12px;
+      border: 1px solid var(--panel-border);
+      border-top: 0;
+      background: var(--panel);
+    }
+
+    button {
+      width: 44px;
+      height: 44px;
+      display: inline-grid;
+      place-items: center;
+      padding: 0;
+      border: 1px solid #4b5563;
+      border-radius: 8px;
+      background: #313844;
+      color: var(--text);
+      cursor: pointer;
+      transition: background-color 180ms ease, border-color 180ms ease;
+      touch-action: manipulation;
+    }
+
+    button:hover { background: #3a4351; }
+
+    button:focus-visible {
+      outline: 3px solid var(--focus);
+      outline-offset: 2px;
+    }
+
+    button svg {
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .progress-wrap {
+      display: grid;
+      grid-template-columns: 48px 1fr 48px;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .time {
+      color: var(--muted-text);
+      font-size: 13px;
+      font-variant-numeric: tabular-nums;
+      text-align: center;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 44px;
+      margin: 0;
+      accent-color: var(--teal);
+      cursor: pointer;
+    }
+
+    .loop-button[aria-pressed="true"] {
+      border-color: var(--focus);
+      color: #a9edf0;
+      background: #24474b;
+    }
+
+    .hint {
+      margin: 10px 2px 0;
+      color: var(--muted-text);
+      font-size: 13px;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    @media (max-width: 680px) {
+      body { padding: 10px; }
+      .controls { grid-template-columns: auto auto 1fr auto; }
+      .progress-wrap { grid-template-columns: 1fr; }
+      .time { display: none; }
+      .fullscreen-button { display: none; }
+      .hint { font-size: 12px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      button { transition: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="player" aria-label="Road-safety animation player">
+    <div class="stage-shell" id="stage-shell">
+      <svg id="video-stage" viewBox="0 0 1920 1080" role="img" aria-labelledby="video-title video-description">
+        <title id="video-title">Safe driving awareness and keep-left demonstration</title>
+        <desc id="video-description">A sixteen-second animated road-safety introduction. A blue car observes another vehicle, a cyclist, and a pedestrian, followed by a clear Indian left-hand traffic demonstration.</desc>
+
+        <defs>
+          <symbol id="car" viewBox="-58 -105 116 210">
+            <rect x="-53" y="-100" width="106" height="200" rx="36" fill="currentColor"/>
+            <path d="M-38-56Q0-78 38-56L33-20Q0-30-33-20Z" fill="#c9e8f2"/>
+            <path d="M-34 22Q0 32 34 22L38 60Q0 78-38 60Z" fill="#173149"/>
+            <rect x="-58" y="-52" width="8" height="39" rx="4" fill="#202a35"/>
+            <rect x="50" y="-52" width="8" height="39" rx="4" fill="#202a35"/>
+            <rect x="-58" y="36" width="8" height="39" rx="4" fill="#202a35"/>
+            <rect x="50" y="36" width="8" height="39" rx="4" fill="#202a35"/>
+            <rect x="-37" y="-92" width="25" height="8" rx="4" fill="#f8fafc"/>
+            <rect x="12" y="-92" width="25" height="8" rx="4" fill="#f8fafc"/>
+            <rect x="-37" y="84" width="25" height="8" rx="4" fill="#c84242"/>
+            <rect x="12" y="84" width="25" height="8" rx="4" fill="#c84242"/>
+            <path d="M-46-3H46M-41 73H41" stroke="#142133" stroke-width="5" opacity=".28"/>
+          </symbol>
+
+          <symbol id="bicycle" viewBox="-45 -88 90 176">
+            <circle cx="0" cy="-59" r="27" fill="none" stroke="#1e2c35" stroke-width="7"/>
+            <circle cx="0" cy="59" r="27" fill="none" stroke="#1e2c35" stroke-width="7"/>
+            <path d="M0-54L-20 5 0 28 20 2 0-54M-20 5H20M0 28V57" fill="none" stroke="#319aa3" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+            <circle cx="0" cy="-6" r="15" fill="#d99970"/>
+            <path d="M0 9V30M0 16L-21 34M0 16L22 33" stroke="#255e62" stroke-width="12" stroke-linecap="round"/>
+          </symbol>
+
+          <symbol id="pedestrian" viewBox="-42 -70 84 140">
+            <circle cx="0" cy="-43" r="18" fill="#d99970"/>
+            <rect x="-22" y="-24" width="44" height="55" rx="18" fill="#43756d"/>
+            <path d="M-9 28L-23 65M9 28L25 65M-18-10L-38 20M18-10L36 16" stroke="#26374a" stroke-width="13" stroke-linecap="round"/>
+          </symbol>
+
+          <symbol id="arrow-up" viewBox="-45 -90 90 180">
+            <path d="M0-78L39-29H17V78H-17V-29H-39Z" fill="currentColor"/>
+          </symbol>
+        </defs>
+
+        <rect width="1920" height="1080" fill="#f5f2ed"/>
+
+        <g id="road-base">
+          <rect x="460" y="0" width="1000" height="1080" fill="#383d43"/>
+          <rect x="420" y="0" width="40" height="1080" fill="#d9dcdf"/>
+          <rect x="1460" y="0" width="40" height="1080" fill="#d9dcdf"/>
+          <rect x="454" y="0" width="9" height="1080" fill="#ffffff"/>
+          <rect x="1457" y="0" width="9" height="1080" fill="#ffffff"/>
+          <path d="M960 0V1080" stroke="#ffffff" stroke-width="12" stroke-dasharray="62 52"/>
+        </g>
+
+        <g id="title-scene">
+          <rect width="1920" height="1080" fill="#f5f2ed"/>
+          <g transform="translate(960 405)">
+            <circle r="118" fill="#e2f2ef"/>
+            <circle r="86" fill="none" stroke="#319aa3" stroke-width="12"/>
+            <path d="M-44 4L-12 38 52-42" fill="none" stroke="#26776f" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+          </g>
+          <text x="960" y="600" text-anchor="middle" fill="#172033" font-size="72" font-weight="750" letter-spacing="-2">SAFE DRIVING STARTS WITH AWARENESS</text>
+          <text x="960" y="674" text-anchor="middle" fill="#506070" font-size="31" font-weight="550" letter-spacing="3">SEE EARLY · THINK AHEAD · PROTECT OTHERS</text>
+        </g>
+
+        <g id="awareness-scene" opacity="0">
+          <g id="crossing">
+            <rect x="475" y="208" width="970" height="182" fill="#383d43"/>
+            <g fill="#f7f7f5">
+              <rect x="492" y="226" width="72" height="146" rx="4"/>
+              <rect x="592" y="226" width="72" height="146" rx="4"/>
+              <rect x="692" y="226" width="72" height="146" rx="4"/>
+              <rect x="792" y="226" width="72" height="146" rx="4"/>
+              <rect x="892" y="226" width="72" height="146" rx="4"/>
+              <rect x="992" y="226" width="72" height="146" rx="4"/>
+              <rect x="1092" y="226" width="72" height="146" rx="4"/>
+              <rect x="1192" y="226" width="72" height="146" rx="4"/>
+              <rect x="1292" y="226" width="72" height="146" rx="4"/>
+              <rect x="1392" y="226" width="52" height="146" rx="4"/>
+            </g>
+          </g>
+
+          <g id="awareness-field" fill="none" stroke="#71bdba" stroke-width="8" stroke-dasharray="18 16" opacity="0">
+            <circle id="awareness-ring" cx="710" cy="825" r="220"/>
+            <path id="sight-left" d="M710 825L560 590"/>
+            <path id="sight-forward" d="M710 825L710 490"/>
+            <path id="sight-right" d="M710 825L1280 300"/>
+          </g>
+
+          <g id="awareness-blue-car" transform="translate(710 890) scale(1.18)" color="#2f78e8">
+            <use href="#car" x="-58" y="-105" width="116" height="210"/>
+          </g>
+          <g id="awareness-amber-car" transform="translate(710 500) scale(.92)" color="#d5a13d">
+            <use href="#car" x="-58" y="-105" width="116" height="210"/>
+          </g>
+          <g id="awareness-bike" transform="translate(535 680) scale(.72)">
+            <use href="#bicycle" x="-45" y="-88" width="90" height="176"/>
+          </g>
+          <g id="awareness-person" transform="translate(1330 300) scale(.85)">
+            <use href="#pedestrian" x="-42" y="-70" width="84" height="140"/>
+          </g>
+
+          <g id="awareness-caption" opacity="0">
+            <rect x="109" y="814" width="430" height="150" rx="24" fill="#f5f2ed"/>
+            <rect x="109" y="814" width="10" height="150" rx="5" fill="#319aa3"/>
+            <text x="153" y="870" fill="#172033" font-size="30" font-weight="700" letter-spacing="2">READ THE ROAD</text>
+            <text x="153" y="918" fill="#435364" font-size="24" font-weight="500">Recognise risk before it reaches you.</text>
+          </g>
+
+          <g id="protect-caption" opacity="0">
+            <rect x="1187" y="660" width="575" height="157" rx="24" fill="#f5f2ed"/>
+            <rect x="1187" y="660" width="10" height="157" rx="5" fill="#26776f"/>
+            <text x="1231" y="717" fill="#172033" font-size="30" font-weight="700" letter-spacing="2">CREATE SAFE SPACE</text>
+            <text x="1231" y="766" fill="#435364" font-size="24" font-weight="500">For drivers, cyclists and pedestrians.</text>
+          </g>
+        </g>
+
+        <g id="keep-left-scene" opacity="0">
+          <g id="keep-left-heading">
+            <rect x="95" y="86" width="476" height="142" rx="26" fill="#f5f2ed"/>
+            <rect x="95" y="86" width="11" height="142" rx="6" fill="#2f78e8"/>
+            <text x="145" y="145" fill="#172033" font-size="29" font-weight="700" letter-spacing="3">INDIA · LEFT-HAND TRAFFIC</text>
+            <text x="145" y="194" fill="#435364" font-size="31" font-weight="600">Keep to the left.</text>
+          </g>
+
+          <g id="left-blue-arrow" transform="translate(700 348)" color="#319aa3">
+            <use href="#arrow-up" x="-45" y="-90" width="90" height="180"/>
+          </g>
+          <g id="left-amber-arrow" transform="translate(1220 731) rotate(180)" color="#319aa3">
+            <use href="#arrow-up" x="-45" y="-90" width="90" height="180"/>
+          </g>
+
+          <g id="keep-left-blue-car" transform="translate(700 900) scale(1.18)" color="#2f78e8">
+            <use href="#car" x="-58" y="-105" width="116" height="210"/>
+          </g>
+          <g id="keep-left-amber-car" transform="translate(1220 180) rotate(180) scale(1.06)" color="#d5a13d">
+            <use href="#car" x="-58" y="-105" width="116" height="210"/>
+          </g>
+
+          <g id="left-highlight" opacity="0">
+            <rect x="488" y="52" width="420" height="976" rx="58" fill="none" stroke="#66b9af" stroke-width="14"/>
+            <g transform="translate(315 895)">
+              <circle r="85" fill="#e2f2ef"/>
+              <path d="M28-40L-25 0 28 40" fill="none" stroke="#26776f" stroke-width="18" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+            <text x="315" y="1019" text-anchor="middle" fill="#26776f" font-size="28" font-weight="750" letter-spacing="2">YOUR LEFT</text>
+          </g>
+        </g>
+
+        <g id="end-scene" opacity="0">
+          <rect width="1920" height="1080" fill="#f5f2ed"/>
+          <g transform="translate(960 370)">
+            <path d="M0-168C109-168 194-124 194-124V15C194 147 86 223 0 254-86 223-194 147-194 15V-124S-109-168 0-168Z" fill="#e2f2ef" stroke="#26776f" stroke-width="13"/>
+            <g transform="translate(0 22) scale(1.08)" color="#2f78e8">
+              <use href="#car" x="-58" y="-105" width="116" height="210"/>
+            </g>
+          </g>
+          <text x="960" y="740" text-anchor="middle" fill="#172033" font-size="76" font-weight="760" letter-spacing="-2">KEEP LEFT. STAY AWARE.</text>
+          <text x="960" y="816" text-anchor="middle" fill="#506070" font-size="31" font-weight="550" letter-spacing="3">GOOD DRIVERS CREATE SAFETY AROUND THEM</text>
+        </g>
+
+        <g aria-hidden="true">
+          <rect id="timeline-progress" x="0" y="1068" width="0" height="12" fill="#319aa3"/>
+        </g>
+      </svg>
+    </div>
+
+    <section class="controls" aria-label="Playback controls">
+      <button id="play-pause" type="button" aria-label="Pause animation">
+        <svg id="pause-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14M16 5v14"/></svg>
+        <svg id="play-icon" viewBox="0 0 24 24" aria-hidden="true" hidden><path d="M8 5l11 7-11 7z"/></svg>
+      </button>
+
+      <button id="restart" type="button" aria-label="Restart animation">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8V4m0 0h4M4 4l4 4a7 7 0 1 1-1.7 7"/></svg>
+      </button>
+
+      <div class="progress-wrap">
+        <span class="time" id="current-time">00:00</span>
+        <input id="scrubber" type="range" min="0" max="16" step="0.01" value="0" aria-label="Animation position">
+        <span class="time">00:16</span>
+      </div>
+
+      <button id="loop" class="loop-button" type="button" aria-label="Loop animation" aria-pressed="true">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M17 2l3 3-3 3M3 11V9a4 4 0 0 1 4-4h13M7 22l-3-3 3-3m14-3v2a4 4 0 0 1-4 4H4"/></svg>
+      </button>
+
+      <button id="fullscreen" class="fullscreen-button" type="button" aria-label="Enter fullscreen">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H3v5M16 3h5v5M8 21H3v-5M16 21h5v-5"/></svg>
+      </button>
+    </section>
+
+    <p class="hint">Space: play/pause · R: restart · F: fullscreen · Duration: 16 seconds · No audio embedded</p>
+  </main>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const DURATION = 16;
+      const stageShell = document.getElementById('stage-shell');
+      const titleScene = document.getElementById('title-scene');
+      const awarenessScene = document.getElementById('awareness-scene');
+      const keepLeftScene = document.getElementById('keep-left-scene');
+      const endScene = document.getElementById('end-scene');
+      const awarenessField = document.getElementById('awareness-field');
+      const awarenessRing = document.getElementById('awareness-ring');
+      const sightLeft = document.getElementById('sight-left');
+      const sightForward = document.getElementById('sight-forward');
+      const sightRight = document.getElementById('sight-right');
+      const awarenessCaption = document.getElementById('awareness-caption');
+      const protectCaption = document.getElementById('protect-caption');
+      const leftHighlight = document.getElementById('left-highlight');
+      const progressLine = document.getElementById('timeline-progress');
+      const playPause = document.getElementById('play-pause');
+      const playIcon = document.getElementById('play-icon');
+      const pauseIcon = document.getElementById('pause-icon');
+      const restartButton = document.getElementById('restart');
+      const loopButton = document.getElementById('loop');
+      const fullscreenButton = document.getElementById('fullscreen');
+      const scrubber = document.getElementById('scrubber');
+      const currentTime = document.getElementById('current-time');
+      const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+      const movers = {
+        awarenessBlue: document.getElementById('awareness-blue-car'),
+        awarenessAmber: document.getElementById('awareness-amber-car'),
+        awarenessBike: document.getElementById('awareness-bike'),
+        awarenessPerson: document.getElementById('awareness-person'),
+        keepBlue: document.getElementById('keep-left-blue-car'),
+        keepAmber: document.getElementById('keep-left-amber-car')
+      };
+
+      let playing = !reducedMotion;
+      let loop = true;
+      let time = 0;
+      let previousFrame = performance.now();
+      let dragging = false;
+
+      const clamp = (value, min = 0, max = 1) => Math.min(max, Math.max(min, value));
+      const mix = (from, to, amount) => from + (to - from) * amount;
+      const ease = value => 1 - Math.pow(1 - clamp(value), 3);
+      const fadeWindow = (now, start, enterEnd, exitStart, end) => {
+        if (now < start || now > end) return 0;
+        if (now < enterEnd) return ease((now - start) / (enterEnd - start));
+        if (now <= exitStart) return 1;
+        return 1 - ease((now - exitStart) / (end - exitStart));
+      };
+
+      function setOpacity(element, value) {
+        element.setAttribute('opacity', clamp(value).toFixed(3));
+      }
+
+      function move(element, x, y, rotation = 0, scale = 1) {
+        element.setAttribute('transform', `translate(${x.toFixed(1)} ${y.toFixed(1)}) rotate(${rotation}) scale(${scale})`);
+      }
+
+      function formatTime(seconds) {
+        const whole = Math.max(0, Math.min(DURATION, Math.floor(seconds)));
+        return `00:${String(whole).padStart(2, '0')}`;
+      }
+
+      function render(now) {
+        const titleOpacity = now <= 1.35 ? 1 : 1 - ease((now - 1.35) / 0.65);
+        const awarenessOpacity = fadeWindow(now, 1.45, 2.05, 7.15, 7.85);
+        const keepLeftOpacity = fadeWindow(now, 7.35, 8.05, 14.15, 14.85);
+        const endOpacity = fadeWindow(now, 14.2, 14.8, 16, 16.001);
+
+        setOpacity(titleScene, titleOpacity);
+        setOpacity(awarenessScene, awarenessOpacity);
+        setOpacity(keepLeftScene, keepLeftOpacity);
+        setOpacity(endScene, endOpacity);
+
+        const awarenessMotion = ease(clamp((now - 1.65) / 5.6));
+        const blueY = mix(930, 675, awarenessMotion);
+        const amberY = mix(520, 425, awarenessMotion);
+        const bikeY = mix(715, 560, awarenessMotion);
+        const personX = mix(1340, 1080, ease(clamp((now - 3.1) / 3.5)));
+
+        move(movers.awarenessBlue, 710, blueY, 0, 1.18);
+        move(movers.awarenessAmber, 710, amberY, 0, .92);
+        move(movers.awarenessBike, 535, bikeY, 0, .72);
+        move(movers.awarenessPerson, personX, 300, 0, .85);
+
+        awarenessRing.setAttribute('cy', blueY.toFixed(1));
+        sightLeft.setAttribute('d', `M710 ${blueY.toFixed(1)}L535 ${bikeY.toFixed(1)}`);
+        sightForward.setAttribute('d', `M710 ${blueY.toFixed(1)}L710 ${amberY.toFixed(1)}`);
+        sightRight.setAttribute('d', `M710 ${blueY.toFixed(1)}L${personX.toFixed(1)} 300`);
+
+        setOpacity(awarenessField, fadeWindow(now, 2.55, 3.15, 6.8, 7.25));
+        setOpacity(awarenessCaption, fadeWindow(now, 2.15, 2.7, 4.5, 5.05));
+        setOpacity(protectCaption, fadeWindow(now, 4.55, 5.1, 6.9, 7.35));
+
+        const keepMotion = ease(clamp((now - 7.8) / 6.25));
+        move(movers.keepBlue, 700, mix(930, 520, keepMotion), 0, 1.18);
+        move(movers.keepAmber, 1220, mix(140, 550, keepMotion), 180, 1.06);
+        setOpacity(leftHighlight, fadeWindow(now, 9.25, 9.85, 13.6, 14.2));
+
+        progressLine.setAttribute('width', ((now / DURATION) * 1920).toFixed(1));
+        if (!dragging) scrubber.value = now.toFixed(2);
+        currentTime.textContent = formatTime(now);
+      }
+
+      function updatePlayButton() {
+        playIcon.hidden = playing;
+        pauseIcon.hidden = !playing;
+        playPause.setAttribute('aria-label', playing ? 'Pause animation' : 'Play animation');
+      }
+
+      function togglePlayback() {
+        playing = !playing;
+        previousFrame = performance.now();
+        updatePlayButton();
+      }
+
+      function restart() {
+        time = 0;
+        playing = !reducedMotion;
+        previousFrame = performance.now();
+        render(time);
+        updatePlayButton();
+      }
+
+      function tick(frameTime) {
+        const elapsed = Math.min((frameTime - previousFrame) / 1000, 0.1);
+        previousFrame = frameTime;
+
+        if (playing && !dragging) {
+          time += elapsed;
+          if (time >= DURATION) {
+            if (loop) {
+              time %= DURATION;
+            } else {
+              time = DURATION;
+              playing = false;
+              updatePlayButton();
+            }
+          }
+        }
+
+        render(time);
+        requestAnimationFrame(tick);
+      }
+
+      playPause.addEventListener('click', togglePlayback);
+      restartButton.addEventListener('click', restart);
+
+      loopButton.addEventListener('click', () => {
+        loop = !loop;
+        loopButton.setAttribute('aria-pressed', String(loop));
+      });
+
+      fullscreenButton.addEventListener('click', async () => {
+        try {
+          if (!document.fullscreenElement) {
+            await stageShell.requestFullscreen();
+          } else {
+            await document.exitFullscreen();
+          }
+        } catch (error) {
+          console.warn('Fullscreen is not available in this browser.', error);
+        }
+      });
+
+      scrubber.addEventListener('pointerdown', () => { dragging = true; });
+      scrubber.addEventListener('input', event => {
+        time = Number(event.target.value);
+        render(time);
+      });
+      scrubber.addEventListener('change', () => {
+        dragging = false;
+        previousFrame = performance.now();
+      });
+      window.addEventListener('pointerup', () => { dragging = false; });
+
+      document.addEventListener('keydown', event => {
+        if (event.target instanceof HTMLInputElement) return;
+        if (event.code === 'Space') {
+          event.preventDefault();
+          togglePlayback();
+        } else if (event.key.toLowerCase() === 'r') {
+          restart();
+        } else if (event.key.toLowerCase() === 'f') {
+          fullscreenButton.click();
+        }
+      });
+
+      document.addEventListener('fullscreenchange', () => {
+        fullscreenButton.setAttribute('aria-label', document.fullscreenElement ? 'Exit fullscreen' : 'Enter fullscreen');
+      });
+
+      render(0);
+      updatePlayButton();
+      requestAnimationFrame(tick);
+    })();
+  </script>
+</body>
+</html>
