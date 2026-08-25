@@ -64,6 +64,7 @@ import { loadJourneyProgress } from './portal/progress'
 import { loadExamSession } from './portal/examSession'
 import { clearDemoSession, loadDemoSession, saveDemoSession, type DemoSession } from './portal/auth'
 import { deriveJourneyState, getRouteAccess } from './portal/journeyState'
+import { JudgeTourCoachmark, JudgeTourFloatingPill, JudgeTourHeroCard, useJudgeTour } from './portal/judgeTour'
 
 const ApplicationFlow = lazy(() => import('./portal/ApplicationFlow').then((module) => ({ default: module.ApplicationFlow })))
 const SubmittedPage = lazy(() => import('./portal/ApplicationFlow').then((module) => ({ default: module.SubmittedPage })))
@@ -177,14 +178,14 @@ function usePathname() {
   return pathname
 }
 
-function PortalLink({ href, className, children, onNavigate }: { href: string; className?: string; children: ReactNode; onNavigate?: () => void }) {
+function PortalLink({ href, className, children, onNavigate, dataTour }: { href: string; className?: string; children: ReactNode; onNavigate?: () => void; dataTour?: string }) {
   const open = (event: MouseEvent<HTMLAnchorElement>) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
     event.preventDefault()
     navigatePortal(href)
     onNavigate?.()
   }
-  return <a href={href} className={className} onClick={open}>{children}</a>
+  return <a href={href} className={className} onClick={open} data-tour={dataTour}>{children}</a>
 }
 
 function PortalMark({ language = 'en', national = false }: { language?: Language; national?: boolean }) {
@@ -295,7 +296,7 @@ function Breadcrumbs({ items }: { items: Array<{ label: string; href?: string }>
   )
 }
 
-function NationalHomePage({ onUnavailable, onDrivingServices, onPrototypeDetails, language }: { onUnavailable: (destination: HomeDestination) => void; onDrivingServices: () => void; onPrototypeDetails: () => void; language: Language }) {
+function NationalHomePage({ onUnavailable, onDrivingServices, onPrototypeDetails, language, tour }: { onUnavailable: (destination: HomeDestination) => void; onDrivingServices: () => void; onPrototypeDetails: () => void; language: Language; tour: ReturnType<typeof useJudgeTour> }) {
   const [activeNoticeTab, setActiveNoticeTab] = useState<'notifications' | 'advisories' | 'media'>('notifications')
 
   const serviceCategoriesList = [
@@ -523,7 +524,7 @@ function NationalHomePage({ onUnavailable, onDrivingServices, onPrototypeDetails
 
   return (
     <div className="national-home">
-      <section className="national-hero" aria-labelledby="home-title">
+      <section className="national-hero" aria-labelledby="home-title" data-tour="home-overview">
         <img src="/assets/parivahan-transport-hero.webp" alt="Indian road transport connecting citizens, buses and commercial vehicles" fetchPriority="high" />
         <div className="national-hero__shade" aria-hidden="true" />
         <div className="national-hero__content">
@@ -532,10 +533,13 @@ function NationalHomePage({ onUnavailable, onDrivingServices, onPrototypeDetails
           <p>{copy(language, 'Find licence, vehicle, permit and road-safety services with clear guidance at every step.', 'लाइसेंस, वाहन, परमिट और सड़क सुरक्षा सेवाएँ हर चरण पर स्पष्ट मार्गदर्शन के साथ पाएँ।')}</p>
           <div className="national-hero__actions">
             <a className="button button--light" href="#citizen-services">{copy(language, 'Explore services', 'सेवाएँ देखें')} <ArrowRight size={18} /></a>
-            <button className="button national-hero__secondary" type="button" onClick={onDrivingServices}>{copy(language, 'Driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ')}</button>
+            <button className="button national-hero__secondary" type="button" onClick={onDrivingServices} data-tour="hero-driving-services">{copy(language, 'Driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ')}</button>
           </div>
         </div>
       </section>
+
+      {/* Hero Onboarding Card on Homepage */}
+      <JudgeTourHeroCard tour={tour} language={language} />
 
       {/* Engineering Evidence Dossier Strip */}
       <section className="engineering-dossier-strip" aria-label={copy(language, 'Engineering decisions', 'इंजीनियरिंग निर्णय')}>
@@ -997,7 +1001,7 @@ function ServicesPage({ language, demoApplication }: { language: Language; demoA
       <Breadcrumbs items={[{ label: copy(language, 'Home', 'होम'), href: '/' }, { label: copy(language, 'Driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ') }]} />
 
       {/* MP Services Hero Showcase Banner */}
-      <section className="mp-services-hero" aria-labelledby="mp-services-hero-title">
+      <section className="mp-services-hero" aria-labelledby="mp-services-hero-title" data-tour="services-overview">
         <div className="mp-services-hero__content">
           <div className="mp-services-hero__eyebrow">
             <span className="pulse-dot" />
@@ -1068,7 +1072,12 @@ function ServicesPage({ language, demoApplication }: { language: Language; demoA
 
         <div className="featured-services-grid">
           {featuredSpotlights.map((spotlight) => (
-            <PortalLink href={spotlight.href} className={`featured-spotlight-card featured-spotlight-card--${spotlight.id}`} key={spotlight.id}>
+            <PortalLink
+              href={spotlight.href}
+              className={`featured-spotlight-card featured-spotlight-card--${spotlight.id}`}
+              key={spotlight.id}
+              dataTour={spotlight.id === 'apply-ll' ? 'apply-ll-service' : undefined}
+            >
               <div className="featured-spotlight-card__main">
                 <div className="featured-spotlight-card__content">
                   <div className="featured-spotlight-card__meta">
@@ -1253,11 +1262,11 @@ function LLStartPage({ onCreate, language, demoApplication }: { onCreate: (kind:
       </div>
       <div className="ll-launch-card__footer">
         {!demoApplication ? (
-          <button className="button button--primary ll-launch-card__action" onClick={() => onCreate('full')}>
+          <button className="button button--primary ll-launch-card__action" onClick={() => onCreate('full')} data-tour="start-fresh-application">
             {copy(language, 'Start new application', 'नया आवेदन शुरू करें')} <ArrowRight className="ll-launch-arrow" size={18} />
           </button>
         ) : (
-          <button className="button button--secondary ll-launch-card__action" onClick={() => setConfirmNewApplication(true)} aria-expanded={confirmNewApplication}>
+          <button className="button button--secondary ll-launch-card__action" onClick={() => setConfirmNewApplication(true)} aria-expanded={confirmNewApplication} data-tour="start-fresh-application">
             {copy(language, 'Start another', 'दूसरा शुरू करें')} <ArrowRight className="ll-launch-arrow" size={18} />
           </button>
         )}
@@ -1270,7 +1279,7 @@ function LLStartPage({ onCreate, language, demoApplication }: { onCreate: (kind:
           </div>
           <div className="ll-replace-draft__actions">
             <button className="text-button" onClick={() => setConfirmNewApplication(false)}>{copy(language, 'Keep saved application', 'सहेजा आवेदन रखें')}</button>
-            <button className="button button--primary" onClick={() => onCreate('full')}>{copy(language, 'Start another', 'दूसरा शुरू करें')}</button>
+            <button className="button button--primary" onClick={() => onCreate('full')} data-tour="confirm-fresh-application">{copy(language, 'Start another', 'दूसरा शुरू करें')}</button>
           </div>
         </div>
       )}
@@ -1327,7 +1336,7 @@ function LLStartPage({ onCreate, language, demoApplication }: { onCreate: (kind:
   return (
     <>
       <Breadcrumbs items={[{ label: copy(language, 'Services', 'सेवाएँ'), href: '/mp/services' }, { label: copy(language, 'Apply for Learner’s Licence', 'लर्नर लाइसेंस के लिए आवेदन') }]} />
-      <section className="page-title ll-launch-title">
+      <section className="page-title ll-launch-title" data-tour="ll-start-overview">
         <div>
           <p className="eyebrow">{copy(language, 'Madhya Pradesh · Learner’s Licence', 'मध्य प्रदेश · लर्नर लाइसेंस')}</p>
           <h1 tabIndex={-1}>{copy(language, 'Apply for a Learner’s Licence', 'लर्नर लाइसेंस के लिए आवेदन करें')}</h1>
@@ -1345,7 +1354,7 @@ function LLStartPage({ onCreate, language, demoApplication }: { onCreate: (kind:
           <strong>{copy(language, 'Judge review shortcut', 'जज समीक्षा शॉर्टकट')}</strong>
           <p>{copy(language, 'Load a clearly labelled synthetic application and begin at the device-readiness innovation. No citizen data is used.', 'स्पष्ट रूप से लेबल किया गया सिंथेटिक आवेदन लोड करें और डिवाइस-जाँच नवाचार से शुरू करें। किसी नागरिक का डेटा उपयोग नहीं होता।')}</p>
         </div>
-        <button type="button" className="button button--secondary" onClick={() => onCreate('judge')}>
+        <button type="button" className="button button--secondary" onClick={() => onCreate('judge')} data-tour="load-prepared-app">
           {copy(language, 'Load prepared review application', 'तैयार समीक्षा आवेदन लोड करें')} <ArrowRight size={18} />
         </button>
       </aside>
@@ -1736,7 +1745,7 @@ function StateSelectionDialog({ language, onClose }: { language: Language; onClo
   }
 
   return (
-    <div className="dialog-layer" onMouseDown={onClose}>
+    <div className="dialog-layer" onMouseDown={onClose} data-tour="state-selection-dialog">
       <section
         ref={dialogRef}
         tabIndex={-1}
@@ -1788,7 +1797,7 @@ function StateSelectionDialog({ language, onClose }: { language: Language; onClo
 
         <div className="state-selection-actions">
           {configured ? (
-            <button className="button button--primary button--full" onClick={proceed}>
+            <button className="button button--primary button--full" onClick={proceed} data-tour="state-selection-continue">
               {copy(language, 'Continue to Madhya Pradesh services', 'मध्य प्रदेश सेवाओं पर जाएँ')} <ArrowRight size={18} />
             </button>
           ) : (
@@ -1862,6 +1871,7 @@ function PortalApp() {
   const [session, setSession] = useState<DemoSession | null>(() => loadDemoSession())
   const [accountOpen, setAccountOpen] = useState(false)
   const [demoApplication, setDemoApplication] = useState<DemoApplication | null>(() => loadDemoApplication())
+  const tour = useJudgeTour(pathname, demoApplication?.id)
 
   useEffect(() => {
     document.documentElement.lang = language === 'hi' ? 'hi' : 'en-IN'
@@ -1922,7 +1932,7 @@ function PortalApp() {
   }, [pathname, route, demoApplication])
 
   let page: ReactNode
-  if (route.name === 'home') page = <NationalHomePage language={language} onUnavailable={setUnavailableDestination} onDrivingServices={() => setStateSelectionOpen(true)} onPrototypeDetails={() => setPrototypeDetailsOpen(true)} />
+  if (route.name === 'home') page = <NationalHomePage language={language} tour={tour} onUnavailable={setUnavailableDestination} onDrivingServices={() => setStateSelectionOpen(true)} onPrototypeDetails={() => setPrototypeDetailsOpen(true)} />
   else if (route.name === 'login') page = <LoginPage language={language} onSignedIn={(nextSession) => { saveDemoSession(nextSession); setSession(nextSession) }} />
   else if (route.name === 'services') page = <ServicesPage language={language} demoApplication={demoApplication} />
   else if (route.name === 'll-start') page = <LLStartPage language={language} onCreate={createApplication} demoApplication={demoApplication} />
@@ -1954,11 +1964,45 @@ function PortalApp() {
   } else page = <NotFoundPage language={language} />
 
   if (route.name === 'gateway' || route.name === 'rehearsal' || route.name === 'test' || route.name === 'test-interruption') {
-    return <Suspense fallback={<RouteLoading language={language} />}>{page}</Suspense>
+    return (
+      <div className="portal-app portal-app--focused-route">
+        <Suspense fallback={<RouteLoading language={language} />}>{page}</Suspense>
+        <JudgeTourCoachmark tour={tour} language={language} />
+      </div>
+    )
   }
 
   const national = route.name === 'home' || route.name === 'login'
-  return <div className="portal-app"><PortalHeader pathname={pathname} language={language} textScale={textScale} national={national} session={session} onLanguage={() => setLanguage((value) => value === 'en' ? 'hi' : 'en')} onTextScale={() => setTextScale((value) => value === 'normal' ? 'large' : 'normal')} onHelp={() => setHelpOpen(true)} onAccount={() => setAccountOpen(true)} /><main id="main-content" className={`portal-container portal-main ${route.name === 'home' ? 'portal-main--home' : ''}`}><Suspense fallback={<RouteLoading language={language} />}>{page}</Suspense></main><PortalFooter language={language} national={national} onPrototypeDetails={() => setPrototypeDetailsOpen(true)} />{helpOpen && <HelpDialog route={route} language={language} onClose={() => setHelpOpen(false)} />}{prototypeDetailsOpen && <PrototypeDetailsDialog language={language} onClose={() => setPrototypeDetailsOpen(false)} />}{unavailableDestination && <UnavailableServiceDialog destination={unavailableDestination} language={language} onClose={() => setUnavailableDestination(null)} />}{stateSelectionOpen && <StateSelectionDialog language={language} onClose={() => setStateSelectionOpen(false)} />}{accountOpen && session && <Suspense fallback={null}><AccountDialog language={language} session={session} onClose={() => setAccountOpen(false)} onSignOut={() => { clearDemoSession(); setSession(null); setAccountOpen(false); navigatePortal('/') }} /></Suspense>}</div>
+  return (
+    <div className="portal-app">
+      <PortalHeader
+        pathname={pathname}
+        language={language}
+        textScale={textScale}
+        national={national}
+        session={session}
+        onLanguage={() => setLanguage((value) => value === 'en' ? 'hi' : 'en')}
+        onTextScale={() => setTextScale((value) => value === 'normal' ? 'large' : 'normal')}
+        onHelp={() => setHelpOpen(true)}
+        onAccount={() => setAccountOpen(true)}
+      />
+      <main id="main-content" className={`portal-container portal-main ${route.name === 'home' ? 'portal-main--home' : ''}`}>
+        <Suspense fallback={<RouteLoading language={language} />}>{page}</Suspense>
+      </main>
+      <PortalFooter language={language} national={national} onPrototypeDetails={() => setPrototypeDetailsOpen(true)} />
+      <JudgeTourFloatingPill tour={tour} language={language} />
+      <JudgeTourCoachmark tour={tour} language={language} />
+      {helpOpen && <HelpDialog route={route} language={language} onClose={() => setHelpOpen(false)} />}
+      {prototypeDetailsOpen && <PrototypeDetailsDialog language={language} onClose={() => setPrototypeDetailsOpen(false)} />}
+      {unavailableDestination && <UnavailableServiceDialog destination={unavailableDestination} language={language} onClose={() => setUnavailableDestination(null)} />}
+      {stateSelectionOpen && <StateSelectionDialog language={language} onClose={() => setStateSelectionOpen(false)} />}
+      {accountOpen && session && (
+        <Suspense fallback={null}>
+          <AccountDialog language={language} session={session} onClose={() => setAccountOpen(false)} onSignOut={() => { clearDemoSession(); setSession(null); setAccountOpen(false); navigatePortal('/') }} />
+        </Suspense>
+      )}
+    </div>
+  )
 }
 
 export default PortalApp

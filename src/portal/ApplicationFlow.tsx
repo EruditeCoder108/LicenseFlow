@@ -1734,7 +1734,12 @@ export function ApplicationFlow({
   }, [step])
 
   const applyDemoData = () => {
-    setDraft((current) => fillDraftWithDemoData(current))
+    setDraft((current) => ({
+      ...fillDraftWithDemoData(current),
+      documentsUploaded: false,
+      photoUploaded: false,
+      signatureUploaded: false,
+    }))
     setErrors({})
     setQuickFillStatus(
       local(
@@ -1798,7 +1803,7 @@ export function ApplicationFlow({
         quickActionLabel={local(language, 'Fill demo', 'डेमो भरें')}
         quickActionIcon={CheckCircle2}
       />
-      <header className="page-header" ref={headerRef}>
+      <header className="page-header" ref={headerRef} data-tour="application-step-overview">
         <div className="page-header__left">
           <p className="eyebrow">
             {local(language, 'Application', 'आवेदन')} · {draft.applicationId}
@@ -1811,6 +1816,7 @@ export function ApplicationFlow({
             type="button"
             className="quick-fill-btn"
             onClick={applyDemoData}
+            data-tour="application-quick-fill"
             title={local(language, 'Replaces current form values with synthetic demo data', 'मौजूदा मानों को सिंथेटिक डेमो डेटा से बदलता है')}
           >
             <CheckCircle2 size={16} aria-hidden="true" />
@@ -1831,7 +1837,7 @@ export function ApplicationFlow({
         <form className="application-flow__main" onSubmit={submit} noValidate>
           <ErrorSummary errors={errors} language={language} />
 
-          <div key={step} className="application-flow__step-container">
+          <div key={step} className="application-flow__step-container" data-tour="application-step-content">
             <StepContent step={step} draft={draft} setDraft={setDraft} errors={errors} language={language} />
           </div>
 
@@ -1854,7 +1860,7 @@ export function ApplicationFlow({
               </button>
             )}
 
-            <button type="submit" className="button button--primary">
+            <button type="submit" className="button button--primary" data-tour="application-continue">
               {step === 'review'
                 ? local(language, 'Submit application & continue', 'आवेदन जमा करें और आगे बढ़ें')
                 : local(language, 'Save and continue', 'सहेजें और आगे बढ़ें')}{' '}
@@ -1898,7 +1904,7 @@ export function SubmittedPage({
         </ol>
       </nav>
 
-      <section className="submission-card">
+      <section className="submission-card" data-tour="submitted-overview">
         <div className="submission-card__icon" aria-hidden="true">
           <BadgeCheck size={38} />
         </div>
@@ -1937,7 +1943,7 @@ export function SubmittedPage({
           </div>
         </dl>
         <div className="submission-actions">
-          <button className="button button--primary" onClick={() => onContinue(draft)}>
+          <button className="button button--primary" onClick={() => onContinue(draft)} data-tour="submitted-continue">
             {local(language, 'Add documents and photo', 'दस्तावेज़ और फोटो जोड़ें')} <ArrowRight size={18} />
           </button>
           <FlowLink href={`/mp/application/${draft.applicationId}`} className="button button--secondary">
@@ -2074,7 +2080,7 @@ export function UploadsPage({
           </li>
         </ol>
       </nav>
-      <header className="page-header" ref={headerRef}>
+      <header className="page-header" ref={headerRef} data-tour="uploads-overview">
         <div className="page-header__left">
           <p className="eyebrow">
             {local(language, 'Application', 'आवेदन')} · {applicationId}
@@ -2085,7 +2091,7 @@ export function UploadsPage({
           </p>
         </div>
         <div className="page-header__right">
-          <button type="button" className="quick-fill-btn" onClick={attachAll} disabled={complete}>
+          <button type="button" className="quick-fill-btn" onClick={attachAll} disabled={complete} data-tour="uploads-attach-all">
             <FileCheck2 size={16} aria-hidden="true" />
             {complete ? local(language, 'All demo files attached', 'सभी डेमो फाइलें जुड़ी हैं') : local(language, 'Attach all demo files', 'सभी डेमो फाइलें जोड़ें')}
           </button>
@@ -2156,7 +2162,7 @@ export function UploadsPage({
         <FlowLink href={`/mp/application/${applicationId}`} className="button button--secondary">
           <ArrowLeft size={18} /> {local(language, 'Application status', 'आवेदन स्थिति')}
         </FlowLink>
-        <button className="button button--primary" disabled={!complete} onClick={() => onComplete(draft)}>
+        <button className="button button--primary" disabled={!complete} onClick={() => onComplete(draft)} data-tour="uploads-confirm">
           {local(language, 'Confirm demo files', 'डेमो फाइलों की पुष्टि करें')} <ArrowRight size={18} />
         </button>
       </div>

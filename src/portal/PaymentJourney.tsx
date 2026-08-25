@@ -53,13 +53,13 @@ function money(paise: number, language: Language) {
   return new Intl.NumberFormat(language === 'en' ? 'en-IN' : 'hi-IN', { style: 'currency', currency: 'INR' }).format(paise / 100)
 }
 
-function FlowLink({ href, className, children }: { href: string; className?: string; children: ReactNode }) {
+function FlowLink({ href, className, children, dataTour }: { href: string; className?: string; children: ReactNode; dataTour?: string }) {
   const open = (event: MouseEvent<HTMLAnchorElement>) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
     event.preventDefault()
     navigatePortal(href)
   }
-  return <a href={href} className={className} onClick={open}>{children}</a>
+  return <a href={href} className={className} onClick={open} data-tour={dataTour}>{children}</a>
 }
 
 function Breadcrumbs({ language, applicationId, current }: { language: Language; applicationId: string; current: string }) {
@@ -289,7 +289,7 @@ export function PaymentPage({ language, applicationId }: { language: Language; a
   return (
     <>
       <Breadcrumbs language={language} applicationId={applicationId} current={local(language, 'Fee payment', 'शुल्क भुगतान')} />
-      <section className="page-title">
+      <section className="page-title" data-tour="payment-overview">
         <div>
           <p className="eyebrow">{local(language, 'Fee payment', 'शुल्क भुगतान')}</p>
           <h1 tabIndex={-1}>{local(language, 'Review fee and choose payment method', 'शुल्क देखें और भुगतान का तरीका चुनें')}</h1>
@@ -385,7 +385,7 @@ export function PaymentPage({ language, applicationId }: { language: Language; a
               <p>{local(language, 'Do not pay again immediately. Open the payment status page to check whether your payment went through.', 'तुरंत दोबारा भुगतान न करें। भुगतान स्थिति पेज खोलकर देखें कि भुगतान सफल हुआ या नहीं।')}</p>
             </div>
           </details>
-          <label className="consent-box">
+          <label className="consent-box" data-tour="payment-consent">
             <input type="checkbox" checked={confirmed} onChange={(event) => setConfirmed(event.target.checked)} />
             <span>
               <strong>{local(language, 'I have checked the fee and application details.', 'मैंने शुल्क और आवेदन का विवरण देख लिया है।')}</strong>
@@ -412,7 +412,7 @@ export function PaymentPage({ language, applicationId }: { language: Language; a
         </div>
       </div>
       <div className="lf-actions">
-        <button className="button button--primary" disabled={!confirmed || paymentBlocksNewAttempt(progress.payment)} onClick={begin}>
+        <button className="button button--primary" disabled={!confirmed || paymentBlocksNewAttempt(progress.payment)} onClick={begin} data-tour="payment-start-gateway">
           {local(language, 'Pay now via Gateway', 'गेटवे से भुगतान करें')} <ExternalLink size={18} />
         </button>
         <FlowLink className="button button--secondary" href={`/mp/application/${applicationId}`}>
@@ -435,7 +435,7 @@ export function PaymentRedirectPage({ language, applicationId }: { language: Lan
   return (
     <>
       <Breadcrumbs language={language} applicationId={applicationId} current={local(language, 'Payment gateway', 'पेमेंट गेटवे')} />
-      <section className="redirect-panel">
+      <section className="redirect-panel" data-tour="payment-redirect-overview">
         <span><ExternalLink size={32} /></span>
         <p className="eyebrow">{local(language, 'Opening payment gateway', 'पेमेंट गेटवे खुल रहा है')}</p>
         <h1 tabIndex={-1}>{local(language, 'Opening payment gateway', 'पेमेंट गेटवे खुल रहा है')}</h1>
@@ -446,7 +446,7 @@ export function PaymentRedirectPage({ language, applicationId }: { language: Lan
           <div><dt>{local(language, 'Application', 'आवेदन')}</dt><dd>{applicationId}</dd></div>
         </dl>
         <div className="lf-actions">
-          <button className="button button--primary" onClick={open}>
+          <button className="button button--primary" onClick={open} data-tour="payment-redirect-continue">
             {local(language, 'Continue to payment gateway', 'पेमेंट गेटवे पर जाएँ')} <ArrowRight size={18} />
           </button>
           <FlowLink className="button button--secondary" href={`/mp/application/${applicationId}/payment`}>
@@ -511,7 +511,7 @@ export function GatewayPage({ language, applicationId }: { language: Language; a
         </div>
         <span className="gateway-sandbox">DEMO</span>
       </header>
-      <main className="gateway-card">
+      <main className="gateway-card" data-tour="gateway-overview">
         <div className="gateway-merchant">
           <Building2 size={26} />
           <div>
@@ -541,7 +541,7 @@ export function GatewayPage({ language, applicationId }: { language: Language; a
               <option value="unknown">{local(language, 'Status lost', 'स्थिति खो गई')}</option>
             </select>
           </details>
-          <button className="button button--primary button--full" type="submit">
+          <button className="button button--primary button--full" type="submit" data-tour="gateway-complete">
             {local(language, 'Complete demo payment', 'डेमो भुगतान पूरा करें')} <ArrowRight size={18} />
           </button>
           <button className="gateway-cancel" type="button" onClick={cancel}>
@@ -586,7 +586,7 @@ export function PaymentReturnPage({ language, applicationId, onStageChange }: { 
   return (
     <>
       <Breadcrumbs language={language} applicationId={applicationId} current={local(language, 'Payment result', 'भुगतान परिणाम')} />
-      <section className={`payment-return payment-return--${payment.status}`}>
+      <section className={`payment-return payment-return--${payment.status}`} data-tour="payment-return-overview">
         <span><Icon size={36} /></span>
         <p className="eyebrow">{local(language, `Payment status · ${statusCopy(language, payment.status)}`, `भुगतान स्थिति · ${statusCopy(language, payment.status)}`)}</p>
         <h1 tabIndex={-1}>{title}</h1>
@@ -610,7 +610,7 @@ export function PaymentReturnPage({ language, applicationId, onStageChange }: { 
         </div>
         <div className="lf-actions">
           {confirmed && (
-            <><FlowLink className="button button--primary" href={`/mp/application/${applicationId}/tutorial`}>
+            <><FlowLink className="button button--primary" href={`/mp/application/${applicationId}/tutorial`} dataTour="payment-continue-tutorial">
               {local(language, 'Continue to road-safety learning', 'सड़क सुरक्षा सीख पर आगे बढ़ें')} <ArrowRight size={18} />
             </FlowLink><FlowLink className="button button--secondary" href={`/mp/application/${applicationId}/receipt`}><ReceiptText size={18} /> {local(language, 'View receipt', 'रसीद देखें')}</FlowLink></>
           )}

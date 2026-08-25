@@ -169,7 +169,7 @@ export function DeviceReadinessPage({ language, applicationId, onStageChange }: 
     saveJourneyProgress(updated)
     media.stop()
     stopAllMediaTracks()
-    onStageChange('Test rehearsal')
+    onStageChange('Demo test question')
     try {
       if (document.documentElement.requestFullscreen) {
         await document.documentElement.requestFullscreen()
@@ -183,7 +183,7 @@ export function DeviceReadinessPage({ language, applicationId, onStageChange }: 
   return (
     <>
       <JourneyBreadcrumbs language={language} applicationId={applicationId} current={local(language, 'Device check', 'डिवाइस जाँच')} />
-      <section className="page-title">
+      <section className="page-title" data-tour="readiness-overview">
         <div>
           <p className="eyebrow">{local(language, 'Before payment · device check', 'भुगतान से पहले · डिवाइस जाँच')}</p>
           <h1 tabIndex={-1}>{local(language, 'Check your device before you pay', 'भुगतान से पहले अपने डिवाइस की जाँच करें')}</h1>
@@ -233,7 +233,7 @@ export function DeviceReadinessPage({ language, applicationId, onStageChange }: 
                   <CheckCircle2 size={20} />
                   <div>
                     <strong>{local(language, 'Device check is already complete.', 'डिवाइस जाँच पहले से पूरी है।')}</strong>
-                    <p>{local(language, 'You can continue to practice or run the check again.', 'आप अभ्यास जारी रख सकते हैं या दोबारा जाँच कर सकते हैं।')}</p>
+                    <p>{local(language, 'You can open the demo question or run the device check again.', 'आप डेमो प्रश्न खोल सकते हैं या डिवाइस जाँच दोबारा कर सकते हैं।')}</p>
                   </div>
                 </div>
               )}
@@ -267,18 +267,18 @@ export function DeviceReadinessPage({ language, applicationId, onStageChange }: 
               )}
 
               {!preparedIssue && (
-                <div className="lf-readiness-actions-bar">
+                <div className="lf-readiness-actions-bar" data-tour="readiness-controls">
                   <div className="lf-readiness-actions-row">
                     <button className="button button--primary" onClick={() => void media.start()}>
                       {local(language, 'Start private device check', 'डिवाइस जाँच शुरू करें')} <ArrowRight size={18} />
                     </button>
-                    <button className="button button--secondary quick-fill-btn" onClick={media.useGuidedSignals}>
+                    <button className="button button--secondary quick-fill-btn" onClick={media.useGuidedSignals} data-tour="readiness-demo-simulation">
                       <CheckCircle2 size={15} />
                       <span>{local(language, 'Use Demo Simulation', 'डेमो सिमुलेशन')}</span>
                     </button>
                     {progress.readiness.status === 'passed' && (
                       <FlowLink className="button button--secondary" href={`/mp/application/${applicationId}/rehearsal`}>
-                        {local(language, 'Continue to rehearsal', 'रिहर्सल पर जाएँ')} <ArrowRight size={16} />
+                        {local(language, 'Open demo question', 'डेमो प्रश्न खोलें')} <ArrowRight size={16} />
                       </FlowLink>
                     )}
                     <FlowLink className="button button--secondary" href={`/mp/application/${applicationId}`}>
@@ -496,14 +496,14 @@ export function DeviceReadinessPage({ language, applicationId, onStageChange }: 
             </div>
           )}
           <div className="lf-actions lf-actions--stack">
-            <button className="button button--primary" disabled={!media.ready} onClick={finish}>
-              {local(language, 'Open one-question system rehearsal', 'एक-प्रश्न सिस्टम रिहर्सल शुरू करें')} <ArrowRight size={18} />
+            <button className="button button--primary" disabled={!media.ready} onClick={finish} data-tour="readiness-continue">
+              {local(language, 'Open demo question', 'डेमो प्रश्न खोलें')} <ArrowRight size={18} />
             </button>
             <p className="lf-actions__supporting-text">
               {local(
                 language,
-                'Confirm that this browser can display a test question, accept an answer and save the response before payment.',
-                'पुष्टि करें कि यह ब्राउज़र भुगतान से पहले टेस्ट प्रश्न दिखा सकता है, उत्तर स्वीकार कर सकता है और प्रतिक्रिया सहेज सकता है।'
+                'Open one sample question to confirm that this device can display choices and save an answer before payment.',
+                'भुगतान से पहले पुष्टि करने के लिए एक नमूना प्रश्न खोलें कि यह डिवाइस विकल्प दिखा सकता है और उत्तर सहेज सकता है।'
               )}
             </p>
             {!media.ready && (
@@ -542,7 +542,7 @@ export function RehearsalPage({ language, applicationId, onStageChange }: { lang
       <FocusedAssessmentShell
         mode="rehearsal"
         title="LicenceFlow"
-        stageBadge={local(language, 'System Rehearsal', 'सिस्टम रिहर्सल')}
+        stageBadge={local(language, 'Demo question', 'डेमो प्रश्न')}
         language={language}
         onExit={() => navigatePortal(`/mp/application/${applicationId}`)}
       >
@@ -602,14 +602,16 @@ export function RehearsalPage({ language, applicationId, onStageChange }: { lang
     <FocusedAssessmentShell
       mode="rehearsal"
       title="LicenceFlow"
-      stageBadge={local(language, 'System rehearsal · does not count', 'सिस्टम रिहर्सल · मुख्य परीक्षा में नहीं गिना जाएगा')}
+      stageBadge={local(language, 'Demo question · does not count', 'डेमो प्रश्न · मुख्य परीक्षा में नहीं गिना जाएगा')}
       online={true}
       cameraActive={true}
       cameraGuided={progress.readiness.mode === 'guided-signals'}
-      cameraLabel={local(language, 'Device Ready', 'डिवाइस तैयार')}
+      cameraLabel={progress.readiness.mode === 'guided-signals'
+        ? local(language, 'Camera-free demo', 'कैमरा-रहित डेमो')
+        : local(language, 'Device ready', 'डिवाइस तैयार')}
       language={language}
       onExit={exitRehearsal}
-      exitLabel={local(language, 'Exit rehearsal', 'रिहर्सल बंद करें')}
+      exitLabel={local(language, 'Exit demo question', 'डेमो प्रश्न बंद करें')}
       bottomBar={
         !saved ? (
           <div className="focused-bottom-actions">
@@ -618,8 +620,9 @@ export function RehearsalPage({ language, applicationId, onStageChange }: { lang
               className="button button--primary"
               disabled={selected === null}
               onClick={saveAnswer}
+              data-tour="rehearsal-save"
             >
-              {local(language, 'Save rehearsal answer', 'रिहर्सल उत्तर सहेजें')} <LockKeyhole size={17} />
+              {local(language, 'Save demo answer', 'डेमो उत्तर सहेजें')} <LockKeyhole size={17} />
             </button>
             <button
               type="button"
@@ -635,8 +638,9 @@ export function RehearsalPage({ language, applicationId, onStageChange }: { lang
               type="button"
               className="button button--primary"
               onClick={exitToPayment}
+              data-tour="rehearsal-continue-payment"
             >
-              {local(language, 'Exit rehearsal and continue to fee payment', 'रिहर्सल से बाहर निकलें और शुल्क भुगतान पर जाएँ')}{' '}
+              {local(language, 'Continue to fee payment', 'शुल्क भुगतान पर जाएँ')}{' '}
               <ArrowRight size={17} />
             </button>
             <button
@@ -657,15 +661,15 @@ export function RehearsalPage({ language, applicationId, onStageChange }: { lang
     >
       <div className="focused-workspace-container">
         {!saved ? (
-          <div className="focused-question-card">
+          <div className="focused-question-card" data-tour="rehearsal-overview">
             <div className="focused-explanation-banner">
               <Info size={18} aria-hidden="true" />
               <div>
                 <strong>
                   {local(
                     language,
-                    'This one-question rehearsal checks whether this device can run the test.',
-                    'यह एक-प्रश्न रिहर्सल जाँचेगी कि आपका डिवाइस परीक्षा चलाने के लिए तैयार है।'
+                    'This demo question checks whether this device can run the test.',
+                    'यह डेमो प्रश्न जाँचता है कि आपका डिवाइस परीक्षा चला सकता है या नहीं।'
                   )}
                 </strong>
                 <p>
@@ -709,6 +713,7 @@ export function RehearsalPage({ language, applicationId, onStageChange }: { lang
                 return (
                   <label
                     key={option}
+                    data-tour={index === 0 ? 'rehearsal-first-answer' : undefined}
                     className={`focused-option-card ${
                       isSelected ? 'focused-option-card--selected' : ''
                     }`}
@@ -745,16 +750,16 @@ export function RehearsalPage({ language, applicationId, onStageChange }: { lang
               <CheckCircle2 size={44} />
             </div>
             <p className="eyebrow">{local(language, 'Readiness verified', 'तैयारी सत्यापित')}</p>
-            <h1>{local(language, 'System rehearsal passed', 'सिस्टम रिहर्सल सफल')}</h1>
+            <h1>{local(language, 'Demo question completed', 'डेमो प्रश्न पूरा हुआ')}</h1>
             <p className="focused-success-card__sub">
               {local(
                 language,
-                'Your browser and device successfully displayed the test question, accepted an answer, and verified local progress persistence.',
-                'आपके ब्राउज़र ने सफलतापूर्वक प्रश्न प्रदर्शित किया, उत्तर स्वीकार किया और स्थानीय प्रगति सहेजना जाँचा।'
+                'This device displayed the question, accepted your answer and saved it successfully.',
+                'इस डिवाइस ने प्रश्न दिखाया, आपका उत्तर स्वीकार किया और उसे सफलतापूर्वक सहेजा।'
               )}
             </p>
 
-            <ul className="focused-checklist" aria-label={local(language, 'Rehearsal verification items', 'रिहर्सल सत्यापन बिंदु')}>
+            <ul className="focused-checklist" aria-label={local(language, 'Demo question checks', 'डेमो प्रश्न जाँच')}>
               <li>
                 <Check size={18} aria-hidden="true" />
                 <div>

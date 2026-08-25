@@ -27,6 +27,9 @@ describe('clearLicenceFlowDeviceData', () => {
       'mp-ll-journey-progress-v1:demo-mp-ll': 'journey',
       'mp-ll-exam-session-v1:demo-mp-ll': 'exam',
       'mp-portal-language': 'hi',
+      'licenceflow-judge-tour-active': 'true',
+      'licenceflow-judge-tour-step': '2',
+      'licenceflow-judge-tour-dismissed': 'true',
       'unrelated-site-data': 'keep',
     })
     vi.stubGlobal('localStorage', localStorage)

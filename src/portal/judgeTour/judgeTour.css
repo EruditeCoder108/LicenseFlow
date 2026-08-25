@@ -1,0 +1,397 @@
+/* Raahi judge tour: quiet civic-tech coachmarks, never a blocking modal. */
+
+.judge-tour-floating-dock {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 990;
+}
+
+.judge-tour-pill-btn {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px 7px 8px;
+  border: 1px solid #1f6da8;
+  border-radius: 999px;
+  background: #071a34;
+  color: #fff;
+  box-shadow: 0 12px 28px rgba(7, 26, 52, 0.24);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  transition: transform 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+}
+
+.judge-tour-pill-btn:hover {
+  background: #0b3158;
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px rgba(7, 26, 52, 0.3);
+}
+
+.judge-tour-pill-btn:focus-visible,
+.judge-tour-card button:focus-visible,
+.judge-onboarding-hero-card button:focus-visible {
+  outline: 3px solid #38bdf8;
+  outline-offset: 3px;
+}
+
+.judge-tour-btn:disabled {
+  cursor: wait;
+  opacity: 0.82;
+}
+
+.judge-tour-btn__spinner {
+  animation: judge-tour-spin 800ms linear infinite;
+}
+
+@keyframes judge-tour-spin {
+  to { transform: rotate(360deg); }
+}
+
+.judge-tour-pill__avatar {
+  width: 34px;
+  height: 34px;
+  overflow: hidden;
+  flex: 0 0 34px;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  border-radius: 50%;
+  background: #dff5ff;
+}
+
+.judge-tour-pill__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 18%;
+  transform: scale(1.18);
+}
+
+.judge-tour-pill__label { display: flex; flex-direction: column; line-height: 1.15; }
+.judge-tour-pill__label strong { color: #fff; font-size: 0.9rem; }
+.judge-tour-pill__label small { color: #bae6fd; font-size: 0.72rem; }
+.judge-tour-pill__sparkle { color: #62d4ff; }
+
+.judge-onboarding-hero-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  align-items: center;
+  gap: 24px;
+  min-height: 190px;
+  margin: 0 0 28px;
+  padding: 20px 64px 20px 24px;
+  overflow: hidden;
+  border: 1px solid #2c78ad;
+  border-radius: 18px;
+  background: linear-gradient(112deg, #071a34 0%, #0b3158 62%, #0b5c78 100%);
+  color: #fff;
+  box-shadow: 0 14px 34px rgba(7, 26, 52, 0.2);
+}
+
+.judge-onboarding-hero-card::after {
+  content: '';
+  position: absolute;
+  right: -70px;
+  bottom: -130px;
+  width: 300px;
+  height: 300px;
+  border: 1px solid rgba(98, 212, 255, 0.2);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.judge-onboarding-hero-card__character { width: 150px; height: 170px; align-self: end; }
+
+.judge-onboarding-hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+  filter: drop-shadow(0 10px 12px rgba(0, 0, 0, 0.28));
+}
+
+.judge-onboarding-hero-card__content { position: relative; z-index: 1; min-width: 0; }
+
+.judge-onboarding-hero-card__tag,
+.judge-tour-card__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 750;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+}
+
+.judge-onboarding-hero-card__tag {
+  margin-bottom: 8px;
+  padding: 4px 10px;
+  border: 1px solid rgba(186, 230, 253, 0.34);
+  background: rgba(255, 255, 255, 0.08);
+  color: #dff5ff;
+}
+
+.judge-onboarding-hero-card h2 {
+  margin: 0 0 7px;
+  color: #fff;
+  font-size: clamp(1.25rem, 2vw, 1.6rem);
+  line-height: 1.2;
+}
+
+.judge-onboarding-hero-card p {
+  max-width: 680px;
+  margin: 0 0 16px;
+  color: #dbeafe;
+  font-size: 0.98rem;
+  line-height: 1.5;
+}
+
+.judge-onboarding-hero-card__actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.judge-onboarding-cta { min-height: 46px; border-color: #fff; background: #fff; color: #071a34; }
+.judge-onboarding-cta:hover { border-color: #e0f2fe; background: #e0f2fe; color: #071a34; }
+.judge-onboarding-dismiss { min-height: 46px; border-color: rgba(255,255,255,.42); background: transparent; color: #fff; }
+.judge-onboarding-dismiss:hover { background: rgba(255,255,255,.1); color: #fff; }
+
+.judge-onboarding-close-btn,
+.judge-tour-card__close-btn {
+  display: inline-grid;
+  width: 44px;
+  height: 44px;
+  place-items: center;
+  border: 0;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.judge-onboarding-close-btn {
+  position: absolute;
+  z-index: 2;
+  top: 12px;
+  right: 12px;
+  background: transparent;
+  color: #bae6fd;
+}
+
+.judge-onboarding-close-btn:hover { background: rgba(255,255,255,.1); color: #fff; }
+
+.judge-tour-root { position: fixed; z-index: 2147483000; inset: 0; pointer-events: auto; }
+.judge-tour-root--exploring { pointer-events: none; }
+
+.judge-tour-scrim {
+  position: fixed;
+  z-index: 0;
+  inset: 0;
+  background: rgba(7, 26, 52, 0.22);
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 240ms ease-out;
+}
+
+.judge-tour-spotlight {
+  position: fixed;
+  z-index: 1;
+  border: 3px solid #38bdf8;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.09);
+  box-shadow: 0 10px 34px rgba(7, 26, 52, 0.2), 0 0 0 5px rgba(56, 189, 248, 0.14), inset 0 0 0 1px rgba(255,255,255,.82);
+  -webkit-backdrop-filter: brightness(1.28) saturate(1.08);
+  backdrop-filter: brightness(1.28) saturate(1.08);
+  opacity: 1;
+  pointer-events: none;
+  transition: top 260ms cubic-bezier(.22, 1, .36, 1), left 260ms cubic-bezier(.22, 1, .36, 1), width 260ms cubic-bezier(.22, 1, .36, 1), height 260ms cubic-bezier(.22, 1, .36, 1), opacity 220ms ease-out;
+}
+
+.judge-tour-card {
+  position: fixed;
+  z-index: 2;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  display: grid;
+  grid-template-columns: 170px minmax(0, 390px);
+  align-items: end;
+  width: min(560px, calc(100vw - 40px));
+  pointer-events: auto;
+  animation: raahiCardEnter 220ms ease-out;
+  opacity: 1;
+  transition: opacity 220ms ease-out, transform 260ms cubic-bezier(.22, 1, .36, 1);
+}
+
+.judge-tour-root--exploring .judge-tour-scrim,
+.judge-tour-root--exploring .judge-tour-spotlight,
+.judge-tour-root--exploring .judge-tour-card {
+  opacity: 0;
+}
+
+.judge-tour-root--exploring .judge-tour-card {
+  transform: translateY(10px);
+  pointer-events: none;
+}
+
+.judge-tour-card--dock-left { left: 24px; }
+.judge-tour-card--dock-right { right: 24px; }
+.judge-tour-card--fallback { right: auto; left: 50%; transform: translateX(-50%); }
+
+.judge-tour-card__character {
+  position: relative;
+  z-index: 2;
+  width: 180px;
+  height: 240px;
+  margin-right: -20px;
+  pointer-events: none;
+}
+
+.raahi-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: bottom center;
+  filter: drop-shadow(0 12px 14px rgba(7, 26, 52, 0.35));
+}
+
+.judge-tour-card__panel {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
+  padding: 16px 16px 14px 28px;
+  border: 1px solid rgba(125, 211, 252, 0.55);
+  border-radius: 18px;
+  background: rgba(7, 26, 52, 0.97);
+  color: #fff;
+  box-shadow: 0 20px 48px rgba(7, 26, 52, 0.34);
+  pointer-events: auto;
+}
+
+.judge-tour-card__panel::before {
+  content: '';
+  position: absolute;
+  top: 62px;
+  left: -10px;
+  width: 18px;
+  height: 18px;
+  border-bottom: 1px solid rgba(125,211,252,.55);
+  border-left: 1px solid rgba(125,211,252,.55);
+  background: #071a34;
+  transform: rotate(45deg);
+}
+
+.judge-tour-card__header { display: flex; align-items: center; gap: 10px; }
+.judge-tour-card__tag { flex: 0 0 auto; padding: 4px 9px; background: #dff5ff; color: #075985; }
+
+.judge-tour-card__progress {
+  display: flex;
+  flex: 1;
+  justify-content: flex-end;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.judge-tour-card__progress li { position: relative; width: 22px; height: 4px; overflow: hidden; border: 0; border-radius: 999px; background: rgba(125, 211, 252, .28); }
+.judge-tour-card__progress li.is-complete { background: #7dd3fc; }
+.judge-tour-card__progress li.is-current { background: #fff; }
+.judge-tour-card__progress li span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.judge-tour-card__close-btn { flex: 0 0 44px; background: transparent; color: #cbd5e1; }
+.judge-tour-card__close-btn:hover { background: rgba(255,255,255,.09); color: #fff; }
+
+.judge-tour-card__speech { padding: 6px 2px 2px; animation: raahiSpeechSwap 180ms ease-out; }
+.judge-tour-card__title { display: block; margin-bottom: 5px; color: #fff; font-size: 1.08rem; line-height: 1.25; }
+.judge-tour-card__dialogue { margin: 0; color: #dbeafe; font-size: 0.95rem; line-height: 1.48; }
+.judge-tour-card__notice { display: block; margin-top: 6px; color: #7dd3fc; font-size: 0.79rem; }
+
+.judge-tour-card__actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(186,230,253,.18);
+}
+
+.judge-tour-btn { min-height: 44px; padding: 8px 14px; font-size: 0.86rem; font-weight: 750; }
+.judge-tour-btn--action { border-color: #fff; background: #fff; color: #071a34; box-shadow: none; }
+.judge-tour-btn--action:hover { border-color: #dff5ff; background: #dff5ff; color: #071a34; }
+.judge-tour-link-btn { min-width: 52px; min-height: 44px; padding: 8px 10px; border: 0; border-radius: 8px; background: transparent; color: #bae6fd; cursor: pointer; font: inherit; font-size: .86rem; font-weight: 650; }
+.judge-tour-link-btn:hover { background: rgba(255,255,255,.08); color: #fff; }
+
+@keyframes raahiCardEnter {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes raahiSpeechSwap {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 767px) {
+  .judge-tour-floating-dock { right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); }
+  .judge-tour-pill__label small, .judge-tour-pill__sparkle { display: none; }
+
+  .judge-onboarding-hero-card { grid-template-columns: 96px minmax(0, 1fr); gap: 12px; min-height: 0; padding: 18px 48px 18px 14px; }
+  .judge-onboarding-hero-card__character { width: 96px; height: 140px; }
+  .judge-onboarding-hero-card__actions { grid-column: 1 / -1; }
+
+  .judge-tour-scrim { background: rgba(7, 26, 52, 0.15); }
+  .judge-tour-card {
+    position: absolute;
+    right: 10px !important;
+    left: 10px !important;
+    grid-template-columns: 88px minmax(0, 1fr);
+    width: auto;
+    transform: none;
+  }
+
+  .judge-tour-card--mobile-bottom {
+    top: auto;
+    bottom: max(10px, env(safe-area-inset-bottom));
+  }
+
+  .judge-tour-card--mobile-top {
+    top: max(10px, env(safe-area-inset-top));
+    bottom: auto;
+    align-items: start;
+  }
+
+  .judge-tour-card__character { width: 96px; height: 148px; margin-right: -8px; }
+  .judge-tour-card__panel { padding: 12px 12px 11px 18px; border-radius: 15px; }
+  .judge-tour-card__panel::before { top: 48px; left: -8px; width: 14px; height: 14px; }
+  .judge-tour-card__tag { font-size: .68rem; }
+  .judge-tour-card__progress { display: none; }
+  .judge-tour-card__title { font-size: .98rem; }
+  .judge-tour-card__dialogue { font-size: .86rem; line-height: 1.4; }
+  .judge-tour-card__actions { gap: 6px; }
+  .judge-tour-btn { padding-inline: 10px; font-size: .8rem; }
+}
+
+@media (max-width: 390px) {
+  .judge-onboarding-hero-card { display: block; padding: 18px 48px 18px 18px; }
+  .judge-onboarding-hero-card__character { float: left; width: 82px; height: 112px; margin: 0 12px 4px -4px; }
+  .judge-onboarding-hero-card__actions { clear: both; padding-top: 8px; }
+  .judge-onboarding-hero-card__actions .button { width: 100%; }
+  .judge-tour-card { grid-template-columns: 72px minmax(0, 1fr); }
+  .judge-tour-card__character { width: 80px; height: 128px; }
+  .judge-tour-card__panel { padding-left: 14px; }
+  .judge-tour-card__tag { max-width: 110px; }
+}
+
+@media (max-height: 560px) and (orientation: landscape) {
+  .judge-tour-card { bottom: 8px; grid-template-columns: 94px minmax(0, 390px); }
+  .judge-tour-card__character { width: 104px; height: 132px; }
+  .judge-tour-card__panel { padding-block: 10px; }
+  .judge-tour-card__speech { padding-block: 3px 0; }
+  .judge-tour-card__actions { margin-top: 6px; padding-top: 6px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .judge-tour-btn__spinner { animation-duration: 1.6s; }
+  .judge-tour-pill-btn,
+  .judge-tour-card,
+  .judge-tour-card__speech,
+  .judge-tour-spotlight,
+  .judge-tour-scrim { animation: none !important; transition: none !important; }
+}

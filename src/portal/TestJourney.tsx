@@ -28,13 +28,13 @@ const questionPrompt = (question: Question, language: Language) => language === 
 const questionOptions = (question: Question, language: Language) => language === 'hi' ? question.optionsHi ?? question.options : question.options
 const questionExplanation = (question: Question, language: Language) => language === 'hi' ? question.explanationHi ?? question.explanation : question.explanation
 
-function FlowLink({ href, className, children }: { href: string; className?: string; children: ReactNode }) {
+function FlowLink({ href, className, children, dataTour }: { href: string; className?: string; children: ReactNode; dataTour?: string }) {
   const open = (event: MouseEvent<HTMLAnchorElement>) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
     event.preventDefault()
     navigatePortal(href)
   }
-  return <a href={href} className={className} onClick={open}>{children}</a>
+  return <a href={href} className={className} onClick={open} data-tour={dataTour}>{children}</a>
 }
 
 function Breadcrumbs({ applicationId, current, language }: { applicationId: string; current: string; language: Language }) {
@@ -258,7 +258,7 @@ export function TutorialPage({ applicationId, onStageChange, language }: { appli
   return (
     <>
       <Breadcrumbs applicationId={applicationId} current={local(language, 'Road safety learning', 'सड़क सुरक्षा सीख')} language={language} />
-      <section className="page-title">
+      <section className="page-title" data-tour="tutorial-overview">
         <div>
           <p className="eyebrow">{local(language, 'Required prototype learning', 'आवश्यक प्रोटोटाइप सीख')}</p>
           <h1 tabIndex={-1}>{local(language, 'Road Safety Tutorial', 'सड़क सुरक्षा ट्यूटोरियल')}</h1>
@@ -340,7 +340,7 @@ export function TutorialPage({ applicationId, onStageChange, language }: { appli
                 <strong>{local(language, 'Judge demo shortcut', 'जज डेमो शॉर्टकट')}</strong>
                 <p>{local(language, 'This visible prototype bypass saves review time. Production tutorial enforcement is demonstrated by the locked watch progress above.', 'यह स्पष्ट प्रोटोटाइप बायपास समीक्षा का समय बचाता है। प्रोडक्शन ट्यूटोरियल प्रवर्तन ऊपर लॉक की गई देखने की प्रगति द्वारा दिखाया गया है।')}</p>
               </div>
-              <button type="button" className="button button--secondary" onClick={skipTutorialForJudgeDemo} disabled={completed}>
+              <button type="button" className="button button--secondary" onClick={skipTutorialForJudgeDemo} disabled={completed} data-tour="skip-tutorial-judge">
                 {completed ? <Check size={17} aria-hidden="true" /> : <FastForward size={17} aria-hidden="true" />}
                 {completed
                   ? local(language, 'Tutorial already complete', 'ट्यूटोरियल पहले से पूरा')
@@ -408,7 +408,7 @@ function JudgePassShortcut({ language, onActivate, compact = false }: { language
         <strong>{local(language, 'Judge review controls', 'जज समीक्षा नियंत्रण')}</strong>
         <p>{local(language, 'Generate a passing prototype attempt through the normal scoring flow and open the result, receipt and demo licence.', 'सामान्य स्कोरिंग प्रवाह से पासिंग प्रोटोटाइप प्रयास बनाएँ और परिणाम, रसीद तथा डेमो लाइसेंस खोलें।')}</p>
       </div>
-      <button type="button" className="button button--secondary" onClick={onActivate}>
+      <button type="button" className="button button--secondary" onClick={onActivate} data-tour="preview-result-judge">
         <FastForward size={17} aria-hidden="true" /> {local(language, 'Preview passing result', 'पास परिणाम देखें')}
       </button>
     </aside>
@@ -478,7 +478,7 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
   return (
     <>
       <Breadcrumbs applicationId={applicationId} current={local(language, 'Online test instructions', 'ऑनलाइन टेस्ट निर्देश')} language={language} />
-      <section className="page-title">
+      <section className="page-title" data-tour="test-entry-overview">
         <div>
           <p className="eyebrow">{local(language, 'Demo test', 'डेमो टेस्ट')}</p>
           <h1 tabIndex={-1}>{local(language, 'Final system check before your 15-question demo test', '15-प्रश्न डेमो परीक्षा से पहले अंतिम सिस्टम जाँच')}</h1>
@@ -552,7 +552,7 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
         <p>{local(language, 'This browser prototype demonstrates device checks, monitoring signals and safe recovery. A production high-stakes test would still require a separately audited native secure-test companion for operating-system lockdown.', 'यह ब्राउज़र प्रोटोटाइप डिवाइस जाँच, निगरानी संकेत और सुरक्षित रिकवरी दिखाता है। वास्तविक उच्च-जोखिम परीक्षा में ऑपरेटिंग सिस्टम लॉकडाउन के लिए अलग से जाँचे गए नेटिव सुरक्षित-टेस्ट साथी की जरूरत होगी।')}</p>
       </div>
       {fresh ? (
-        <label className="consent-box">
+        <label className="consent-box" data-tour="test-entry-consent">
           <input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} />
           <span>
             <strong>{local(language, 'I understand this is a demo test.', 'मैं समझता/समझती हूँ कि यह एक डेमो टेस्ट है।')}</strong>
@@ -570,7 +570,7 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
       )}
       <div className="lf-actions">
         {fresh ? (
-          <button className="button button--primary" disabled={!accepted || (!guided && !preTestReady)} onClick={start}>
+          <button className="button button--primary" disabled={!accepted || (!guided && !preTestReady)} onClick={start} data-tour="test-entry-start">
             {local(language, `Enter focused mode and start ${LL_TEST_CONFIG.questionCount}-question test`, `फ़ोकस्ड मोड में प्रवेश करें और ${LL_TEST_CONFIG.questionCount}-प्रश्नों का टेस्ट शुरू करें`)} <ArrowRight size={18} />
           </button>
         ) : (
@@ -836,7 +836,7 @@ export function TestPage({ applicationId, onStageChange, language }: { applicati
       }
     >
       <div className="focused-workspace-container focused-workspace-container--split">
-        <div className="focused-question-card">
+        <div className="focused-question-card" data-tour="test-question-overview">
           <div className="focused-question-heading">
             <div className="focused-question-meta">
               <span className="focused-question-pill">
@@ -1215,7 +1215,7 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
       />
 
       {/* Unified Outcome Hero */}
-      <section className={`result-dashboard-hero ${passed ? 'result-dashboard-hero--passed' : 'result-dashboard-hero--failed'}`}>
+      <section className={`result-dashboard-hero ${passed ? 'result-dashboard-hero--passed' : 'result-dashboard-hero--failed'}`} data-tour="result-overview">
         <div className="result-dashboard-hero__main">
           <div className="result-dashboard-hero__icon" aria-hidden="true">
             {passed ? <CheckCircle2 size={36} /> : <Flag size={36} />}
@@ -1285,6 +1285,7 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
               <FlowLink
                 className="button button--primary"
                 href={`/mp/application/${applicationId}/result/review`}
+                dataTour="result-open-review"
               >
                 <BookOpenCheck size={18} />{' '}
                 {local(language, 'Open 15-Question Answer Review', '15-प्रश्नों की उत्तर समीक्षा खोलें')}{' '}
@@ -1608,7 +1609,7 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
           )}
         </div>
         <div className="result-utility-bar__right">
-          <button type="button" className="result-utility-link result-utility-link--danger" onClick={() => setConfirmClear(true)}>
+          <button type="button" className="result-utility-link result-utility-link--danger" onClick={() => setConfirmClear(true)} data-tour="reset-demo">
             <Eraser size={15} aria-hidden="true" /> {local(language, 'Reset demo data', 'डेमो डेटा रीसेट करें')}
           </button>
           <FlowLink className="result-utility-link" href={`/mp/application/${applicationId}`}>
@@ -1727,7 +1728,7 @@ export function ResultReviewPage({
         </ol>
       </nav>
 
-      <section className="page-title">
+      <section className="page-title" data-tour="result-review-overview">
         <div>
           <p className="eyebrow">
             {local(language, 'Comprehensive assessment review', 'विस्तृत परीक्षा समीक्षा')}
@@ -1936,6 +1937,7 @@ export function ResultReviewPage({
         <FlowLink
           className="button button--primary"
           href={`/mp/application/${applicationId}/result`}
+          dataTour="result-review-back"
         >
           <ArrowLeft size={18} /> {local(language, 'Return to test result', 'परीक्षा परिणाम पर लौटें')}
         </FlowLink>

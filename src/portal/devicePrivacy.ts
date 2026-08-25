@@ -9,6 +9,12 @@ const EXACT_KEYS = new Set([
   'mp-ll-demo-application-v1',
   'mp-portal-language',
   'mp-portal-text-scale',
+  'mp-portal-judge-tour-active',
+  'mp-portal-judge-tour-step',
+  'mp-portal-judge-tour-dismissed',
+  'licenceflow-judge-tour-active',
+  'licenceflow-judge-tour-step',
+  'licenceflow-judge-tour-dismissed',
 ])
 
 const KEY_PREFIXES = [
