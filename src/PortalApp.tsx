@@ -592,7 +592,7 @@ function NationalHomePage({ onUnavailable, onDrivingServices, onPrototypeDetails
       </section>
 
       {/* 4 Primary Service Cards with 3D Showcase */}
-      <section id="citizen-services" className="home-section" aria-labelledby="citizen-services-title">
+      <section id="citizen-services" className="home-section" aria-labelledby="citizen-services-title" data-tour="home-service-cards">
         <div className="home-section__heading">
           <div>
             <p className="eyebrow">{copy(language, 'Online services', 'ऑनलाइन सेवाएँ')}</p>
@@ -622,7 +622,7 @@ function NationalHomePage({ onUnavailable, onDrivingServices, onPrototypeDetails
               </>
             )
             return service.href ? (
-              <button type="button" onClick={onDrivingServices} className="home-service-card" key={service.id}>
+              <button type="button" onClick={onDrivingServices} className="home-service-card" key={service.id} data-tour="home-driving-services-card">
                 {content}
               </button>
             ) : (

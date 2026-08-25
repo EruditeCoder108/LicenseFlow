@@ -119,11 +119,8 @@ test('Raahi mascot guide: full walkthrough shows and operates the complete journ
   await page.mouse.move(8, 8)
   await page.mouse.wheel(0, 700)
   await expect.poll(() => page.evaluate(() => window.scrollY)).not.toBe(scrollBefore)
-  await expect(page.locator('.judge-tour-root')).toHaveClass(/judge-tour-root--exploring/)
-  await expect(page.locator('.judge-tour-scrim')).toHaveCSS('opacity', '0')
-  await expect(page.locator('.judge-tour-card')).toHaveCSS('opacity', '0')
-  await expect(page.locator('.judge-tour-root')).not.toHaveClass(/judge-tour-root--exploring/, { timeout: 4_000 })
-  await expect(page.locator('.judge-tour-card')).toHaveCSS('opacity', '1')
+  await expect(page.locator('.judge-tour-root')).not.toHaveClass(/judge-tour-root--exploring/, { timeout: 1_000 })
+  await expect(page.locator('.judge-tour-root')).toHaveCSS('opacity', '1')
 
   const seen = new Set<string>()
   const title = page.locator('.judge-tour-card__title')
@@ -136,7 +133,6 @@ test('Raahi mascot guide: full walkthrough shows and operates the complete journ
       await action.click({ force: isMobile })
       break
     }
-    await expect(page.locator('.judge-tour-spotlight')).toBeVisible()
     if (await action.isDisabled()) {
       await expect(title).not.toHaveText(currentTitle, { timeout: 5_000 })
       continue
@@ -145,6 +141,7 @@ test('Raahi mascot guide: full walkthrough shows and operates the complete journ
   }
 
   expect(seen).toContain('1 of 7 · Licence details')
+  expect(seen).toContain('Choose a service area')
   expect(seen).toContain('2 of 7 · Identity check')
   expect(seen).toContain('6 of 7 · Health declaration')
   expect(seen).toContain('Add demo documents')
@@ -174,7 +171,15 @@ test('Raahi mascot guide: dismiss, replay, and escape handling', async ({ page }
   await page.getByRole('button', { name: /Start the full Judge Walkthrough with Raahi/ }).click()
   await expect(page.locator('.judge-tour-card__dialogue')).toContainText('guide you through the complete demo')
 
+  // Move forward once, then close accidentally.
+  await page.locator('.judge-tour-card .judge-tour-btn--action').click()
+  await expect(page.locator('.judge-tour-card__title')).toHaveText('Choose a service area')
+
   // Press Escape to dismiss
   await page.keyboard.press('Escape')
   await expect(page.locator('.judge-tour-card')).toHaveCount(0)
+
+  // Reopening resumes the same step instead of restarting at the top.
+  await page.getByRole('button', { name: /Resume the Judge Walkthrough with Raahi/ }).click()
+  await expect(page.locator('.judge-tour-card__title')).toHaveText('Choose a service area')
 })

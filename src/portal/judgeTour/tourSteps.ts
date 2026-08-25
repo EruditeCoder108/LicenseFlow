@@ -47,7 +47,8 @@ const applicationShowcaseSteps = [
 
 const rawSteps: StepInput[] = [
   step('home-overview', 'discover', '[data-tour="home-overview"]', '/', 'Meet LicenceFlow', 'I’m Raahi. I’ll guide you through the complete demo. You can stop at any time.', 'Show the first service', 'advance', 'top', 'welcome'),
-  step('home-driving-services', 'discover', '[data-tour="hero-driving-services"]', '/', 'Start with driving licence services', 'This is the same service choice an applicant would use.', 'Open driving services', 'click', 'target', 'pointing'),
+  step('home-service-cards', 'discover', '[data-tour="home-service-cards"]', '/', 'Choose a service area', 'These cards show the main transport services available to citizens. Driving licence services is the first option.', 'Show the driving licence card', 'advance', 'target', 'working'),
+  step('home-driving-services', 'discover', '[data-tour="home-driving-services-card"]', '/', 'Start with driving licence services', 'Choose this card to open Learner’s Licence and other driving licence services.', 'Open driving services', 'click', 'target', 'pointing'),
   step('state-selection', 'discover', '[data-tour="state-selection-continue"]', '/', 'Choose Madhya Pradesh', 'Madhya Pradesh contains the complete interactive prototype.', 'Continue to MP services', 'click', 'target', 'pointing'),
   step('services-overview', 'discover', '[data-tour="services-overview"]', '/mp/services', 'Driving licence services', 'This page lists the available services. The Learner’s Licence application is below.', 'Find Learner’s Licence'),
   step('apply-ll-service', 'discover', '[data-tour="apply-ll-service"]', '/mp/services', 'Apply for a Learner’s Licence', 'Choose this service to start the application.', 'Open the application', 'click', 'target', 'pointing'),

@@ -1,5 +1,4 @@
-/* Raahi judge tour: quiet civic-tech coachmarks, never a blocking modal. */
-
+/* Raahi floating dock: lifted, professional white pill button with protruding circular avatar */
 .judge-tour-floating-dock {
   position: fixed;
   right: 24px;
@@ -9,31 +8,51 @@
 
 .judge-tour-pill-btn {
   display: inline-flex;
-  min-height: 48px;
+  min-height: 46px;
   align-items: center;
-  gap: 10px;
-  padding: 7px 14px 7px 8px;
-  border: 1px solid #1f6da8;
-  border-radius: 999px;
-  background: #071a34;
-  color: #fff;
-  box-shadow: 0 12px 28px rgba(7, 26, 52, 0.24);
+  gap: 12px;
+  padding: 0 18px 0 0;
+  border: 1px solid rgba(7, 93, 168, 0.16);
+  border-radius: 9999px;
+  background: #ffffff;
+  color: #071a34;
+  box-shadow: 0 10px 25px -3px rgba(7, 26, 52, 0.12),
+              0 4px 10px -2px rgba(7, 26, 52, 0.06),
+              0 0 0 1px rgba(255, 255, 255, 0.95) inset;
   cursor: pointer;
   font: inherit;
   text-align: left;
-  transition: transform 180ms ease, background-color 180ms ease, box-shadow 180ms ease;
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 200ms ease;
+  user-select: none;
+  overflow: visible;
+  position: relative;
 }
 
 .judge-tour-pill-btn:hover {
-  background: #0b3158;
-  transform: translateY(-2px);
-  box-shadow: 0 16px 34px rgba(7, 26, 52, 0.3);
+  background: #ffffff;
+  border-color: rgba(7, 93, 168, 0.36);
+  transform: translateY(-3px) scale(1.015);
+  box-shadow: 0 18px 38px -4px rgba(7, 26, 52, 0.18),
+              0 8px 16px -2px rgba(7, 26, 52, 0.08),
+              0 0 0 1px rgba(8, 116, 202, 0.15);
+}
+
+.judge-tour-pill-btn:hover .judge-tour-pill__avatar {
+  transform: scale(1.05);
+  box-shadow: 0 6px 16px rgba(7, 26, 52, 0.22);
+}
+
+.judge-tour-pill-btn:active {
+  transform: translateY(-1px) scale(0.99);
+  box-shadow: 0 6px 16px -2px rgba(7, 26, 52, 0.14);
 }
 
 .judge-tour-pill-btn:focus-visible,
 .judge-tour-card button:focus-visible,
 .judge-onboarding-hero-card button:focus-visible {
-  outline: 3px solid #38bdf8;
+  outline: 3px solid #0874ca;
   outline-offset: 3px;
 }
 
@@ -51,27 +70,46 @@
 }
 
 .judge-tour-pill__avatar {
-  width: 34px;
-  height: 34px;
+  width: 54px;
+  height: 54px;
   overflow: hidden;
-  flex: 0 0 34px;
-  border: 1px solid rgba(255, 255, 255, 0.45);
+  flex: 0 0 54px;
+  margin: -4px 0 -4px -6px;
+  border: 2.5px solid #ffffff;
   border-radius: 50%;
-  background: #dff5ff;
+  background: linear-gradient(180deg, #dff5ff 0%, #bae6fd 100%);
+  box-shadow: 0 4px 12px rgba(7, 26, 52, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  z-index: 2;
+  transition: transform 220ms cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .judge-tour-pill__avatar img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
-  object-position: center 18%;
-  transform: scale(1.18);
+  object-fit: contain;
+  object-position: center bottom;
+  transform: scale(1.08) translateY(2px);
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.12));
 }
 
-.judge-tour-pill__label { display: flex; flex-direction: column; line-height: 1.15; }
-.judge-tour-pill__label strong { color: #fff; font-size: 0.9rem; }
-.judge-tour-pill__label small { color: #bae6fd; font-size: 0.72rem; }
-.judge-tour-pill__sparkle { color: #62d4ff; }
+.judge-tour-pill__label {
+  display: flex;
+  align-items: center;
+  line-height: 1;
+}
+
+.judge-tour-pill__label strong {
+  color: #071a34;
+  font-size: 0.93rem;
+  font-weight: 750;
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+}
 
 .judge-onboarding-hero-card {
   position: relative;
@@ -178,8 +216,22 @@
 
 .judge-onboarding-close-btn:hover { background: rgba(255,255,255,.1); color: #fff; }
 
-.judge-tour-root { position: fixed; z-index: 2147483000; inset: 0; pointer-events: auto; }
-.judge-tour-root--exploring { pointer-events: none; }
+.judge-tour-root {
+  position: fixed;
+  z-index: 2147483000;
+  inset: 0;
+  opacity: 1;
+  pointer-events: auto;
+  transition: opacity 360ms cubic-bezier(.22, 1, .36, 1);
+  will-change: opacity;
+}
+
+.judge-tour-root--exploring {
+  opacity: 0;
+  pointer-events: none;
+  transition-duration: 280ms;
+  transition-timing-function: cubic-bezier(.4, 0, 1, 1);
+}
 
 .judge-tour-scrim {
   position: fixed;
@@ -187,8 +239,6 @@
   inset: 0;
   background: rgba(7, 26, 52, 0.22);
   pointer-events: none;
-  opacity: 1;
-  transition: opacity 240ms ease-out;
 }
 
 .judge-tour-spotlight {
@@ -196,13 +246,9 @@
   z-index: 1;
   border: 3px solid #38bdf8;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.09);
-  box-shadow: 0 10px 34px rgba(7, 26, 52, 0.2), 0 0 0 5px rgba(56, 189, 248, 0.14), inset 0 0 0 1px rgba(255,255,255,.82);
-  -webkit-backdrop-filter: brightness(1.28) saturate(1.08);
-  backdrop-filter: brightness(1.28) saturate(1.08);
-  opacity: 1;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0 8px 28px rgba(7, 26, 52, 0.2), inset 0 0 0 1px rgba(255,255,255,.7);
   pointer-events: none;
-  transition: top 260ms cubic-bezier(.22, 1, .36, 1), left 260ms cubic-bezier(.22, 1, .36, 1), width 260ms cubic-bezier(.22, 1, .36, 1), height 260ms cubic-bezier(.22, 1, .36, 1), opacity 220ms ease-out;
 }
 
 .judge-tour-card {
@@ -215,19 +261,6 @@
   width: min(560px, calc(100vw - 40px));
   pointer-events: auto;
   animation: raahiCardEnter 220ms ease-out;
-  opacity: 1;
-  transition: opacity 220ms ease-out, transform 260ms cubic-bezier(.22, 1, .36, 1);
-}
-
-.judge-tour-root--exploring .judge-tour-scrim,
-.judge-tour-root--exploring .judge-tour-spotlight,
-.judge-tour-root--exploring .judge-tour-card {
-  opacity: 0;
-}
-
-.judge-tour-root--exploring .judge-tour-card {
-  transform: translateY(10px);
-  pointer-events: none;
 }
 
 .judge-tour-card--dock-left { left: 24px; }
@@ -330,7 +363,9 @@
 
 @media (max-width: 767px) {
   .judge-tour-floating-dock { right: 12px; bottom: max(12px, env(safe-area-inset-bottom)); }
-  .judge-tour-pill__label small, .judge-tour-pill__sparkle { display: none; }
+  .judge-tour-pill-btn { min-height: 42px; padding: 0 14px 0 0; gap: 9px; }
+  .judge-tour-pill__avatar { width: 48px; height: 48px; flex: 0 0 48px; margin: -3px 0 -3px -5px; }
+  .judge-tour-pill__label strong { font-size: 0.86rem; }
 
   .judge-onboarding-hero-card { grid-template-columns: 96px minmax(0, 1fr); gap: 12px; min-height: 0; padding: 18px 48px 18px 14px; }
   .judge-onboarding-hero-card__character { width: 96px; height: 140px; }
@@ -390,6 +425,7 @@
 @media (prefers-reduced-motion: reduce) {
   .judge-tour-btn__spinner { animation-duration: 1.6s; }
   .judge-tour-pill-btn,
+  .judge-tour-root,
   .judge-tour-card,
   .judge-tour-card__speech,
   .judge-tour-spotlight,

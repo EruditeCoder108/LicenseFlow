@@ -8,6 +8,18 @@ export const STORAGE_KEY_STEP = 'mp-portal-judge-tour-step'
 export const STORAGE_KEY_DISMISSED = 'mp-portal-judge-tour-dismissed'
 const FORM_SHOWCASE_PREFIX = 'application-showcase-'
 
+function routeMatchesPattern(pattern: string, pathname: string): boolean {
+  const expression = pattern
+    .split('/')
+    .map((segment) => segment.startsWith(':') ? '[^/]+' : segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('/')
+  return new RegExp(`^${expression}$`).test(pathname)
+}
+
+function resolveTourRoute(pattern: string, applicationId?: string): string {
+  return pattern.replace(':id', applicationId ?? 'MP-LL-DEMO-2408')
+}
+
 function readStorageBool(key: string, defaultVal: boolean): boolean {
   try {
     const val = localStorage.getItem(key)
@@ -45,7 +57,7 @@ function removeStorage(key: string): void {
   }
 }
 
-export function useJudgeTour(pathname: string, _activeApplicationId?: string) {
+export function useJudgeTour(pathname: string, activeApplicationId?: string) {
   const [isActive, setIsActive] = useState<boolean>(() => readStorageBool(STORAGE_KEY_ACTIVE, false))
   const [stepIndex, setStepIndex] = useState<number>(() => {
     const step = readStorageNumber(STORAGE_KEY_STEP, 0)
@@ -69,12 +81,8 @@ export function useJudgeTour(pathname: string, _activeApplicationId?: string) {
   }, [isActive])
 
   useEffect(() => {
-    if (isActive) {
-      saveStorage(STORAGE_KEY_STEP, String(stepIndex))
-    } else {
-      removeStorage(STORAGE_KEY_STEP)
-    }
-  }, [isActive, stepIndex])
+    saveStorage(STORAGE_KEY_STEP, String(stepIndex))
+  }, [stepIndex])
 
   useEffect(() => {
     if (isDismissed) {
@@ -132,17 +140,25 @@ export function useJudgeTour(pathname: string, _activeApplicationId?: string) {
 
   // Yield the screen whenever the evaluator chooses to explore independently.
   // Wheel, touch, keyboard scrolling and scrollbar drags all restart the same
-  // three-second quiet timer. The guide state itself is preserved.
+  // short quiet timer. The guide state itself is preserved.
   useEffect(() => {
     if (!isActive) return
 
-    const pauseForExploration = () => {
-      setIsUserExploring(true)
+    const scheduleResume = (delay = 480) => {
       if (explorationTimerRef.current !== null) window.clearTimeout(explorationTimerRef.current)
       explorationTimerRef.current = window.setTimeout(() => {
         explorationTimerRef.current = null
         setIsUserExploring(false)
-      }, 3000)
+      }, delay)
+    }
+
+    const pauseForExploration = () => {
+      setIsUserExploring(true)
+      scheduleResume(520)
+    }
+
+    const resumeAfterScroll = () => {
+      scheduleResume(480)
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -161,12 +177,14 @@ export function useJudgeTour(pathname: string, _activeApplicationId?: string) {
     window.addEventListener('wheel', pauseForExploration, { passive: true })
     window.addEventListener('touchmove', pauseForExploration, { passive: true })
     window.addEventListener('pointerdown', handlePointerDown, { passive: true })
+    window.addEventListener('scrollend', resumeAfterScroll, { passive: true })
     document.addEventListener('keydown', handleKeyDown)
 
     return () => {
       window.removeEventListener('wheel', pauseForExploration)
       window.removeEventListener('touchmove', pauseForExploration)
       window.removeEventListener('pointerdown', handlePointerDown)
+      window.removeEventListener('scrollend', resumeAfterScroll)
       document.removeEventListener('keydown', handleKeyDown)
       if (explorationTimerRef.current !== null) {
         window.clearTimeout(explorationTimerRef.current)
@@ -186,8 +204,12 @@ export function useJudgeTour(pathname: string, _activeApplicationId?: string) {
     const element = document.querySelector<HTMLElement>(currentStep.targetSelector)
     if (element) {
       const rect = element.getBoundingClientRect()
-      // Only treat as found if element is visible on page
-      if (rect.width > 0 && rect.height > 0) {
+      const intersectsViewport = rect.bottom > 0
+        && rect.top < window.innerHeight
+        && rect.right > 0
+        && rect.left < window.innerWidth
+      // Do not draw a misleading box when its target has been scrolled away.
+      if (rect.width > 0 && rect.height > 0 && intersectsViewport) {
         setTargetRect({
           top: rect.top,
           left: rect.left,
@@ -318,10 +340,23 @@ export function useJudgeTour(pathname: string, _activeApplicationId?: string) {
     setIsUserExploring(false)
     setIsFormShowcasePlaying(false)
     setIsActive(true)
-    setStepIndex(0)
     setIsDismissed(false)
-    navigatePortal('/')
-  }, [])
+
+    if (stepIndex === 0) {
+      if (pathname !== '/') navigatePortal('/')
+      return
+    }
+
+    if (routeMatchesPattern(currentStep.routePattern, pathname)) return
+
+    const matchingIndex = JUDGE_TOUR_STEPS.findIndex((step) => routeMatchesPattern(step.routePattern, pathname))
+    if (matchingIndex >= 0) {
+      setStepIndex(matchingIndex)
+      return
+    }
+
+    navigatePortal(resolveTourRoute(currentStep.routePattern, activeApplicationId))
+  }, [activeApplicationId, currentStep.routePattern, pathname, stepIndex])
 
   const nextStep = useCallback(() => {
     if (stepIndex < JUDGE_TOUR_STEPS.length - 1) {
@@ -341,6 +376,7 @@ export function useJudgeTour(pathname: string, _activeApplicationId?: string) {
     if (currentStep.action === 'finish') {
       setIsActive(false)
       setIsDismissed(true)
+      setStepIndex(0)
       return
     }
 
@@ -412,12 +448,15 @@ export function useJudgeTour(pathname: string, _activeApplicationId?: string) {
     return pathname === '/' && !isActive && !isDismissed
   }, [pathname, isActive, isDismissed])
 
+  const isResumable = !isActive && stepIndex > 0
+
   return {
     isActive,
     stepIndex,
     isDismissed,
     isFormShowcasePlaying,
     isUserExploring,
+    isResumable,
     currentStep,
     totalSteps: JUDGE_TOUR_STEPS.length,
     targetRect,

@@ -58,6 +58,7 @@ describe('JudgeTour UI Components Rendering', () => {
     isDismissed: false,
     isFormShowcasePlaying: false,
     isUserExploring: false,
+    isResumable: false,
     currentStep: JUDGE_TOUR_STEPS[0] as typeof JUDGE_TOUR_STEPS[number],
     totalSteps: JUDGE_TOUR_STEPS.length,
     targetRect: { top: 100, left: 100, width: 200, height: 50, bottom: 150, right: 300 },
@@ -95,7 +96,6 @@ describe('JudgeTour UI Components Rendering', () => {
       <JudgeTourFloatingPill tour={mockTour} language="en" />
     )
     expect(html).toContain('Full Judge Walkthrough')
-    expect(html).toContain('Every screen · 2–3 min')
     expect(html).toContain('/assets/raahi/raahi-confident.webp')
   })
 

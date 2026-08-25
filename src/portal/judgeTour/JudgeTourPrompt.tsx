@@ -9,7 +9,7 @@ interface JudgeTourPromptProps {
 }
 
 export function JudgeTourFloatingPill({ tour, language }: JudgeTourPromptProps) {
-  const { shouldShowReplayPill, replayTour } = tour
+  const { shouldShowReplayPill, replayTour, isResumable } = tour
 
   if (!shouldShowReplayPill) return null
 
@@ -19,23 +19,25 @@ export function JudgeTourFloatingPill({ tour, language }: JudgeTourPromptProps) 
         type="button"
         className="judge-tour-pill-btn"
         onClick={replayTour}
-        aria-label={language === 'en' ? 'Start the full Judge Walkthrough with Raahi' : 'राही के साथ पूर्ण जज वॉकथ्रू शुरू करें'}
+        aria-label={language === 'en'
+          ? isResumable ? 'Resume the Judge Walkthrough with Raahi' : 'Start the full Judge Walkthrough with Raahi'
+          : isResumable ? 'राही के साथ जज वॉकथ्रू जारी रखें' : 'राही के साथ पूर्ण जज वॉकथ्रू शुरू करें'}
       >
         <span className="judge-tour-pill__avatar" aria-hidden="true">
           <img
             src={RAAHI_ASSETS.confident.src}
             alt=""
-            width={28}
-            height={28}
+            width={48}
+            height={48}
             loading="lazy"
             decoding="async"
           />
         </span>
         <span className="judge-tour-pill__label">
-          <strong>{language === 'en' ? 'Full Judge Walkthrough' : 'पूर्ण जज वॉकथ्रू'}</strong>
-          <small>{language === 'en' ? 'Every screen · 2–3 min' : 'हर स्क्रीन · 2–3 मिनट'}</small>
+          <strong>{language === 'en'
+            ? isResumable ? 'Resume Judge Walkthrough' : 'Full Judge Walkthrough'
+            : isResumable ? 'जज वॉकथ्रू जारी रखें' : 'पूर्ण जज वॉकथ्रू'}</strong>
         </span>
-        <Sparkles size={14} className="judge-tour-pill__sparkle" aria-hidden="true" />
       </button>
     </aside>
   )
