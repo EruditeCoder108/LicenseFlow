@@ -20,6 +20,9 @@ describe('clearLicenceFlowDeviceData', () => {
     const localStorage = storage({
       'licenceflow-demo-session-v1': 'session',
       'mp-ll-application-draft-v1': 'draft',
+      'mp-ll-application-draft-v2:MP-LL-1234': 'current-draft',
+      'mp-ll-active-citizen-id': 'MP-LL-1234',
+      'mp-ll-citizen-application-v2': 'application',
       'mp-ll-demo-application-v1': 'application',
       'mp-ll-journey-progress-v1:demo-mp-ll': 'journey',
       'mp-ll-exam-session-v1:demo-mp-ll': 'exam',

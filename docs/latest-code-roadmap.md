@@ -1,8 +1,8 @@
 # LicenceFlow — latest code and future roadmap
 
-**Last updated:** 24 August 2026  
-**Status:** Current planning authority for new integrity, assessment and post-hackathon engineering work  
-**Immediate rule:** Preserve the uncommitted working tree and do not publish the current local build until the final video and complete journey pass QA.
+**Last updated:** 25 August 2026
+**Status:** Hackathon functional finish line implemented; mascot/onboarding artwork remains a separate later task
+**Immediate rule:** Stop broad feature work. Preserve the verified functional slice below, then do only UI polish, final QA and submission. Preserve unrelated working-tree files. The existing YouTube tutorial remains the interim learning video.
 
 This roadmap consolidates the latest repository state and the recent product decisions about exam integrity, retesting, question quality, Safe Exam Browser, AI-assisted cheating and production hardening. Older planning documents remain useful historical context, but future work in these areas should follow this file.
 
@@ -29,8 +29,10 @@ For the hackathon, backend, identity, payment and government integrations may re
 As of this update, the local working tree has been verified with:
 
 - TypeScript type-check passing;
-- 82 automated tests across 21 test files passing;
+- 90 deterministic tests across 23 test files passing;
+- six Playwright release checks passing across desktop and mobile Chrome profiles, with the two desktop-only recovery cases explicitly skipped on mobile to avoid redundant matrix work;
 - production Vite build passing;
+- zero known npm dependency vulnerabilities after the in-range Vite security update;
 - `git diff --check` passing apart from harmless Windows line-ending warnings.
 
 The current local build includes:
@@ -42,18 +44,20 @@ The current local build includes:
 - YouTube IFrame tutorial playback with sequential-watch enforcement, progress persistence, reload-safe API loading and hidden-tab pause;
 - an always-visible, clearly labelled judge shortcut for tutorial completion;
 - a judge-only review control that produces a passing preview through the normal scoring reducer;
-- 15 questions, 30 seconds per question, a prototype pass mark of 9 and no negative marking;
+- a 50-question reviewed text bank that generates balanced 15-question papers with 6 easy, 7 medium and 2 applied items, 30 seconds per question, a prototype pass mark of 9 and no negative marking;
+- deterministic paper seeds, retest family exclusion, an attempt number and a non-personal paper fingerprint;
+- an accessible read-question-aloud control that uses browser speech synthesis without sending question text to an external speech service;
+- one small deterministic monitoring-decision module reused by the existing camera pipeline;
 - interruption, result, receipt and visibly invalid demonstration-licence screens;
 - synthetic applicant photographs, signatures and documents in the application and generated demonstration records.
 
 ### Important current limitations
 
-- The test currently reads `fullQuestions` in its stored order. It does **not** yet generate a genuinely different balanced paper for every attempt.
 - Correct answers and questions still exist in the frontend bundle because there is no authoritative exam server.
 - Browser `localStorage` is recoverable prototype state, not trusted production evidence.
 - Browser monitoring can observe camera loss, face count, framing, page hiding, connection state and similar events. It cannot prevent a second phone, another monitor, screen recording, remote assistance or modification of client-side state.
-- The current tutorial uses an external YouTube source. The owner's final original video and its question-coverage audit are still pending.
-- The current public deployment intentionally remains unchanged.
+- The current tutorial uses an external YouTube source. It remains the approved hackathon tutorial unless the owner later supplies a replacement.
+- The current public deployment includes the locally hosted MediaPipe assets and the judge journey available at the time of deployment.
 
 ## 3. Work that is not being started now
 
@@ -72,32 +76,162 @@ The following ideas are approved directions, but they are **future work**, not i
 
 These items must not be described in the submission as already implemented.
 
-## 4. Immediate release path
+## 4. Hackathon finish line — then stop feature work
 
-The next release should stay narrow.
+The project will **not** implement this entire roadmap before submission. The numbered future sections are not a sequential checklist. In particular, “implement everything through 8.3” is not the release rule.
 
-### 4.1 Integrate the final learning video
+The release rule is: complete the small high-yield slice in this section, then move directly to visual polish, final QA and upload.
 
-- Inspect its format, dimensions, audio, duration and captions.
-- Connect it without unnecessary re-encoding.
+### 4.1 Status of the original eight-point plan
+
+| Original item | Hackathon decision | Status |
+|---|---|---|
+| 1. Remove misleading homepage information | Unsupported statistics, visitor counts, fictional notices and official partnership language were replaced with explicit prototype capabilities and release notes. | **Completed** |
+| 2. Fix accessibility problems | State/help dialogs now contain focus, close with Escape and restore focus; question narration and minimum-size controls are included. | **High-impact slice completed** |
+| 3. Add automatic browser journey tests | Playwright now covers the transparent homepage, dialog keyboard behavior, complete judge path, first real test question, reload recovery, reset, failed payment and interruption resume on desktop/mobile profiles. | **Completed** |
+| 4. Self-host MediaPipe assets | Keep the model and WASM files on the LicenceFlow Site as static assets. Do not build a new face detector. | **Completed** |
+| 5. Organize monitoring decisions | Existing coaching/pause thresholds were extracted into a pure tested decision function; the MediaPipe pipeline was not duplicated. | **Completed** |
+| 6. Measure mobile performance | The full judge route passes in the Pixel 5 browser profile and production chunks were measured. Physical low-end-camera inference still needs later device testing, so no speculative Web Worker rewrite was added. | **Hackathon measurement complete** |
+| 7. Integrate the learning video | Continue using the configured YouTube safe-driving tutorial for the hackathon. Verify its playback gates, but do not require every test question to appear in that particular video. | YouTube retained |
+| 8. Complete final QA | Automated release checks, unit tests, type-check, production build and dependency audit pass. Final human UI polish and deployed-site smoke check remain. | **Automated gate passed** |
+
+### 4.2 Small real-innovation slice
+
+To move the project beyond “a prettier government website,” implement only this coherent assessment slice:
+
+1. Expand the bank to **50 reviewed, text-only questions** for the hackathon: approximately **22 easy, 22 medium and 6 applied text scenarios**. Image and video questions remain future work.
+2. Give every question typed metadata: competency, difficulty and variant family.
+3. Generate a balanced 15-question paper from an attempt seed instead of always reading the stored order.
+4. Use the same difficulty blueprint on every attempt: **6 easy, 7 medium and 2 applied text scenarios**. The exact questions change; the intended difficulty does not.
+5. Make a retest use a new seed and avoid the previous attempt's question families while maintaining the same competency and difficulty quotas.
+6. Preserve the citizen's application, tutorial completion and mock payment entitlement, but start the retest with fresh answers.
+7. Expose a non-personal attempt ID and paper fingerprint in the demonstration audit view.
+
+The bank should be approachable rather than tricky. Most items should test common signs, ordinary road rules and sensible safety decisions. A prepared applicant should have a realistic path to the 60% threshold, while dangerous misconceptions still need to be caught. “Easy to understand” must not become “automatically pass everyone.”
+
+This is the strongest engineering story for the hackathon because judges can see a fair, different retest rather than merely hear a production-security promise.
+
+### 4.2.1 Read-question-aloud control
+
+Add a speaker button beside the question heading:
+
+- accessible name: **“Read question aloud”**;
+- speak the current question in the selected interface language using the browser's speech-synthesis capability;
+- change to **“Stop reading”** while active;
+- stop automatically when the candidate answers, changes question, pauses or leaves the examination;
+- never auto-play speech;
+- keep the control keyboard reachable with a visible focus state and at least a 44 × 44 px target;
+- fail gracefully when a suitable browser voice is unavailable;
+- do not send question text to an external speech service.
+
+The normal timer remains visible and consistent for everyone. Questions must therefore remain concise enough that the spoken prompt is usable within the current question time. Screen readers must still be able to read the question and every answer through ordinary semantic markup; the speaker button is an additional convenience, not a screen-reader substitute.
+
+### 4.3 Explicit production cut line
+
+The following are **not required before UI polish**:
+
+- Section 7.3's authoritative server, short-lived tokens, nonces and server evidence ledger;
+- replacing `localStorage` for the mocked hackathon flow;
+- Safe Exam Browser or a custom SafeLock application;
+- anti-spoofing, gaze tracking, face recognition or a new vision pipeline;
+- a full authoring CMS or hundreds of media questions;
+- a complete low-end-device and cross-browser certification matrix;
+- invisible AI prompt-injection text.
+
+Section 7.3 remains an honest production architecture note, not an implementation task. Section 8.3 is worth implementing only in its lightweight form as metadata produced naturally by the seeded paper generator. It is not a reason to delay the finish line.
+
+### 4.4 Thirty-second judge guide
+
+Add an optional, clearly labelled **“30-second judge tour”** rather than an unskippable citizen onboarding flow.
+
+Recommended interaction:
+
+1. A professional illustrated LicenceFlow guide named **Raahi** appears beside a short speech bubble.
+2. The page uses a dark translucent scrim and a precise spotlight around the current real control.
+3. The tour scrolls the highlighted control into view and asks the judge to activate it.
+4. It points to the existing quick-fill, attach-demo-files, tutorial-completion and passing-preview controls.
+5. It ends at the demonstration learner's licence and offers “Replay tour” or “Explore freely.”
+
+Guardrails:
+
+- keep **Skip tour**, Back and Close available at every step;
+- do not auto-click destructive or state-changing actions without the judge's input;
+- do not let the character obscure the highlighted control;
+- trap focus correctly while a tour card behaves like a dialog, then restore focus;
+- support keyboard activation, screen-reader labels and `prefers-reduced-motion`;
+- use 150–300 ms transform/opacity transitions and avoid scroll-jacking;
+- keep it explicitly in demo/judge mode so the ordinary citizen journey stays serious and uncluttered;
+- load the character image efficiently and provide meaningful alternative text.
+
+Raahi's visual direction:
+
+- a friendly, gender-neutral young Indian adult;
+- intelligent, observant expression with a slightly raised eyebrow;
+- modern navy public-service jacket with teal LicenceFlow accents, but no government insignia or imitation uniform;
+- clean editorial/2.5D illustration with a transparent background;
+- expressive pointing, thinking and small celebratory poses;
+- warm and memorable without becoming childish, hyper-cute or an “AI assistant” cliché.
+
+Dialogue direction:
+
+- one useful instruction and at most one dry joke per step;
+- short enough to understand in three seconds;
+- never joke about road deaths, disability, cheating or a citizen's mistakes;
+- clearly distinguish judge shortcuts from the real citizen rules.
+
+Example lines:
+
+- **Welcome:** “Namaste, I’m Raahi. You have 30 seconds; bureaucracy usually asks for more.”
+- **Start:** “We’re applying for a learner’s licence, not hunting for buried paperwork. Start here.”
+- **Quick fill:** “Judges should judge, not type twelve addresses. Let’s borrow some synthetic details.”
+- **Documents:** “Three demo documents. Zero real identities. Attach them in one click.”
+- **Readiness:** “We check the device before we blame the applicant. Camera, microphone and network first.”
+- **Tutorial shortcut:** “For this demonstration, we’ll respect your calendar. The citizen route still keeps its learning gate.”
+- **Assessment:** “The questions change. The difficulty doesn’t. Randomness is not an excuse for unfairness.”
+- **Result:** “Licence generated—synthetically, visibly, and with absolutely no authority to drive.”
+
+The character should be generated later as one cohesive raster character set matching this direction.
+
+### 4.4.1 End-of-tour reset
+
+The final tour card offers:
+
+- **Explore freely**;
+- **Replay tour**;
+- **Reset demo and return home**.
+
+Reset is intentionally user-triggered and requires confirmation:
+
+> This clears LicenceFlow's mock application, uploads, payment, tutorial, examination and tour progress from this browser. It does not affect any real government record.
+
+On confirmation, LicenceFlow must stop any active speech, clear only its own namespaced local/session storage, reset in-memory journey state, return to the homepage and show the “Take the 30-second tour” / “Explore myself” choice again. Do not call a blanket storage clear that might remove unrelated origin data.
+
+### 4.5 Tutorial and examination-content boundary
+
+- Keep the current YouTube tutorial.
 - Verify play, pause, rewind, reload recovery, forward-seek prevention, hidden-tab pause and completion unlocking.
-- Test desktop and real mobile playback.
-
-### 4.2 Audit learning coverage
-
-- Map every live examination question to the exact video chapter that teaches it.
-- Rewrite, replace or remove questions that the tutorial does not support.
+- Treat tutorial completion and the preliminary knowledge test as separate parts of the flow.
+- Do **not** require every question to be taught in or timestamp-mapped to this particular YouTube video.
+- Keep all questions inside the learner-licence knowledge domain: traffic signs and signals, rules of the road, accident duties, unmanned railway-crossing precautions, required driving documents, fuel-efficient driving where applicable and ordinary safe-driving judgment.
+- Use official sample-question material as a reference boundary, then rewrite questions clearly for the prototype rather than copying an entire official bank verbatim.
 - Keep time-sensitive rules and state-specific claims configurable and honestly labelled.
 
-### 4.3 Release-integrity and QA gate
+### 4.6 Functional-complete gate before UI polish
 
-- Remove or qualify unsupported homepage statistics, visitor counts, dated notices, official-looking achievements and unverified claims.
-- Complete keyboard, modal focus, screen-reader and Hindi checks.
-- Test the critical judge route and the ordinary complete route at mobile, tablet and desktop widths.
-- Verify tutorial and passing-result judge shortcuts without weakening the demonstrated citizen gates.
-- Test PDF downloads, refresh behavior, failed payment states, timeouts and interruption routes.
-- Run all tests, type-check and the production build.
-- Deploy only after the full journey passes.
+Feature work stops when all of the following are true:
+
+- homepage claims are honest and clearly marked as prototype content;
+- confirmed modal and keyboard accessibility defects are fixed;
+- the judge can complete the entire demonstration quickly through the existing prepared-application, tutorial and result shortcuts; the Raahi mascot tour is deliberately deferred;
+- a normal citizen can complete the route without judge controls changing the rules;
+- a second attempt visibly receives a different but balanced paper without another form or mock payment;
+- monitoring decisions are deterministic, factual and proportionate;
+- every active question stays within the defined learner-licence knowledge domain and has been reviewed for one unambiguous answer;
+- one browser-level golden path and the highest-risk recovery cases pass;
+- mobile performance shows no blocking lag;
+- tests, type-check, build, downloads and deployed-route checks pass.
+
+After this gate, allow only UI consistency, responsive refinement, copy tightening, accessibility polish, bug fixes and submission assets. Do not start another security architecture project.
 
 ## 5. Future Phase A — LicenceFlow Assessment Compiler
 
@@ -120,15 +254,15 @@ Every approved question should declare:
 
 ### 5.2 Balanced paper blueprint
 
-A 15-question prototype paper should initially target:
+A 15-question prototype paper should target:
 
-- 4 easy recognition/foundation questions;
+- 6 easy recognition/foundation questions;
 - 7 medium rule-application questions;
-- 4 applied real-world or hazard-perception scenarios.
+- 2 applied text-only road scenarios.
 
 The blueprint must cover required competencies rather than selecting randomly from the whole bank. Example areas include traffic signs, right of way, pedestrian/cyclist safety, junctions, overtaking, stopping distance, emergency vehicles, poor weather and hazard perception.
 
-The mix remains configurable until validated against the applicable official examination rules.
+The 50-question hackathon bank should contain enough questions in every bucket and competency to generate repeated attempts without weakening this mix. The mix remains configurable until validated against the applicable state examination implementation.
 
 ### 5.3 Fair, different retests
 
@@ -312,9 +446,10 @@ The concise product story is:
 ## 14. Reference boundaries
 
 - Central 2021 licensing amendment and tutorial/knowledge threshold context: [MoRTH Gazette notification](https://morth.nic.in/sites/default/files/notifications_document/GSR%20240%28E%29%20dated%2031st%20March%202021%20Committee%20A%20Licensing%20of%20drivers%2C%20Fitness%20and%20Registration%20of%20motor%20vehicles%20%20.pdf)
+- Preliminary-test knowledge domains under Rule 11: [Central Motor Vehicles Rules, Chapter II](https://morth.nic.in/sites/default/files/CMVR-chapter2.pdf)
+- Official sample-question reference: [Parivahan STALL question bank](https://parivahan.gov.in/parivahan/sites/default/files/DownloadForm/STALL_QB_ENGLISH_NEW.pdf)
 - Safe Exam Browser server integration and verification: [SEB integration documentation](https://safeexambrowser.org/developer/seb-integration.html)
 - SEB supported platforms: [SEB platform overview](https://safeexambrowser.org/about_overview_en.html)
 - Android managed-device kiosk requirements: [Android Lock Task documentation](https://developer.android.com/work/dpc/dedicated-devices/lock-task-mode)
 - iPhone/iPad single-app assistance: [Apple Guided Access documentation](https://support.apple.com/en-au/111795)
 - Why hidden instructions are prompt injection rather than a dependable exam lock: [OpenAI prompt-injection overview](https://openai.com/safety/prompt-injections/) and [OWASP prevention guidance](https://cheatsheetseries.owasp.org/cheatsheets/LLM_Prompt_Injection_Prevention_Cheat_Sheet.html)
-

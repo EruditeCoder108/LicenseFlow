@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { FaceLandmarker, NormalizedLandmark } from '@mediapipe/tasks-vision'
+import { decideMonitoringAction } from '../domain/monitoringDecision'
 
 const WASM_ROOT = '/assets/mediapipe/vision-wasm'
 const FACE_MODEL = '/assets/mediapipe/face_landmarker.task'
@@ -33,6 +34,7 @@ export interface DeviceReadinessSnapshot {
   secureContext: boolean
   coachingReason: MediaCoachingReason
   blockingReason: MediaBlockingReason
+  analysisLatencyMs: number | null
   error?: string
 }
 
@@ -56,6 +58,7 @@ const initialSnapshot: DeviceReadinessSnapshot = {
   secureContext: typeof window === 'undefined' ? true : window.isSecureContext,
   coachingReason: null,
   blockingReason: null,
+  analysisLatencyMs: null,
 }
 
 function testLocalStorage(): boolean {
@@ -335,7 +338,9 @@ export function useDeviceReadiness() {
       if (!video || !landmarker || !canvas || video.readyState < 2) return
 
       try {
-        const result = landmarker.detectForVideo(video, performance.now())
+        const analysisStartedAt = performance.now()
+        const result = landmarker.detectForVideo(video, analysisStartedAt)
+        const analysisLatencyMs = performance.now() - analysisStartedAt
         const faceCount = result.faceLandmarks.length
         const brightness = measureBrightness(video, canvas)
         const lighting: LightingStatus =
@@ -416,23 +421,12 @@ export function useDeviceReadiness() {
 
         const isHeadTurnPassed = currentTurnStep === 'passed'
 
-        const coachingReason: MediaCoachingReason =
-          multipleFaceSinceRef.current && now - multipleFaceSinceRef.current > 1000
-            ? 'multiple-faces'
-            : noFaceSinceRef.current && now - noFaceSinceRef.current > 1500
-              ? 'no-face'
-              : framingIssueSinceRef.current && now - framingIssueSinceRef.current > 2000
-                ? 'framing'
-                : lightingIssueSinceRef.current && now - lightingIssueSinceRef.current > 2500
-                  ? 'lighting'
-                  : null
-
-        const blockingReason: MediaBlockingReason =
-          multipleFaceSinceRef.current && now - multipleFaceSinceRef.current > 2500
-            ? 'multiple-faces'
-            : noFaceSinceRef.current && now - noFaceSinceRef.current > 4000
-              ? 'no-face'
-              : null
+        const { coachingReason, blockingReason } = decideMonitoringAction({
+          noFaceMs: noFaceSinceRef.current ? now - noFaceSinceRef.current : 0,
+          multipleFacesMs: multipleFaceSinceRef.current ? now - multipleFaceSinceRef.current : 0,
+          framingIssueMs: framingIssueSinceRef.current ? now - framingIssueSinceRef.current : 0,
+          lightingIssueMs: lightingIssueSinceRef.current ? now - lightingIssueSinceRef.current : 0,
+        })
 
         setSnapshot((current) => ({
           ...current,
@@ -447,6 +441,7 @@ export function useDeviceReadiness() {
           audioLevel: measureAudio(analyserRef.current, audioBufferRef.current),
           coachingReason,
           blockingReason,
+          analysisLatencyMs,
         }))
       } catch {
         setSnapshot((current) => ({

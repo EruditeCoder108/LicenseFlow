@@ -3,10 +3,10 @@ import { fullQuestions } from './questions'
 import { LL_TEST_CONFIG } from './testConfig'
 
 describe('prototype LL question configuration', () => {
-  it('keeps the configured question count and pass mark internally consistent', () => {
-    expect(fullQuestions).toHaveLength(LL_TEST_CONFIG.questionCount)
+  it('keeps a 50-question bank and a valid 15-question pass mark', () => {
+    expect(fullQuestions).toHaveLength(50)
     expect(LL_TEST_CONFIG.passMark).toBeGreaterThan(0)
-    expect(LL_TEST_CONFIG.passMark).toBeLessThanOrEqual(fullQuestions.length)
+    expect(LL_TEST_CONFIG.passMark).toBeLessThanOrEqual(LL_TEST_CONFIG.questionCount)
   })
 
   it('uses unique questions with valid answer indices and explanations', () => {
@@ -16,6 +16,14 @@ describe('prototype LL question configuration', () => {
       expect(question.correct).toBeGreaterThanOrEqual(0)
       expect(question.correct).toBeLessThan(question.options.length)
       expect(question.explanation.trim().length).toBeGreaterThan(10)
+      expect(['easy', 'medium', 'applied']).toContain(question.difficulty)
+      expect(question.family.trim().length).toBeGreaterThan(3)
     }
+  })
+
+  it('contains the reviewed difficulty inventory', () => {
+    expect(fullQuestions.filter((question) => question.difficulty === 'easy')).toHaveLength(22)
+    expect(fullQuestions.filter((question) => question.difficulty === 'medium')).toHaveLength(22)
+    expect(fullQuestions.filter((question) => question.difficulty === 'applied')).toHaveLength(6)
   })
 })

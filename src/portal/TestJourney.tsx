@@ -2,9 +2,10 @@ import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 're
 import {
   ArrowLeft, ArrowRight, BookOpenCheck, Camera, Check, CheckCircle2, CircleHelp, Clock3,
   ClipboardCheck, Download, Eraser, FastForward, FileCheck2, FileText, Flag, Info, LockKeyhole, Network, Printer,
-  RefreshCcw, RotateCcw, ShieldCheck, Signal, TriangleAlert, UserRound, WifiOff,
+  RefreshCcw, RotateCcw, ShieldCheck, Signal, TriangleAlert, UserRound, Volume2, VolumeX, WifiOff,
 } from 'lucide-react'
-import { fullQuestions, type Question } from '../content/questions'
+import type { Question } from '../content/questions'
+import { paperFingerprint, resolveQuestionPaper } from '../content/questionPaper'
 import { LL_TEST_CONFIG, OFFICIAL_QUESTION_BANK, ROAD_SAFETY_VIDEO } from '../content/testConfig'
 import { journeyReducer, type InterruptionKind, type JourneyEvent, type JourneyState } from '../domain/journey'
 import { useDeviceReadiness } from '../hooks/useDeviceReadiness'
@@ -588,15 +589,19 @@ export function TestPage({ applicationId, onStageChange, language }: { applicati
   const progress = loadJourneyProgress(applicationId)
   const [state, setState] = useState(() => loadExamSession(applicationId, progress))
   const [selected, setSelected] = useState<number | null>(null)
+  const [speaking, setSpeaking] = useState(false)
   const media = useDeviceReadiness()
   const guided = progress.readiness.mode === 'guided-signals'
-  const question = fullQuestions[state.exam.currentQuestion]
+  const paper = resolveQuestionPaper(state.exam.paperQuestionIds)
+  const question = paper[state.exam.currentQuestion]
   const [secondsLeft, setSecondsLeft] = useState<number>(LL_TEST_CONFIG.secondsPerQuestion)
   const timeoutHandledQuestion = useRef(-1)
 
   const submitAnswer = (answer: number) => {
     if (!question) return
-    const next = journeyReducer(state, { type: 'ANSWER', answer, correct: answer === question.correct, isLast: state.exam.currentQuestion === fullQuestions.length - 1, passThreshold: LL_TEST_CONFIG.passMark, triggerDemoInterruption: state.exam.currentQuestion === LL_TEST_CONFIG.interruptionAfterQuestion - 1 })
+    window.speechSynthesis?.cancel()
+    setSpeaking(false)
+    const next = journeyReducer(state, { type: 'ANSWER', answer, correct: answer === question.correct, isLast: state.exam.currentQuestion === paper.length - 1, passThreshold: LL_TEST_CONFIG.passMark, triggerDemoInterruption: state.exam.currentQuestion === LL_TEST_CONFIG.interruptionAfterQuestion - 1 })
     saveExamSession(applicationId, next); setState(next); setSelected(null)
     if (next.stage === 'interruption') navigatePortal(`/mp/application/${applicationId}/test-interruption`)
     if (next.stage === 'result') { onStageChange(local(language, 'View result and receipt', 'परिणाम और रसीद देखें')); navigatePortal(`/mp/application/${applicationId}/result`) }
@@ -641,6 +646,7 @@ export function TestPage({ applicationId, onStageChange, language }: { applicati
     const next = journeyReducer(state, { type: 'PAUSE_EXAM', kind, detail, synthetic: false })
     saveExamSession(applicationId, next); setState(next); navigatePortal(`/mp/application/${applicationId}/test-interruption`)
   }, [applicationId, guided, media.snapshot.blockingReason, media.snapshot.online, state])
+  useEffect(() => () => window.speechSynthesis?.cancel(), [])
   if (state.stage !== 'exam' || !question) return <Guard applicationId={applicationId} language={language} title={local(language, 'Open the saved test stage', 'सहेजा परीक्षा चरण खोलें')} body={local(language, 'This route follows the persisted exam state.', 'यह पेज सहेजी हुई परीक्षा स्थिति का अनुसरण करता है।')} route={routeForSession(applicationId, state)} action={local(language, 'Continue saved session', 'सहेजा सत्र जारी रखें')} />
 
   const mediaReady = guided
@@ -670,6 +676,24 @@ export function TestPage({ applicationId, onStageChange, language }: { applicati
   }
   const answers = questionOptions(question, language)
   const savedCount = Object.keys(state.exam.answers).length
+  const speechAvailable = typeof window !== 'undefined' && 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window
+  const toggleQuestionSpeech = () => {
+    if (!speechAvailable) return
+    if (speaking) {
+      window.speechSynthesis.cancel()
+      setSpeaking(false)
+      return
+    }
+    window.speechSynthesis.cancel()
+    const spokenOptions = answers.map((option, index) => `${String.fromCharCode(65 + index)}. ${option}`).join('. ')
+    const utterance = new SpeechSynthesisUtterance(`${questionPrompt(question, language)}. ${spokenOptions}`)
+    utterance.lang = language === 'hi' && question.promptHi ? 'hi-IN' : 'en-IN'
+    utterance.rate = 0.92
+    utterance.onend = () => setSpeaking(false)
+    utterance.onerror = () => setSpeaking(false)
+    setSpeaking(true)
+    window.speechSynthesis.speak(utterance)
+  }
 
   return (
     <>
@@ -683,8 +707,12 @@ export function TestPage({ applicationId, onStageChange, language }: { applicati
         <div className="test-question-area">
           <div className="test-question-heading">
             <div>
-              <p className="eyebrow">{local(language, `Question ${state.exam.currentQuestion + 1} of ${fullQuestions.length}`, `प्रश्न ${state.exam.currentQuestion + 1} / ${fullQuestions.length}`)}</p>
+              <p className="eyebrow">{local(language, `Question ${state.exam.currentQuestion + 1} of ${paper.length}`, `प्रश्न ${state.exam.currentQuestion + 1} / ${paper.length}`)}</p>
               <h1 tabIndex={-1}>{questionPrompt(question, language)}</h1>
+              <button className="question-speech-button" type="button" onClick={toggleQuestionSpeech} disabled={!speechAvailable} aria-pressed={speaking}>
+                {speaking ? <VolumeX size={18} aria-hidden="true" /> : <Volume2 size={18} aria-hidden="true" />}
+                {speaking ? local(language, 'Stop reading', 'पढ़ना बंद करें') : local(language, 'Read question aloud', 'प्रश्न सुनें')}
+              </button>
             </div>
             <div className="test-question-timing"><span className={secondsLeft <= 10 ? 'test-timer test-timer--urgent' : 'test-timer'}><Clock3 size={16} />{secondsLeft}s</span><span>{local(language, `${savedCount} saved`, `${savedCount} सहेजे`)}</span></div>
           </div>
@@ -703,7 +731,7 @@ export function TestPage({ applicationId, onStageChange, language }: { applicati
             <span>{local(language, 'Your answer is saved when you click “Save answer and continue”.', '“उत्तर सहेजें और आगे बढ़ें” दबाने पर उत्तर सुरक्षित होगा।')}</span>
           </div>
           <button className="button button--primary" disabled={selected === null || !mediaReady} onClick={saveAnswer}>
-            {state.exam.currentQuestion === fullQuestions.length - 1 ? local(language, 'Save answer and finish', 'उत्तर सहेजें और पूरा करें') : local(language, 'Save answer and continue', 'उत्तर सहेजें और आगे बढ़ें')} <ArrowRight size={18} />
+            {state.exam.currentQuestion === paper.length - 1 ? local(language, 'Save answer and finish', 'उत्तर सहेजें और पूरा करें') : local(language, 'Save answer and continue', 'उत्तर सहेजें और आगे बढ़ें')} <ArrowRight size={18} />
           </button>
         </div>
         <aside className={`test-observation-panel ${coaching || needsCameraStart ? 'test-observation-panel--coach' : ''}`} aria-live="polite">
@@ -748,6 +776,7 @@ function translatedInterruptionDetail(detail: string, language: Language): strin
 export function InterruptionPage({ applicationId, onStageChange, language }: { applicationId: string; onStageChange: StageChange; language: Language }) {
   const progress = loadJourneyProgress(applicationId)
   const [state, setState] = useState(() => loadExamSession(applicationId, progress))
+  const paper = resolveQuestionPaper(state.exam.paperQuestionIds)
   if (state.stage !== 'interruption') return <Guard applicationId={applicationId} language={language} title={local(language, 'No active interruption', 'कोई सक्रिय बाधा नहीं')} body={local(language, 'Continue from the current saved test stage.', 'वर्तमान सहेजे परीक्षा चरण से जारी रखें।')} route={routeForSession(applicationId, state)} action={local(language, 'Continue saved session', 'सहेजा सत्र जारी रखें')} />
   const integrity = state.exam.interruptionKind === 'multiple-faces'
   const resume = () => {
@@ -779,7 +808,7 @@ export function InterruptionPage({ applicationId, onStageChange, language }: { a
           <div><span>{local(language, 'Latest answer', 'पिछला उत्तर')}</span><strong>{local(language, 'Saved in storage', 'मेमोरी में सुरक्षित')}</strong></div>
           <div><span>{local(language, 'Payment', 'भुगतान')}</span><strong>{local(language, '₹250 Confirmed', '₹२५० पुष्ट')}</strong></div>
           <div><span>{local(language, 'Test progress', 'प्रगति')}</span><strong>{local(language, '0 Answers lost', 'कोई उत्तर नष्ट नहीं')}</strong></div>
-          <div><span>{local(language, 'Resume checkpoint', 'यहाँ से जारी करें')}</span><strong>{local(language, `Question ${state.exam.currentQuestion + 1} of 15`, `प्रश्न ${state.exam.currentQuestion + 1} / १५`)}</strong></div>
+          <div><span>{local(language, 'Resume checkpoint', 'यहाँ से जारी करें')}</span><strong>{local(language, `Question ${state.exam.currentQuestion + 1} of ${paper.length}`, `प्रश्न ${state.exam.currentQuestion + 1} / ${paper.length}`)}</strong></div>
         </div>
         <div className="interruption-card__principles">
           <ShieldCheck size={19} />
@@ -842,6 +871,8 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
   const [documentStatus, setDocumentStatus] = useState<'idle' | 'licence' | 'receipt' | 'licence-ready' | 'receipt-ready' | 'error'>('idle')
   if (state.stage !== 'result') return <Guard applicationId={applicationId} language={language} title={local(language, 'Result not available yet', 'परिणाम अभी उपलब्ध नहीं')} body={local(language, 'Complete the saved synthetic test before opening its outcome.', 'परिणाम खोलने से पहले सहेजी सिंथेटिक परीक्षा पूरी करें।')} route={routeForSession(applicationId, state)} action={local(language, 'Continue saved session', 'सहेजा सत्र जारी रखें')} />
   const passed = state.exam.knowledgeResult === 'passed'
+  const paper = resolveQuestionPaper(state.exam.paperQuestionIds)
+  const fingerprint = paperFingerprint(state.exam.paperQuestionIds)
   const eligible = isDemonstrationLicenceEligible({
     paymentConfirmed: isPaymentConfirmed(progress.payment),
     tutorialCompleted: progress.tutorial.status === 'completed',
@@ -865,7 +896,7 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
   const receiptData: JourneyReceiptData = {
     ...licenceData,
     correctAnswers: state.exam.correctAnswers,
-    totalQuestions: fullQuestions.length,
+    totalQuestions: paper.length,
     interruptionRecovered: state.exam.interruptionSeen,
     integrityStatus: state.exam.integrityStatus,
     events: state.events.map((event) => {
@@ -902,7 +933,7 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
   }
   const clearDevice = () => { clearLicenceFlowDeviceData(); window.location.assign('/') }
   const busy = documentStatus === 'licence' || documentStatus === 'receipt'
-  const reviewItems = fullQuestions.map((question, index) => ({ question, index, answer: state.exam.answers[index] ?? -1 })).filter(({ question, answer }) => answer !== question.correct)
+  const reviewItems = paper.map((question, index) => ({ question, index, answer: state.exam.answers[index] ?? -1 })).filter(({ question, answer }) => answer !== question.correct)
   return (
     <>
       <Breadcrumbs applicationId={applicationId} current={local(language, 'Test result', 'परीक्षा परिणाम')} language={language} />
@@ -911,7 +942,7 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
         <div>
           <p className="eyebrow">{passed ? local(language, 'Application complete', 'आवेदन पूरा हुआ') : local(language, 'Demo test result', 'डेमो टेस्ट परिणाम')}</p>
           <h1 tabIndex={-1}>{passed ? local(language, 'Congratulations! You passed the demo test', 'बधाई हो! आपने डेमो टेस्ट पास कर लिया') : local(language, 'You did not pass the demo test this time', 'इस बार आप डेमो टेस्ट पास नहीं कर सके')}</h1>
-          <p>{local(language, `${state.exam.correctAnswers} of ${fullQuestions.length} answers correct · prototype pass mark is ${LL_TEST_CONFIG.passMark}.`, `${fullQuestions.length} में से ${state.exam.correctAnswers} उत्तर सही · प्रोटोटाइप पास अंक ${LL_TEST_CONFIG.passMark} हैं।`)}</p>
+          <p>{local(language, `${state.exam.correctAnswers} of ${paper.length} answers correct · prototype pass mark is ${LL_TEST_CONFIG.passMark}.`, `${paper.length} में से ${state.exam.correctAnswers} उत्तर सही · प्रोटोटाइप पास अंक ${LL_TEST_CONFIG.passMark} हैं।`)}</p>
         </div>
       </section>
       <section className="outcome-grid">
@@ -940,6 +971,12 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
           </div>
         </article>
       </section>
+      <aside className="paper-audit-strip" aria-label={local(language, 'Assessment paper audit details', 'परीक्षा प्रश्नपत्र ऑडिट विवरण')}>
+        <ClipboardCheck size={20} aria-hidden="true" />
+        <div><small>{local(language, 'Attempt', 'प्रयास')}</small><strong>#{state.exam.attemptNumber}</strong></div>
+        <div><small>{local(language, 'Paper fingerprint', 'प्रश्नपत्र फिंगरप्रिंट')}</small><strong>{fingerprint}</strong></div>
+        <div><small>{local(language, 'Difficulty blueprint', 'कठिनाई संरचना')}</small><strong>{local(language, '6 easy · 7 medium · 2 applied', '६ आसान · ७ मध्यम · २ अनुप्रयोग')}</strong></div>
+      </aside>
       <section className="answer-review" id="answer-review" aria-labelledby="answer-review-title">
         <div className="section-heading">
           <div><p className="eyebrow">{local(language, 'Learning review', 'सीखने की समीक्षा')}</p><h2 id="answer-review-title">{reviewItems.length ? local(language, 'Review answers that need attention', 'जिन उत्तरों पर ध्यान देना है उनकी समीक्षा करें') : local(language, 'Every answer was correct', 'हर उत्तर सही था')}</h2></div>
@@ -1178,7 +1215,7 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
           <RotateCcw size={18} /> {local(language, 'Try demo test again', 'डेमो टेस्ट दोबारा दें')}
         </button>}
         <button className="text-button" onClick={() => setConfirmClear(true)}>
-          <Eraser size={17} /> {local(language, 'Clear device data', 'डिवाइस डेटा हटाएँ')}
+          <Eraser size={17} /> {local(language, 'Reset demo and return home', 'डेमो रीसेट करें और होम पर जाएँ')}
         </button>
         <FlowLink className="text-button" href={`/mp/application/${applicationId}`}>
           {local(language, 'Application status', 'आवेदन स्थिति')}

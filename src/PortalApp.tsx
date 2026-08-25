@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState, type MouseEvent, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useMemo, useRef, useState, type MouseEvent, type ReactNode } from 'react'
 import {
   Accessibility,
   Activity,
@@ -89,6 +89,54 @@ export type HomeDestination = 'vehicle' | 'permit' | 'safety' | 'information'
 
 const copy = (language: Language, en: string, hi: string) => language === 'en' ? en : hi
 
+function useAccessibleDialog(onClose: () => void) {
+  const dialogRef = useRef<HTMLElement | null>(null)
+  const previousFocusRef = useRef<HTMLElement | null>(typeof document !== 'undefined' && document.activeElement instanceof HTMLElement ? document.activeElement : null)
+
+  useEffect(() => {
+    const dialog = dialogRef.current
+    const focusableSelector = 'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    const focusFirst = () => (dialog?.querySelector<HTMLElement>('[autofocus]') ?? dialog?.querySelector<HTMLElement>(focusableSelector) ?? dialog)?.focus()
+    const frame = window.requestAnimationFrame(focusFirst)
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault()
+        onClose()
+        return
+      }
+      if (event.key !== 'Tab' || !dialog) return
+      const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector)).filter((element) => !element.hasAttribute('disabled') && element.getClientRects().length > 0)
+      if (!focusable.length) {
+        event.preventDefault()
+        dialog.focus()
+        return
+      }
+      const first = focusable[0]!
+      const last = focusable.at(-1)!
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first.focus()
+      }
+    }
+
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      document.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = previousOverflow
+      previousFocusRef.current?.focus({ preventScroll: true })
+    }
+  }, [onClose])
+
+  return dialogRef
+}
+
 type DemoApplication = {
   version: 1
   id: string
@@ -146,9 +194,9 @@ function PortalMark({ language = 'en', national = false }: { language?: Language
         height={44}
       />
       <span className="portal-mark__text">
-        <span>{national ? copy(language, 'Ministry of Road Transport & Highways', 'सड़क परिवहन और राजमार्ग मंत्रालय') : copy(language, 'Madhya Pradesh Transport Department', 'मध्य प्रदेश परिवहन विभाग')}</span>
-        <strong>{national ? copy(language, 'Parivahan Sewa', 'परिवहन सेवा') : copy(language, 'Sarathi Citizen Services', 'सारथी नागरिक सेवाएँ')}</strong>
-        <small>{national ? copy(language, 'Government transport services', 'सरकारी परिवहन सेवाएँ') : copy(language, 'Driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ')}</small>
+        <span>{national ? copy(language, 'Independent public-service prototype', 'स्वतंत्र सार्वजनिक-सेवा प्रोटोटाइप') : copy(language, 'Madhya Pradesh journey simulation', 'मध्य प्रदेश यात्रा सिमुलेशन')}</span>
+        <strong>{national ? copy(language, 'LicenceFlow Transport Demo', 'LicenceFlow परिवहन डेमो') : copy(language, 'Learner’s Licence Services', 'लर्नर लाइसेंस सेवाएँ')}</strong>
+        <small>{national ? copy(language, 'Not a government website', 'सरकारी वेबसाइट नहीं') : copy(language, 'Synthetic data · prototype only', 'सिंथेटिक डेटा · केवल प्रोटोटाइप')}</small>
       </span>
     </div>
   )
@@ -179,7 +227,7 @@ function PortalHeader({ pathname, language, textScale, national, session, onLang
       <a className="skip-link" href="#main-content">{copy(language, 'Skip to main content', 'मुख्य सामग्री पर जाएँ')}</a>
       <div className="government-bar">
         <div className="portal-container government-bar__inner">
-          <span>{national ? 'भारत सरकार' : 'मध्य प्रदेश शासन'} <i aria-hidden="true" /> {national ? 'Government of India' : 'Government of Madhya Pradesh'}</span>
+          <span>{copy(language, 'Build What Moves India · Independent hackathon prototype', 'बिल्ड व्हॉट मूव्स इंडिया · स्वतंत्र हैकाथॉन प्रोटोटाइप')}</span>
           <div className="government-tools" aria-label={copy(language, 'Accessibility tools', 'सुलभता विकल्प')}>
             <button onClick={onTextScale} aria-label={textScale === 'normal' ? copy(language, 'Increase text size', 'अक्षर बड़े करें') : copy(language, 'Use standard text size', 'सामान्य अक्षर आकार रखें')}>
               <Accessibility size={16} aria-hidden="true" /> {textScale === 'normal' ? 'A+' : 'A'}
@@ -243,7 +291,7 @@ function Breadcrumbs({ items }: { items: Array<{ label: string; href?: string }>
   )
 }
 
-function NationalHomePage({ onUnavailable, onDrivingServices, language }: { onUnavailable: (destination: HomeDestination) => void; onDrivingServices: () => void; language: Language }) {
+function NationalHomePage({ onUnavailable, onDrivingServices, onPrototypeDetails, language }: { onUnavailable: (destination: HomeDestination) => void; onDrivingServices: () => void; onPrototypeDetails: () => void; language: Language }) {
   const [activeNoticeTab, setActiveNoticeTab] = useState<'notifications' | 'advisories' | 'media'>('notifications')
 
   const serviceCategoriesList = [
@@ -347,96 +395,96 @@ function NationalHomePage({ onUnavailable, onDrivingServices, language }: { onUn
 
   const pulseMetrics = [
     {
-      system: 'VAHAN 4.0 Live',
-      systemHi: 'वाहन 4.0 लाइव',
-      value: '34.8 Cr+',
-      label: 'Registered Vehicles across India',
-      labelHi: 'भारत भर में पंजीकृत वाहन',
+      system: 'Prototype scope',
+      systemHi: 'प्रोटोटाइप का दायरा',
+      value: '1 journey',
+      label: 'End-to-end Learner’s Licence demonstration',
+      labelHi: 'लर्नर लाइसेंस की पूरी डेमो यात्रा',
     },
     {
-      system: 'SARATHI 4.0 Live',
-      systemHi: 'सारथी 4.0 लाइव',
-      value: '19.2 Cr+',
-      label: 'Active Driving Licences Issued',
-      labelHi: 'सक्रिय ड्राइविंग लाइसेंस जारी',
+      system: 'Failure-safe test',
+      systemHi: 'सुरक्षित परीक्षा',
+      value: '15 questions',
+      label: 'Answers checkpointed before each next step',
+      labelHi: 'हर अगले चरण से पहले उत्तर सहेजे जाते हैं',
     },
     {
-      system: 'MP Direct-to-Citizen',
-      systemHi: 'म.प्र. डायरेक्ट-टू-सिटिजन',
-      value: '87.4%',
-      label: 'Faceless LL Contactless Adoption in MP',
-      labelHi: 'मध्य प्रदेश में संपर्कहीन एलएल दर',
+      system: 'Question bank',
+      systemHi: 'प्रश्न बैंक',
+      value: '50 reviewed',
+      label: 'Balanced seeded papers for fair retests',
+      labelHi: 'निष्पक्ष रीटेस्ट के लिए संतुलित प्रश्नपत्र',
     },
     {
-      system: 'Daily Volume',
-      systemHi: 'दैनिक डिजिटल लेन-देन',
-      value: '2.4 Lakh+',
-      label: 'Digital Applications & Tests Daily',
-      labelHi: 'प्रतिदिन डिजिटल कार्य और टेस्ट',
+      system: 'Privacy boundary',
+      systemHi: 'गोपनीयता सीमा',
+      value: 'On device',
+      label: 'Prototype state and camera signals stay in-browser',
+      labelHi: 'डेमो स्थिति और कैमरा संकेत ब्राउज़र में रहते हैं',
     },
   ]
 
   const noticeItems = {
     notifications: [
       {
-        tag: 'NEW',
-        date: '2026-08-20',
-        title: 'Madhya Pradesh Direct-to-Citizen LL Service live statewide',
-        titleHi: 'मध्य प्रदेश डायरेक्ट-टू-सिटिजन एलएल सेवा राज्यभर में लाइव',
-        desc: 'Citizens can apply, complete e-KYC and take the AI-monitored knowledge test from home without visiting an RTO office.',
-        descHi: 'नागरिक बिना आरटीओ कार्यालय जाए घर बैठे ई-केवाईसी और ऑनलाइन टेस्ट पूरा कर सकते हैं।',
+        tag: 'DEMO SCOPE',
+        date: '2026-08-25',
+        title: 'One complete prototype journey is available for review',
+        titleHi: 'समीक्षा के लिए एक पूरी प्रोटोटाइप यात्रा उपलब्ध है',
+        desc: 'The Madhya Pradesh Learner’s Licence flow is interactive; identity, payment, government records and licence issuance remain simulated.',
+        descHi: 'मध्य प्रदेश लर्नर लाइसेंस प्रवाह इंटरैक्टिव है; पहचान, भुगतान, सरकारी रिकॉर्ड और लाइसेंस जारी करना सिम्युलेटेड है।',
       },
       {
-        tag: 'ADVISORY',
-        date: '2026-08-14',
-        title: 'High Security Registration Plate (HSRP) verification mandate',
-        titleHi: 'उच्च सुरक्षा पंजीकरण प्लेट (HSRP) सत्यापन निर्देश',
-        desc: 'All commercial and private vehicle owners are advised to ensure HSRP compliance and laser code linkage on Vahan portal.',
-        descHi: 'सभी वाहन स्वामियों को वाहन पोर्टल पर एचएसआरपी लेजर कोड लिंकेज सुनिश्चित करने की सलाह दी जाती है।',
+        tag: 'RELIABILITY',
+        date: '2026-08-25',
+        title: 'Technical interruptions pause the demo without consuming the attempt',
+        titleHi: 'तकनीकी रुकावट पर डेमो प्रयास समाप्त नहीं होता',
+        desc: 'Saved answers, the synthetic payment state and the current question survive the demonstrated recovery checkpoint.',
+        descHi: 'डेमो रिकवरी चेकपॉइंट में सहेजे उत्तर, सिंथेटिक भुगतान और वर्तमान प्रश्न सुरक्षित रहते हैं।',
       },
       {
-        tag: 'UPDATE',
-        date: '2026-08-01',
-        title: 'Central Motor Vehicles Rules: Camera and mic standards for online exam',
-        titleHi: 'केंद्रीय मोटर वाहन नियम: ऑनलाइन परीक्षा हेतु कैमरा व माइक मानक',
-        desc: 'Browser-based proctoring compatibility checks now required prior to test initialization to ensure failure-safe test completion.',
-        descHi: 'परीक्षा निर्बाध रूप से पूरी करने के लिए परीक्षा शुरू करने से पहले सिस्टम जांच अनिवार्य है।',
+        tag: 'RELEASE NOTE',
+        date: '2026-08-25',
+        title: 'Face-detection model files are served with this prototype',
+        titleHi: 'चेहरा पहचान मॉडल फाइलें इसी प्रोटोटाइप से मिलती हैं',
+        desc: 'The tested MediaPipe model and WebAssembly assets no longer depend on a separate model CDN during the camera check.',
+        descHi: 'कैमरा जाँच के दौरान परीक्षण किया गया MediaPipe मॉडल और WebAssembly फाइलें अलग मॉडल CDN पर निर्भर नहीं हैं।',
       },
     ],
     advisories: [
       {
-        tag: 'ACHIEVEMENT',
-        date: '2026-07-28',
-        title: 'Madhya Pradesh Ranks #1 in Contactless Learner’s Licence Delivery',
-        titleHi: 'मध्य प्रदेश संपर्कहीन लर्नर लाइसेंस वितरण में देश में प्रथम',
-        desc: 'Over 99.1% of eligible applicants received digital licences within 24 hours of passing the online test in Q2 2026.',
-        descHi: '99.1% से अधिक पात्र आवेदकों को ऑनलाइन टेस्ट पास करने के 24 घंटे के भीतर डिजिटल लाइसेंस प्राप्त हुआ।',
+        tag: 'JUDGE REVIEW',
+        date: '2026-08-25',
+        title: 'Review shortcuts are always visible and explicitly labelled',
+        titleHi: 'समीक्षा शॉर्टकट हमेशा दिखते हैं और स्पष्ट रूप से लेबल किए गए हैं',
+        desc: 'Judges can bypass the temporary tutorial and preview a passing result without those actions being presented as citizen behaviour.',
+        descHi: 'जज अस्थायी ट्यूटोरियल छोड़कर पास परिणाम देख सकते हैं; ये विकल्प नागरिक प्रक्रिया के रूप में प्रस्तुत नहीं किए जाते।',
       },
       {
-        tag: 'SAFETY',
-        date: '2026-07-15',
-        title: 'National Road Safety Guidelines for Two-Wheeler Riders',
-        titleHi: 'दोपहिया चालकों के लिए राष्ट्रीय सड़क सुरक्षा दिशा-निर्देश',
-        desc: 'Mandatory ISI-certified helmet usage for rider and pillion passenger under Section 129 of Motor Vehicles Act.',
-        descHi: 'मोटर वाहन अधिनियम की धारा 129 के तहत चालक और पीछे बैठे यात्री दोनों के लिए आईएसआई हेलमेट अनिवार्य है।',
+        tag: 'PRIVACY',
+        date: '2026-08-25',
+        title: 'Camera signals are observations, not proof of identity or cheating',
+        titleHi: 'कैमरा संकेत पहचान या नकल का प्रमाण नहीं हैं',
+        desc: 'This prototype does not record video, perform face recognition or automatically fail an applicant from one camera event.',
+        descHi: 'यह प्रोटोटाइप वीडियो रिकॉर्ड, चेहरा पहचान या एक कैमरा घटना से आवेदक को स्वतः असफल नहीं करता।',
       },
     ],
     media: [
       {
-        tag: 'VIDEO GUIDE',
-        date: '2026-08-10',
-        title: 'How to Take the Online Learner’s Licence Test from Home (Step-by-Step Video)',
-        titleHi: 'घर से ऑनलाइन लर्नर लाइसेंस परीक्षा कैसे दें (वीडियो गाइड)',
-        desc: 'Complete walkthrough on lighting, camera positioning, face alignment, and answering traffic sign questions.',
-        descHi: 'प्रकाश, कैमरा स्थिति, चेहरा संरेखण और यातायात संकेतों के उत्तर देने का पूरा वीडियो गाइड।',
+        tag: 'TEMPORARY VIDEO',
+        date: '2026-08-25',
+        title: 'YouTube road-safety material is used for the current demo',
+        titleHi: 'वर्तमान डेमो में YouTube सड़क-सुरक्षा सामग्री उपयोग होती है',
+        desc: 'It demonstrates full-watch enforcement and resume behaviour. It is not claimed as an official LicenceFlow production course.',
+        descHi: 'यह पूरा देखने और फिर शुरू करने का व्यवहार दिखाता है। इसे आधिकारिक LicenceFlow पाठ्यक्रम नहीं कहा गया है।',
       },
       {
-        tag: 'DOCUMENT',
-        date: '2026-07-01',
-        title: 'Official Handbook of Traffic Signs, Road Markings & Driving Etiquette',
-        titleHi: 'यातायात संकेतों, सड़क चिह्नों और ड्राइविंग शिष्टाचार की आधिकारिक पुस्तिका',
-        desc: 'Download the comprehensive citizen reference guide prepared by Ministry of Road Transport and Highways.',
-        descHi: 'सड़क परिवहन और राजमार्ग मंत्रालय द्वारा तैयार व्यापक संदर्भ मार्गदर्शिका डाउनलोड करें।',
+        tag: 'REFERENCE',
+        date: '2026-08-25',
+        title: 'The prototype includes the Parivahan STALL sample question bank',
+        titleHi: 'प्रोटोटाइप में परिवहन STALL नमूना प्रश्न बैंक शामिल है',
+        desc: 'It is provided as a study reference; LicenceFlow’s 50 text questions are separately worded for this demonstration.',
+        descHi: 'यह अध्ययन संदर्भ है; LicenceFlow के 50 टेक्स्ट प्रश्न इस डेमो के लिए अलग शब्दों में हैं।',
       },
     ],
   }
@@ -449,21 +497,26 @@ function NationalHomePage({ onUnavailable, onDrivingServices, language }: { onUn
   ]
 
   const partnerBadges = [
-    { name: 'Digital India', role: 'Power To Empower' },
-    { name: 'GeM', role: 'Government e Marketplace' },
-    { name: 'india.gov.in', role: 'National Portal of India' },
-    { name: 'MeitY', role: 'Ministry of Electronics & IT' },
-    { name: 'MoRTH', role: 'Road Transport & Highways' },
-    { name: 'NIC', role: 'National Informatics Centre' },
+    { name: 'Parivahan / Sarathi', role: 'Service-flow reference' },
+    { name: 'MoRTH CMVR', role: 'Rule-domain reference' },
+    { name: 'WCAG', role: 'Accessibility guidance' },
+    { name: 'MediaPipe', role: 'On-device face signals' },
+    { name: 'Vite + React', role: 'Prototype application stack' },
+    { name: 'OpenAI Sites', role: 'Hackathon hosting' },
   ]
 
   return (
     <div className="national-home">
+      <aside className="home-prototype-banner" role="note">
+        <Info size={19} aria-hidden="true" />
+        <p><strong>{copy(language, 'Interactive prototype — not a government service.', 'इंटरैक्टिव प्रोटोटाइप — सरकारी सेवा नहीं।')}</strong> {copy(language, 'All applicants, records, payments and credentials shown here are synthetic.', 'यहाँ दिखाए गए सभी आवेदक, रिकॉर्ड, भुगतान और प्रमाण सिंथेटिक हैं।')}</p>
+        <button type="button" onClick={onPrototypeDetails}>{copy(language, 'See what is simulated', 'जानें क्या सिम्युलेटेड है')}</button>
+      </aside>
       <section className="national-hero" aria-labelledby="home-title">
         <img src="/assets/parivahan-transport-hero.webp" alt="Indian road transport connecting citizens, buses and commercial vehicles" fetchPriority="high" />
         <div className="national-hero__shade" aria-hidden="true" />
         <div className="national-hero__content">
-          <p className="eyebrow">{copy(language, 'Parivahan citizen services', 'परिवहन नागरिक सेवाएँ')}</p>
+          <p className="eyebrow">{copy(language, 'LicenceFlow public-service prototype', 'LicenceFlow सार्वजनिक-सेवा प्रोटोटाइप')}</p>
           <h1 id="home-title" tabIndex={-1}>{copy(language, 'Road transport services in one place', 'सड़क परिवहन सेवाएँ एक ही स्थान पर')}</h1>
           <p>{copy(language, 'Find licence, vehicle, permit and road-safety services with clear guidance at every step.', 'लाइसेंस, वाहन, परमिट और सड़क सुरक्षा सेवाएँ हर चरण पर स्पष्ट मार्गदर्शन के साथ पाएँ।')}</p>
           <div className="national-hero__actions">
@@ -473,8 +526,7 @@ function NationalHomePage({ onUnavailable, onDrivingServices, language }: { onUn
         </div>
       </section>
 
-      {/* National Pulse Live Infrastructure Statistics */}
-      <section className="national-pulse-strip" aria-label={copy(language, 'National Transport Infrastructure Statistics', 'राष्ट्रीय परिवहन सांख्यिकी')}>
+      <section className="national-pulse-strip" aria-label={copy(language, 'Prototype capability summary', 'प्रोटोटाइप क्षमता सारांश')}>
         {pulseMetrics.map((item, idx) => (
           <div className="national-pulse-item" key={idx}>
             <div className="national-pulse-indicator">
@@ -697,9 +749,8 @@ function NationalHomePage({ onUnavailable, onDrivingServices, language }: { onUn
         </article>
       </section>
 
-      {/* National Government Partner Strip */}
-      <section className="national-partner-strip" aria-label={copy(language, 'Government Portals and Partners', 'सरकारी पोर्टल एवं सहयोगी संस्थाएं')}>
-        <p className="partner-strip__heading">{copy(language, 'Official Government Portals & Initiatives', 'आधिकारिक सरकारी पोर्टल एवं डिजिटल पहल')}</p>
+      <section className="national-partner-strip" aria-label={copy(language, 'Design and technology references', 'डिज़ाइन और तकनीकी संदर्भ')}>
+        <p className="partner-strip__heading">{copy(language, 'References used — no partnership or endorsement implied', 'उपयोग किए गए संदर्भ — साझेदारी या समर्थन का दावा नहीं')}</p>
         <div className="partner-badge-grid">
           {partnerBadges.map((partner, idx) => (
             <div className="partner-badge-item" key={idx}>
@@ -1240,6 +1291,17 @@ function LLStartPage({ onCreate, language, demoApplication }: { onCreate: (kind:
         {demoApplication ? <>{existingApplicationCard}{newApplicationCard}</> : <>{newApplicationCard}{existingApplicationCard}</>}
       </section>
 
+      <aside className="judge-launch-shortcut" aria-label={copy(language, 'Judge review shortcut', 'जज समीक्षा शॉर्टकट')}>
+        <span><ClipboardCheck size={22} aria-hidden="true" /></span>
+        <div>
+          <strong>{copy(language, 'Judge review shortcut', 'जज समीक्षा शॉर्टकट')}</strong>
+          <p>{copy(language, 'Load a clearly labelled synthetic application and begin at the device-readiness innovation. No citizen data is used.', 'स्पष्ट रूप से लेबल किया गया सिंथेटिक आवेदन लोड करें और डिवाइस-जाँच नवाचार से शुरू करें। किसी नागरिक का डेटा उपयोग नहीं होता।')}</p>
+        </div>
+        <button type="button" className="button button--secondary" onClick={() => onCreate('judge')}>
+          {copy(language, 'Load prepared review application', 'तैयार समीक्षा आवेदन लोड करें')} <ArrowRight size={18} />
+        </button>
+      </aside>
+
       <section className="ll-launch-journey" aria-labelledby="ll-journey-title">
         <div className="ll-launch-journey__heading">
           <p className="eyebrow">{copy(language, 'What happens after you start', 'शुरू करने के बाद क्या होगा')}</p>
@@ -1552,11 +1614,7 @@ function getHelpContent(route: PortalRoute, language: Language): HelpContent {
 }
 
 function HelpDialog({ onClose, route, language }: { onClose: () => void; route: PortalRoute; language: Language }) {
-  useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
-    window.addEventListener('keydown', closeOnEscape)
-    return () => window.removeEventListener('keydown', closeOnEscape)
-  }, [onClose])
+  const dialogRef = useAccessibleDialog(onClose)
   const help = getHelpContent(route, language)
   const sections = [
     [copy(language, 'What this page is', 'यह पेज क्या है'), help.intro],
@@ -1565,16 +1623,12 @@ function HelpDialog({ onClose, route, language }: { onClose: () => void; route: 
     [copy(language, 'What happens next', 'इसके बाद क्या होगा'), help.next],
     [copy(language, 'If something does not work', 'अगर कुछ काम न करे'), help.issue],
   ]
-  return <div className="dialog-layer" onMouseDown={onClose}><section className="help-dialog" role="dialog" aria-modal="true" aria-labelledby="help-title" onMouseDown={(event) => event.stopPropagation()}><div className="dialog-heading"><div><p className="eyebrow">{copy(language, 'Page help', 'पेज सहायता')}</p><h2 id="help-title">{help.title}</h2></div><button className="icon-button" onClick={onClose} aria-label={copy(language, 'Close help', 'सहायता बंद करें')} autoFocus><X size={21} /></button></div><div className="help-list help-list--steps">{sections.map(([title, body], index) => <article key={title}><span aria-hidden="true">{index + 1}</span><div><strong>{title}</strong><p>{body}</p></div></article>)}</div><button className="button button--primary button--full" onClick={onClose}>{copy(language, 'I understand', 'मैं समझ गया/गई')}</button></section></div>
+  return <div className="dialog-layer" onMouseDown={onClose}><section ref={dialogRef} tabIndex={-1} className="help-dialog" role="dialog" aria-modal="true" aria-labelledby="help-title" onMouseDown={(event) => event.stopPropagation()}><div className="dialog-heading"><div><p className="eyebrow">{copy(language, 'Page help', 'पेज सहायता')}</p><h2 id="help-title">{help.title}</h2></div><button className="icon-button" onClick={onClose} aria-label={copy(language, 'Close help', 'सहायता बंद करें')} autoFocus><X size={21} /></button></div><div className="help-list help-list--steps">{sections.map(([title, body], index) => <article key={title}><span aria-hidden="true">{index + 1}</span><div><strong>{title}</strong><p>{body}</p></div></article>)}</div><button className="button button--primary button--full" onClick={onClose}>{copy(language, 'I understand', 'मैं समझ गया/गई')}</button></section></div>
 }
 
 function PrototypeDetailsDialog({ onClose, language }: { onClose: () => void; language: Language }) {
-  useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
-    window.addEventListener('keydown', closeOnEscape)
-    return () => window.removeEventListener('keydown', closeOnEscape)
-  }, [onClose])
-  return <div className="dialog-layer" onMouseDown={onClose}><section className="help-dialog prototype-dialog" role="dialog" aria-modal="true" aria-labelledby="prototype-title" onMouseDown={(event) => event.stopPropagation()}><div className="dialog-heading"><div><p className="eyebrow">{copy(language, 'Safe demo', 'सुरक्षित डेमो')}</p><h2 id="prototype-title">{copy(language, 'What is real and what is simulated?', 'क्या वास्तविक है और क्या सिम्युलेट किया गया है?')}</h2></div><button className="icon-button" onClick={onClose} aria-label={copy(language, 'Close details', 'जानकारी बंद करें')} autoFocus><X size={21} /></button></div><dl className="prototype-facts"><div><dt>{copy(language, 'Runs on this device', 'इस डिवाइस पर वास्तविक रूप से चलता है')}</dt><dd>{copy(language, 'Form saving, camera and microphone checks, saving test answers and restart recovery.', 'फॉर्म सहेजना, कैमरा-माइक्रोफोन जाँच, उत्तर सहेजना और टेस्ट फिर शुरू करना।')}</dd></div><div><dt>{copy(language, 'Simulated for demo', 'डेमो के लिए सिम्युलेट किया गया')}</dt><dd>{copy(language, 'Identity verification, government records, fees, payment approval and official licence issuance.', 'पहचान सत्यापन, सरकारी रिकॉर्ड, शुल्क, भुगतान स्वीकृति और आधिकारिक लाइसेंस जारी करना।')}</dd></div></dl><p className="prototype-dialog__note">{copy(language, 'This independent hackathon prototype is not connected to Sarathi, NIC, UIDAI, a bank or the Government of Madhya Pradesh.', 'यह स्वतंत्र हैकाथॉन प्रोटोटाइप सारथी, एनआईसी, यूआईडीएआई, किसी बैंक या मध्य प्रदेश शासन से जुड़ा नहीं है।')}</p><button className="button button--primary button--full" onClick={onClose}>{copy(language, 'Close', 'बंद करें')}</button></section></div>
+  const dialogRef = useAccessibleDialog(onClose)
+  return <div className="dialog-layer" onMouseDown={onClose}><section ref={dialogRef} tabIndex={-1} className="help-dialog prototype-dialog" role="dialog" aria-modal="true" aria-labelledby="prototype-title" onMouseDown={(event) => event.stopPropagation()}><div className="dialog-heading"><div><p className="eyebrow">{copy(language, 'Safe demo', 'सुरक्षित डेमो')}</p><h2 id="prototype-title">{copy(language, 'What is real and what is simulated?', 'क्या वास्तविक है और क्या सिम्युलेट किया गया है?')}</h2></div><button className="icon-button" onClick={onClose} aria-label={copy(language, 'Close details', 'जानकारी बंद करें')} autoFocus><X size={21} /></button></div><dl className="prototype-facts"><div><dt>{copy(language, 'Runs on this device', 'इस डिवाइस पर वास्तविक रूप से चलता है')}</dt><dd>{copy(language, 'Form saving, camera and microphone checks, saving test answers and restart recovery.', 'फॉर्म सहेजना, कैमरा-माइक्रोफोन जाँच, उत्तर सहेजना और टेस्ट फिर शुरू करना।')}</dd></div><div><dt>{copy(language, 'Simulated for demo', 'डेमो के लिए सिम्युलेट किया गया')}</dt><dd>{copy(language, 'Identity verification, government records, fees, payment approval and official licence issuance.', 'पहचान सत्यापन, सरकारी रिकॉर्ड, शुल्क, भुगतान स्वीकृति और आधिकारिक लाइसेंस जारी करना।')}</dd></div></dl><p className="prototype-dialog__note">{copy(language, 'This independent hackathon prototype is not connected to Sarathi, NIC, UIDAI, a bank or the Government of Madhya Pradesh.', 'यह स्वतंत्र हैकाथॉन प्रोटोटाइप सारथी, एनआईसी, यूआईडीएआई, किसी बैंक या मध्य प्रदेश शासन से जुड़ा नहीं है।')}</p><button className="button button--primary button--full" onClick={onClose}>{copy(language, 'Close', 'बंद करें')}</button></section></div>
 }
 
 function UnavailableServiceDialog({ destination, language, onClose }: { destination: HomeDestination; language: Language; onClose: () => void }) {
@@ -1584,15 +1638,11 @@ function UnavailableServiceDialog({ destination, language, onClose }: { destinat
     safety: ['Road safety services', 'सड़क सुरक्षा सेवाएँ'],
     information: ['Information service', 'जानकारी सेवा'],
   }
-  useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
-    window.addEventListener('keydown', closeOnEscape)
-    return () => window.removeEventListener('keydown', closeOnEscape)
-  }, [onClose])
+  const dialogRef = useAccessibleDialog(onClose)
   const titlePair = titles[destination] ?? ['Service', 'सेवा']
   return (
     <div className="dialog-layer" onMouseDown={onClose}>
-      <section className="help-dialog service-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="service-preview-title" onMouseDown={(event) => event.stopPropagation()}>
+      <section ref={dialogRef} tabIndex={-1} className="help-dialog service-preview-dialog" role="dialog" aria-modal="true" aria-labelledby="service-preview-title" onMouseDown={(event) => event.stopPropagation()}>
         <div className="dialog-heading">
           <div>
             <p className="eyebrow">{copy(language, 'Service directory', 'सेवा सूची')}</p>
@@ -1628,11 +1678,7 @@ function StateSelectionDialog({ language, onClose }: { language: Language; onClo
     'Punjab', 'Rajasthan', 'Sikkim', 'Tamil Nadu', 'Telangana', 'Tripura', 'Uttar Pradesh', 'Uttarakhand', 'West Bengal',
   ]
 
-  useEffect(() => {
-    const closeOnEscape = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose() }
-    window.addEventListener('keydown', closeOnEscape)
-    return () => window.removeEventListener('keydown', closeOnEscape)
-  }, [onClose])
+  const dialogRef = useAccessibleDialog(onClose)
 
   const proceed = () => {
     if (configured) {
@@ -1644,6 +1690,8 @@ function StateSelectionDialog({ language, onClose }: { language: Language; onClo
   return (
     <div className="dialog-layer" onMouseDown={onClose}>
       <section
+        ref={dialogRef}
+        tabIndex={-1}
         className="help-dialog state-selection-dialog"
         role="dialog"
         aria-modal="true"
@@ -1712,8 +1760,8 @@ function PortalFooter({ language, national, onPrototypeDetails }: { language: La
       <div className="portal-container portal-footer__grid">
         <div className="portal-footer__brand">
           <PortalMark language={language} national={national} />
-          <p>{copy(language, 'Ministry of Road Transport and Highways (MoRTH), Government of India.', 'सड़क परिवहन और राजमार्ग मंत्रालय, भारत सरकार।')}</p>
-          <p className="portal-footer__tagline">{copy(language, 'Delivering transparent online transport services.', 'पारदर्शी ऑनलाइन परिवहन सेवाएँ।')}</p>
+          <p>{copy(language, 'Independent hackathon prototype inspired by Indian public digital-service patterns.', 'भारतीय सार्वजनिक डिजिटल-सेवा पैटर्न से प्रेरित स्वतंत्र हैकाथॉन प्रोटोटाइप।')}</p>
+          <p className="portal-footer__tagline">{copy(language, 'No government department has issued or endorsed the records shown here.', 'यहाँ दिखाए रिकॉर्ड किसी सरकारी विभाग ने जारी या अनुमोदित नहीं किए हैं।')}</p>
         </div>
         <div>
           <strong>{copy(language, 'Citizen Services', 'नागरिक सेवाएँ')}</strong>
@@ -1735,8 +1783,8 @@ function PortalFooter({ language, national, onPrototypeDetails }: { language: La
           <button type="button" onClick={onPrototypeDetails}>{copy(language, 'About this demo', 'इस डेमो के बारे में')}</button>
           <span>{copy(language, 'English/Hindi • Screen-reader friendly', 'द्विभाषी • स्क्रीन-रीडर सुलभ')}</span>
           <div className="portal-footer__counter">
-            <small>{copy(language, 'Total Citizen Visitors:', 'कुल नागरिक विज़िटर:')}</small>
-            <strong>29,68,35,596</strong>
+            <small>{copy(language, 'Prototype storage:', 'प्रोटोटाइप स्टोरेज:')}</small>
+            <strong>{copy(language, 'This browser only', 'केवल यह ब्राउज़र')}</strong>
           </div>
         </div>
       </div>
@@ -1825,7 +1873,7 @@ function PortalApp() {
   }, [pathname, route, demoApplication])
 
   let page: ReactNode
-  if (route.name === 'home') page = <NationalHomePage language={language} onUnavailable={setUnavailableDestination} onDrivingServices={() => setStateSelectionOpen(true)} />
+  if (route.name === 'home') page = <NationalHomePage language={language} onUnavailable={setUnavailableDestination} onDrivingServices={() => setStateSelectionOpen(true)} onPrototypeDetails={() => setPrototypeDetailsOpen(true)} />
   else if (route.name === 'login') page = <LoginPage language={language} onSignedIn={(nextSession) => { saveDemoSession(nextSession); setSession(nextSession) }} />
   else if (route.name === 'services') page = <ServicesPage language={language} demoApplication={demoApplication} />
   else if (route.name === 'll-start') page = <LLStartPage language={language} onCreate={createApplication} demoApplication={demoApplication} />

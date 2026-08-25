@@ -67,6 +67,10 @@ export interface ReadinessSummary {
 
 export interface ExamState {
   status: ExamStatus
+  attemptNumber: number
+  paperSeed: string
+  paperQuestionIds: string[]
+  previousPaperQuestionIds: string[]
   currentQuestion: number
   answers: Record<number, number>
   correctAnswers: number
@@ -146,6 +150,10 @@ export const initialJourneyState: JourneyState = {
   paymentStatus: 'not-started',
   exam: {
     status: 'not-started',
+    attemptNumber: 1,
+    paperSeed: '',
+    paperQuestionIds: [],
+    previousPaperQuestionIds: [],
     currentQuestion: 0,
     answers: {},
     correctAnswers: 0,

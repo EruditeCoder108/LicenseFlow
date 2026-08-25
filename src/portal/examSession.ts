@@ -1,4 +1,4 @@
-import { fullQuestions } from '../content/questions'
+import { buildQuestionPaper, isValidQuestionPaper, resolveQuestionPaper } from '../content/questionPaper'
 import { LL_TEST_CONFIG } from '../content/testConfig'
 import { initialJourneyState, journeyReducer, type JourneyEvent, type JourneyState } from '../domain/journey'
 import type { LLJourneyProgress } from './progress'
@@ -9,8 +9,10 @@ function seedEvent(id: string, kind: JourneyEvent['kind'], title: string, detail
   return { id: `${id}-${kind}`, kind, title, detail, at, synthetic }
 }
 
-export function createExamSession(applicationId: string, progress: LLJourneyProgress): JourneyState {
+export function createExamSession(applicationId: string, progress: LLJourneyProgress, attemptNumber = 1, previousQuestionIds: string[] = []): JourneyState {
   const now = new Date().toISOString()
+  const paperSeed = `${applicationId}:attempt:${attemptNumber}`
+  const paperQuestionIds = buildQuestionPaper(paperSeed, previousQuestionIds).map((question) => question.id)
   const events: JourneyEvent[] = [
     seedEvent(applicationId, 'READINESS_PASSED', 'Device readiness passed', progress.readiness.mode === 'guided-signals' ? 'Guided camera-derived signals; browser storage, connection and secure-context checks remained real' : 'Real browser camera, microphone and device checks passed', progress.readiness.completedAt ?? now, progress.readiness.mode === 'guided-signals'),
     seedEvent(applicationId, 'REHEARSAL_COMPLETED', 'Secure-test rehearsal completed', 'Sample answer checkpoint and recovery behavior completed', progress.rehearsal.completedAt ?? now, true),
@@ -35,6 +37,13 @@ export function createExamSession(applicationId: string, progress: LLJourneyProg
     },
     paymentStatus: 'paid',
     paymentReference: progress.payment.reference,
+    exam: {
+      ...initialJourneyState.exam,
+      attemptNumber,
+      paperSeed,
+      paperQuestionIds,
+      previousPaperQuestionIds: previousQuestionIds,
+    },
     events,
   }
 }
@@ -44,7 +53,15 @@ export function loadExamSession(applicationId: string, progress: LLJourneyProgre
     const raw = localStorage.getItem(`${STORAGE_PREFIX}${applicationId}`)
     if (!raw) return createExamSession(applicationId, progress)
     const parsed = JSON.parse(raw) as JourneyState
-    return parsed.version === 2 ? parsed : createExamSession(applicationId, progress)
+    if (parsed.version !== 2) return createExamSession(applicationId, progress)
+    const attemptNumber = parsed.exam.attemptNumber || 1
+    if (!isValidQuestionPaper(parsed.exam.paperQuestionIds ?? [])) {
+      const replacement = createExamSession(applicationId, progress, attemptNumber, parsed.exam.previousPaperQuestionIds ?? [])
+      const migrated = { ...parsed, exam: { ...parsed.exam, ...replacement.exam } }
+      saveExamSession(applicationId, migrated)
+      return migrated
+    }
+    return parsed
   } catch {
     return createExamSession(applicationId, progress)
   }
@@ -60,13 +77,26 @@ export function saveExamSession(applicationId: string, state: JourneyState): boo
 }
 
 export function resetExamSession(applicationId: string, progress: LLJourneyProgress): JourneyState {
-  const state = createExamSession(applicationId, progress)
+  const current = loadExamSession(applicationId, progress)
+  const state = createExamSession(
+    applicationId,
+    progress,
+    (current.exam.attemptNumber || 1) + 1,
+    current.exam.paperQuestionIds,
+  )
   saveExamSession(applicationId, state)
   return state
 }
 
 export function createPassingJudgeExamSession(applicationId: string, progress: LLJourneyProgress): JourneyState {
-  let state = journeyReducer(createExamSession(applicationId, progress), { type: 'START_EXAM' })
+  const current = loadExamSession(applicationId, progress)
+  const base = createExamSession(
+    applicationId,
+    progress,
+    current.stage === 'result' ? (current.exam.attemptNumber || 1) + 1 : current.exam.attemptNumber || 1,
+    current.stage === 'result' ? current.exam.paperQuestionIds : current.exam.previousPaperQuestionIds,
+  )
+  let state = journeyReducer(base, { type: 'START_EXAM' })
   const now = new Date().toISOString()
   state = {
     ...state,
@@ -83,12 +113,13 @@ export function createPassingJudgeExamSession(applicationId: string, progress: L
     ],
   }
 
-  fullQuestions.forEach((question, index) => {
+  const paper = resolveQuestionPaper(state.exam.paperQuestionIds)
+  paper.forEach((question, index) => {
     state = journeyReducer(state, {
       type: 'ANSWER',
       answer: question.correct,
       correct: true,
-      isLast: index === fullQuestions.length - 1,
+      isLast: index === paper.length - 1,
       passThreshold: LL_TEST_CONFIG.passMark,
       triggerDemoInterruption: false,
     })
