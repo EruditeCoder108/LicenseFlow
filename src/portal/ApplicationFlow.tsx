@@ -1631,6 +1631,83 @@ function StepContent(props: StepProps & { step: ApplicationStep }) {
   return <ReviewStep {...props} />
 }
 
+function useHeaderSticky(headerRef: { current: HTMLElement | null }) {
+  const [isSticky, setIsSticky] = useState(false)
+
+  useEffect(() => {
+    const target = headerRef.current
+    if (!target) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const entry = entries[0]
+        if (entry) setIsSticky(!entry.isIntersecting)
+      },
+      { threshold: 0, rootMargin: '-60px 0px 0px 0px' }
+    )
+
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [headerRef])
+
+  return isSticky
+}
+
+function StickyWorkspaceBar({
+  visible,
+  applicationId,
+  stepPill,
+  stepTitle,
+  savedText,
+  onQuickAction,
+  quickActionLabel,
+  quickActionIcon: QuickIcon,
+  quickActionDisabled,
+}: {
+  visible: boolean
+  applicationId: string
+  stepPill?: string
+  stepTitle: string
+  savedText: string
+  onQuickAction?: () => void
+  quickActionLabel?: string
+  quickActionIcon?: typeof CheckCircle2 | typeof FileCheck2
+  quickActionDisabled?: boolean
+}) {
+  return (
+    <div
+      className={`lf-sticky-workspace-bar ${visible ? 'lf-sticky-workspace-bar--visible' : ''}`}
+      role="region"
+      aria-label="Application workspace context"
+      aria-hidden={!visible}
+    >
+      <div className="portal-container lf-sticky-workspace-bar__inner">
+        <div className="lf-sticky-workspace-bar__left">
+          <span className="lf-sticky-workspace-bar__app-id">{applicationId}</span>
+          {stepPill && <span className="lf-sticky-workspace-bar__step-badge">{stepPill}</span>}
+          <strong className="lf-sticky-workspace-bar__title">{stepTitle}</strong>
+        </div>
+        <div className="lf-sticky-workspace-bar__right">
+          <span className="saved-badge">
+            <Check size={13} aria-hidden="true" /> {savedText}
+          </span>
+          {onQuickAction && quickActionLabel && (
+            <button
+              type="button"
+              className="quick-fill-btn quick-fill-btn--compact"
+              onClick={onQuickAction}
+              disabled={quickActionDisabled}
+            >
+              {QuickIcon ? <QuickIcon size={14} aria-hidden="true" /> : <CheckCircle2 size={14} aria-hidden="true" />}
+              <span>{quickActionLabel}</span>
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export function ApplicationFlow({
   step,
   onSubmitted,
@@ -1643,6 +1720,8 @@ export function ApplicationFlow({
   const [draft, setDraft] = useState<LLApplicationDraft>(() => loadApplicationDraft() ?? createEmptyDraft())
   const [errors, setErrors] = useState<FieldErrors>({})
   const [quickFillStatus, setQuickFillStatus] = useState('')
+  const headerRef = useRef<HTMLElement | null>(null)
+  const isHeaderSticky = useHeaderSticky(headerRef)
   const index = applicationSteps.indexOf(step)
   const pageCopy = (language === 'en' ? stepCopy : stepCopyHi)[step]
 
@@ -1709,7 +1788,17 @@ export function ApplicationFlow({
 
   return (
     <div className="application-flow">
-      <header className="page-header">
+      <StickyWorkspaceBar
+        visible={isHeaderSticky}
+        applicationId={draft.applicationId}
+        stepPill={local(language, `Step ${index + 1} of 7`, `चरण ${index + 1}/7`)}
+        stepTitle={pageCopy.title}
+        savedText={local(language, 'Saved automatically', 'स्वतः सहेजा गया')}
+        onQuickAction={applyDemoData}
+        quickActionLabel={local(language, 'Fill demo', 'डेमो भरें')}
+        quickActionIcon={CheckCircle2}
+      />
+      <header className="page-header" ref={headerRef}>
         <div className="page-header__left">
           <p className="eyebrow">
             {local(language, 'Application', 'आवेदन')} · {draft.applicationId}
@@ -1742,7 +1831,9 @@ export function ApplicationFlow({
         <form className="application-flow__main" onSubmit={submit} noValidate>
           <ErrorSummary errors={errors} language={language} />
 
-          <StepContent step={step} draft={draft} setDraft={setDraft} errors={errors} language={language} />
+          <div key={step} className="application-flow__step-container">
+            <StepContent step={step} draft={draft} setDraft={setDraft} errors={errors} language={language} />
+          </div>
 
           <div className="application-flow__actions">
             {prevStep ? (
@@ -1940,6 +2031,8 @@ export function UploadsPage({
     () => loadApplicationDraft(applicationId) ?? createEmptyDraft(applicationId)
   )
   const [previewAsset, setPreviewAsset] = useState<DemoUploadAsset | null>(null)
+  const headerRef = useRef<HTMLElement | null>(null)
+  const isHeaderSticky = useHeaderSticky(headerRef)
   const closePreview = useCallback(() => setPreviewAsset(null), [])
   const update = (patch: Partial<LLApplicationDraft>) => {
     const next = { ...draft, ...patch, lastSavedAt: new Date().toISOString() }
@@ -1951,9 +2044,21 @@ export function UploadsPage({
   }
   const attachAll = () => update({ documentsUploaded: true, photoUploaded: true, signatureUploaded: true })
   const complete = draft.documentsUploaded && draft.photoUploaded && draft.signatureUploaded
+  const uploadedCount = [draft.documentsUploaded, draft.photoUploaded, draft.signatureUploaded].filter(Boolean).length
 
   return (
     <div className="application-flow">
+      <StickyWorkspaceBar
+        visible={isHeaderSticky}
+        applicationId={applicationId}
+        stepPill={local(language, 'Uploads', 'अपलोड')}
+        stepTitle={local(language, 'Documents, photo and signature', 'दस्तावेज़, फोटो और हस्ताक्षर')}
+        savedText={`${uploadedCount} / 3 ${local(language, 'ready', 'तैयार')}`}
+        onQuickAction={attachAll}
+        quickActionLabel={complete ? local(language, 'All attached', 'सभी जुड़े हैं') : local(language, 'Attach demo files', 'डेमो फाइलें जोड़ें')}
+        quickActionIcon={FileCheck2}
+        quickActionDisabled={complete}
+      />
       <nav className="breadcrumbs" aria-label={local(language, 'Breadcrumb', 'स्थान पथ')}>
         <ol>
           <li>
@@ -1969,7 +2074,7 @@ export function UploadsPage({
           </li>
         </ol>
       </nav>
-      <header className="page-header">
+      <header className="page-header" ref={headerRef}>
         <div className="page-header__left">
           <p className="eyebrow">
             {local(language, 'Application', 'आवेदन')} · {applicationId}

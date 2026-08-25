@@ -24,9 +24,11 @@ import {
   Users,
   Wifi,
   WifiOff,
+  Volume2,
+  VolumeX,
 } from 'lucide-react'
 import { practiceQuestion } from '../content/questions'
-import { useDeviceReadiness } from '../hooks/useDeviceReadiness'
+import { useDeviceReadiness, stopAllMediaTracks } from '../hooks/useDeviceReadiness'
 import {
   completeReadiness,
   completeRehearsal,
@@ -35,6 +37,7 @@ import {
   type LLJourneyProgress,
 } from './progress'
 import { navigatePortal } from './router'
+import { FocusedAssessmentShell, useFocusedFullscreen } from './FocusedAssessmentShell'
 
 type StageChange = (label: string) => void
 type CheckTone = 'idle' | 'working' | 'pass' | 'attention'
@@ -154,11 +157,26 @@ export function DeviceReadinessPage({ language, applicationId, onStageChange }: 
   const progress = loadJourneyProgress(applicationId)
   const [preparedIssue, setPreparedIssue] = useState(false)
 
-  const finish = () => {
+  useEffect(() => {
+    return () => {
+      media.stop()
+      stopAllMediaTracks()
+    }
+  }, [media.stop])
+
+  const finish = async () => {
     const updated = completeReadiness(progress, snapshot.guided ? 'guided-signals' : 'real-browser-checks')
     saveJourneyProgress(updated)
     media.stop()
+    stopAllMediaTracks()
     onStageChange('Test rehearsal')
+    try {
+      if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen()
+      }
+    } catch {
+      // non-blocking fallback
+    }
     navigatePortal(`/mp/application/${applicationId}/rehearsal`)
   }
 
@@ -479,8 +497,15 @@ export function DeviceReadinessPage({ language, applicationId, onStageChange }: 
           )}
           <div className="lf-actions lf-actions--stack">
             <button className="button button--primary" disabled={!media.ready} onClick={finish}>
-              {local(language, 'Confirm check and try practice question', 'जाँच की पुष्टि करें और अभ्यास करें')} <ArrowRight size={18} />
+              {local(language, 'Open one-question system rehearsal', 'एक-प्रश्न सिस्टम रिहर्सल शुरू करें')} <ArrowRight size={18} />
             </button>
+            <p className="lf-actions__supporting-text">
+              {local(
+                language,
+                'Confirm that this browser can display a test question, accept an answer and save the response before payment.',
+                'पुष्टि करें कि यह ब्राउज़र भुगतान से पहले टेस्ट प्रश्न दिखा सकता है, उत्तर स्वीकार कर सकता है और प्रतिक्रिया सहेज सकता है।'
+              )}
+            </p>
             {!media.ready && (
               <div className="lf-button-pair">
                 <button className="button button--secondary" onClick={() => void media.start()}>
@@ -501,6 +526,8 @@ export function DeviceReadinessPage({ language, applicationId, onStageChange }: 
 export function RehearsalPage({ language, applicationId, onStageChange }: { language: Language; applicationId: string; onStageChange: StageChange }) {
   const [progress, setProgress] = useState<LLJourneyProgress>(() => loadJourneyProgress(applicationId))
   const [selected, setSelected] = useState<number | null>(() => progress.rehearsal.answer ?? null)
+  const [speaking, setSpeaking] = useState(false)
+  const { exitFullscreen } = useFocusedFullscreen()
   const saved = progress.rehearsal.status === 'completed'
   const rehearsalQuestion = language === 'en' ? practiceQuestion : {
     ...practiceQuestion,
@@ -508,12 +535,19 @@ export function RehearsalPage({ language, applicationId, onStageChange }: { lang
     options: ['संकेत दें और आसपास के सड़क उपयोगकर्ताओं को जाँचें', 'लगातार हॉर्न बजाएँ', 'सड़क के दाहिने भाग में जाएँ'],
   }
 
+  useEffect(() => () => window.speechSynthesis?.cancel(), [])
+
   if (progress.readiness.status !== 'passed') {
     return (
-      <>
-        <JourneyBreadcrumbs language={language} applicationId={applicationId} current={local(language, 'Practice question', 'अभ्यास प्रश्न')} />
-        <section className="route-guard">
-          <TriangleAlert size={30} />
+      <FocusedAssessmentShell
+        mode="rehearsal"
+        title="LicenceFlow"
+        stageBadge={local(language, 'System Rehearsal', 'सिस्टम रिहर्सल')}
+        language={language}
+        onExit={() => navigatePortal(`/mp/application/${applicationId}`)}
+      >
+        <section className="route-guard route-guard--focused">
+          <TriangleAlert size={34} />
           <p className="eyebrow">{local(language, 'Device check required', 'डिवाइस जाँच आवश्यक')}</p>
           <h1 tabIndex={-1}>{local(language, 'Check this device first', 'पहले इस डिवाइस की जाँच करें')}</h1>
           <p>{local(language, 'Practice opens only after a device check passes.', 'अभ्यास तभी खुलेगा जब डिवाइस जाँच पूरी हो जाएगी।')}</p>
@@ -521,100 +555,245 @@ export function RehearsalPage({ language, applicationId, onStageChange }: { lang
             {local(language, 'Start device check', 'डिवाइस जाँच शुरू करें')}
           </FlowLink>
         </section>
-      </>
+      </FocusedAssessmentShell>
     )
   }
 
   const saveAnswer = () => {
     if (selected === null) return
+    window.speechSynthesis?.cancel()
+    setSpeaking(false)
     const updated = completeRehearsal(progress, selected)
     saveJourneyProgress(updated)
     setProgress(updated)
     onStageChange('Fee payment')
   }
 
+  const exitToPayment = async () => {
+    await exitFullscreen()
+    navigatePortal(`/mp/application/${applicationId}/payment`)
+  }
+
+  const toggleSpeech = () => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) return
+    if (speaking) {
+      window.speechSynthesis.cancel()
+      setSpeaking(false)
+      return
+    }
+    window.speechSynthesis.cancel()
+    const optionsText = rehearsalQuestion.options.map((opt, i) => `${String.fromCharCode(65 + i)}. ${opt}`).join('. ')
+    const utterance = new SpeechSynthesisUtterance(`${rehearsalQuestion.prompt}. ${optionsText}`)
+    utterance.lang = language === 'hi' ? 'hi-IN' : 'en-IN'
+    utterance.rate = 0.92
+    utterance.onend = () => setSpeaking(false)
+    utterance.onerror = () => setSpeaking(false)
+    setSpeaking(true)
+    window.speechSynthesis.speak(utterance)
+  }
+
+  const exitRehearsal = async () => {
+    window.speechSynthesis?.cancel()
+    await exitFullscreen()
+    navigatePortal(`/mp/application/${applicationId}`)
+  }
+
   return (
-    <>
-      <JourneyBreadcrumbs language={language} applicationId={applicationId} current={local(language, 'Practice question', 'अभ्यास प्रश्न')} />
-      <section className="page-title">
-        <div>
-          <p className="eyebrow">{local(language, 'Safe practice · does not count as a test attempt', 'सुरक्षित अभ्यास · यह मुख्य परीक्षा में नहीं गिना जाएगा')}</p>
-          <h1 tabIndex={-1}>{local(language, 'Try a practice question', 'एक अभ्यास प्रश्न हल करें')}</h1>
-          <p>{local(language, 'See how questions work and how your answer is saved before you move to the next question.', 'देखें कि प्रश्न कैसे काम करते हैं और अगला प्रश्न खोलने से पहले उत्तर कैसे सहेजता है।')}</p>
-        </div>
-      </section>
-      <div className="lf-status-bar">
-        <span><Camera size={17} />{local(language, 'Device check passed', 'डिवाइस जाँच पास')}</span>
-        <span><Signal size={17} />{local(language, 'Connected', 'इंटरनेट चालू')}</span>
-        <span><LockKeyhole size={17} />{local(language, 'Practice only', 'सिर्फ अभ्यास')}</span>
-      </div>
-      <fieldset className="lf-question-card">
-        <legend>{local(language, 'Practice question', 'अभ्यास प्रश्न')}</legend>
-        <h2>{rehearsalQuestion.prompt}</h2>
-        <div className="lf-answer-options">
-          {rehearsalQuestion.options.map((option, index) => (
-            <label className={selected === index ? 'selected' : ''} key={option}>
-              <input
-                type="radio"
-                name="rehearsal-answer"
-                checked={selected === index}
-                onChange={() => {
-                  setSelected(index)
-                  if (saved) setProgress({ ...progress, rehearsal: { status: 'not-started' } })
-                }}
-              />
-              <span>{String.fromCharCode(65 + index)}</span>
-              <strong>{option}</strong>
-            </label>
-          ))}
-        </div>
-      </fieldset>
-      {saved && (
-        <div className="lf-success-note" role="status">
-          <CheckCircle2 size={20} />
-          <div>
-            <strong>{local(language, 'Sample answer saved.', 'नमूना उत्तर सहेज लिया गया।')}</strong>
-            <p>{local(language, 'If you refresh or lose connection, your answer stays saved.', 'रिफ्रेश करने या कनेक्शन टूटने पर भी उत्तर सुरक्षित रहता है।')}</p>
+    <FocusedAssessmentShell
+      mode="rehearsal"
+      title="LicenceFlow"
+      stageBadge={local(language, 'System rehearsal · does not count', 'सिस्टम रिहर्सल · मुख्य परीक्षा में नहीं गिना जाएगा')}
+      online={true}
+      cameraActive={true}
+      cameraGuided={progress.readiness.mode === 'guided-signals'}
+      cameraLabel={local(language, 'Device Ready', 'डिवाइस तैयार')}
+      language={language}
+      onExit={exitRehearsal}
+      exitLabel={local(language, 'Exit rehearsal', 'रिहर्सल बंद करें')}
+      bottomBar={
+        !saved ? (
+          <div className="focused-bottom-actions">
+            <button
+              type="button"
+              className="button button--primary"
+              disabled={selected === null}
+              onClick={saveAnswer}
+            >
+              {local(language, 'Save rehearsal answer', 'रिहर्सल उत्तर सहेजें')} <LockKeyhole size={17} />
+            </button>
+            <button
+              type="button"
+              className="button button--secondary"
+              onClick={exitRehearsal}
+            >
+              {local(language, 'Exit to application', 'आवेदन पर लौटें')}
+            </button>
           </div>
-        </div>
-      )}
-      <section className="lf-rehearsal-notes">
-        <div>
-          <WifiOff size={20} />
-          <span>
-            <strong>{local(language, 'If the network drops', 'अगर इंटरनेट बंद हो जाए')}</strong>
-            <small>{local(language, 'The test pauses; your answers stay saved', 'परीक्षा रुक जाएगी; उत्तर सुरक्षित रहेंगे')}</small>
-          </span>
-        </div>
-        <div>
-          <EyeOff size={20} />
-          <span>
-            <strong>{local(language, 'If the test closes', 'अगर परीक्षा स्क्रीन बंद हो जाए')}</strong>
-            <small>{local(language, 'Reopen and resume from where you stopped', 'फिर से खोलें और वहीं से शुरू करें')}</small>
-          </span>
-        </div>
-        <div>
-          <Users size={20} />
-          <span>
-            <strong>{local(language, 'If another person appears', 'अगर कोई और दिखे')}</strong>
-            <small>{local(language, 'The system gives a polite reminder; no instant penalty', 'सिस्टम याद दिलाएगा; तुरंत कोई पेनल्टी नहीं')}</small>
-          </span>
-        </div>
-      </section>
-      <div className="lf-actions">
-        {!saved ? (
-          <button className="button button--primary" disabled={selected === null} onClick={saveAnswer}>
-            {local(language, 'Save answer', 'उत्तर सहेजें')} <LockKeyhole size={18} />
-          </button>
         ) : (
-          <button className="button button--primary" onClick={() => navigatePortal(`/mp/application/${applicationId}/payment`)}>
-            {local(language, 'Continue to fee payment', 'शुल्क भुगतान पर जाएँ')} <ArrowRight size={18} />
-          </button>
+          <div className="focused-bottom-actions">
+            <button
+              type="button"
+              className="button button--primary"
+              onClick={exitToPayment}
+            >
+              {local(language, 'Exit rehearsal and continue to fee payment', 'रिहर्सल से बाहर निकलें और शुल्क भुगतान पर जाएँ')}{' '}
+              <ArrowRight size={17} />
+            </button>
+            <button
+              type="button"
+              className="button button--secondary"
+              onClick={() => {
+                const reset = { ...progress, rehearsal: { status: 'not-started' as const } }
+                setProgress(reset)
+                saveJourneyProgress(reset)
+                setSelected(null)
+              }}
+            >
+              <RefreshCcw size={16} /> {local(language, 'Try question again', 'प्रश्न दोबारा आज़माएँ')}
+            </button>
+          </div>
+        )
+      }
+    >
+      <div className="focused-workspace-container">
+        {!saved ? (
+          <div className="focused-question-card">
+            <div className="focused-explanation-banner">
+              <Info size={18} aria-hidden="true" />
+              <div>
+                <strong>
+                  {local(
+                    language,
+                    'This one-question rehearsal checks whether this device can run the test.',
+                    'यह एक-प्रश्न रिहर्सल जाँचेगी कि आपका डिवाइस परीक्षा चलाने के लिए तैयार है।'
+                  )}
+                </strong>
+                <p>
+                  {local(
+                    language,
+                    'Try selecting an option and saving. This question does not affect your real test score.',
+                    'विकल्प चुनकर सहेजें। यह प्रश्न आपके वास्तविक परीक्षा अंक को प्रभावित नहीं करता।'
+                  )}
+                </p>
+              </div>
+            </div>
+
+            <div className="focused-question-heading">
+              <p className="eyebrow">
+                {local(language, 'Practice Question', 'अभ्यास प्रश्न')}
+              </p>
+              <h2>{rehearsalQuestion.prompt}</h2>
+              {typeof window !== 'undefined' && 'speechSynthesis' in window && (
+                <button
+                  type="button"
+                  className="question-speech-button"
+                  onClick={toggleSpeech}
+                  aria-pressed={speaking}
+                >
+                  {speaking ? <VolumeX size={17} /> : <Volume2 size={17} />}
+                  <span>
+                    {speaking
+                      ? local(language, 'Stop reading', 'पढ़ना रोकें')
+                      : local(language, 'Read question aloud', 'प्रश्न सुनें')}
+                  </span>
+                </button>
+              )}
+            </div>
+
+            <fieldset className="focused-option-grid">
+              <legend className="visually-hidden">
+                {local(language, 'Select one answer option', 'एक उत्तर विकल्प चुनें')}
+              </legend>
+              {rehearsalQuestion.options.map((option, index) => {
+                const isSelected = selected === index
+                return (
+                  <label
+                    key={option}
+                    className={`focused-option-card ${
+                      isSelected ? 'focused-option-card--selected' : ''
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="rehearsal-answer-radio"
+                      checked={isSelected}
+                      onChange={() => setSelected(index)}
+                    />
+                    <span className="focused-option-card__badge">
+                      {String.fromCharCode(65 + index)}
+                    </span>
+                    <strong className="focused-option-card__label">{option}</strong>
+                  </label>
+                )
+              })}
+            </fieldset>
+
+            <div className="focused-security-note">
+              <LockKeyhole size={16} aria-hidden="true" />
+              <span>
+                {local(
+                  language,
+                  'Answers are saved locally on this browser so they survive unexpected network drops or refreshes.',
+                  'उत्तर स्थानीय ब्राउज़र पर सुरक्षित रहते हैं ताकि नेटवर्क कटने पर भी सुरक्षित रहें।'
+                )}
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="focused-success-card">
+            <div className="focused-success-card__icon" aria-hidden="true">
+              <CheckCircle2 size={44} />
+            </div>
+            <p className="eyebrow">{local(language, 'Readiness verified', 'तैयारी सत्यापित')}</p>
+            <h1>{local(language, 'System rehearsal passed', 'सिस्टम रिहर्सल सफल')}</h1>
+            <p className="focused-success-card__sub">
+              {local(
+                language,
+                'Your browser and device successfully displayed the test question, accepted an answer, and verified local progress persistence.',
+                'आपके ब्राउज़र ने सफलतापूर्वक प्रश्न प्रदर्शित किया, उत्तर स्वीकार किया और स्थानीय प्रगति सहेजना जाँचा।'
+              )}
+            </p>
+
+            <ul className="focused-checklist" aria-label={local(language, 'Rehearsal verification items', 'रिहर्सल सत्यापन बिंदु')}>
+              <li>
+                <Check size={18} aria-hidden="true" />
+                <div>
+                  <strong>{local(language, 'Question displayed correctly', 'प्रश्न सही तरीके से प्रदर्शित हुआ')}</strong>
+                  <small>{local(language, 'Text, prompt and choices rendered with complete clarity.', 'अक्षर और विकल्प स्पष्ट रूप से पढ़े जा सकते हैं।')}</small>
+                </div>
+              </li>
+              <li>
+                <Check size={18} aria-hidden="true" />
+                <div>
+                  <strong>{local(language, 'Answer controls responsive', 'उत्तर नियंत्रण सक्रिय और सुगम')}</strong>
+                  <small>{local(language, 'Touch, mouse and keyboard selection verified.', 'टच, माउस और कीबोर्ड चयन सुचारू रूप से कार्य कर रहा है।')}</small>
+                </div>
+              </li>
+              <li>
+                <Check size={18} aria-hidden="true" />
+                <div>
+                  <strong>{local(language, 'Response saved on this device', 'प्रतिक्रिया इस डिवाइस पर सहेजी गई')}</strong>
+                  <small>{local(language, 'Encrypted local checkpoint verified against simulated drops.', 'ब्राउज़र स्टोरेज में सुरक्षित चेकपॉइंट सत्यापित।')}</small>
+                </div>
+              </li>
+              <li>
+                <Check size={18} aria-hidden="true" />
+                <div>
+                  <strong>{local(language, 'Connection available', 'इंटरनेट कनेक्शन चालू')}</strong>
+                  <small>{local(language, 'Network baseline verified for smooth session delivery.', 'सत्र के लिए नेटवर्क क्षमता उपयुक्त है।')}</small>
+                </div>
+              </li>
+              <li>
+                <Check size={18} aria-hidden="true" />
+                <div>
+                  <strong>{local(language, 'Camera and biometric readiness confirmed', 'कैमरा और बायोमेट्रिक तैयारी पुष्ट')}</strong>
+                  <small>{local(language, 'Private on-device face alignment and liveness check passed.', 'निजी ऑन-डिवाइस चेहरा संरेखण और जीवंतता जाँच पूर्ण।')}</small>
+                </div>
+              </li>
+            </ul>
+          </div>
         )}
-        <FlowLink href={`/mp/application/${applicationId}`} className="button button--secondary">
-          <ArrowLeft size={18} /> {local(language, 'Application status', 'आवेदन स्थिति')}
-        </FlowLink>
       </div>
-    </>
+    </FocusedAssessmentShell>
   )
 }

@@ -19,6 +19,7 @@ import {
   CircleHelp,
   ClipboardCheck,
   CreditCard,
+  Cpu,
   ExternalLink,
   FileClock,
   FileText,
@@ -37,7 +38,9 @@ import {
   Phone,
   PlayCircle,
   Printer,
+  RotateCcw,
   Route as RouteIcon,
+  Scale,
   Search,
   ShieldCheck,
   SignpostBig,
@@ -76,6 +79,7 @@ const TestEntryPage = lazy(() => import('./portal/TestJourney').then((module) =>
 const TestPage = lazy(() => import('./portal/TestJourney').then((module) => ({ default: module.TestPage })))
 const InterruptionPage = lazy(() => import('./portal/TestJourney').then((module) => ({ default: module.InterruptionPage })))
 const ResultPage = lazy(() => import('./portal/TestJourney').then((module) => ({ default: module.ResultPage })))
+const ResultReviewPage = lazy(() => import('./portal/TestJourney').then((module) => ({ default: module.ResultReviewPage })))
 const AccountDialog = lazy(() => import('./portal/AuthPages').then((module) => ({ default: module.AccountDialog })))
 const LoginPage = lazy(() => import('./portal/AuthPages').then((module) => ({ default: module.LoginPage })))
 const ApplicationLookupPage = lazy(() => import('./portal/StatusUtilities').then((module) => ({ default: module.ApplicationLookupPage })))
@@ -393,34 +397,46 @@ function NationalHomePage({ onUnavailable, onDrivingServices, onPrototypeDetails
     },
   ]
 
-  const pulseMetrics = [
+  const engineeringPrinciples = [
     {
-      system: 'Prototype scope',
-      systemHi: 'प्रोटोटाइप का दायरा',
-      value: '1 journey',
-      label: 'End-to-end Learner’s Licence demonstration',
-      labelHi: 'लर्नर लाइसेंस की पूरी डेमो यात्रा',
+      icon: RotateCcw,
+      principle: 'Resume, don’t restart',
+      principleHi: 'जारी रखें, रीसेट नहीं',
+      outcome: 'An interruption should pause the test—not erase the journey.',
+      outcomeHi: 'रुकावट से परीक्षा रुकनी चाहिए—पूरी यात्रा मिटनी नहीं चाहिए।',
+      proof: 'Forms, synthetic payment, tutorial progress and examination checkpoints survive refreshes and interruptions.',
+      proofHi: 'फॉर्म, भुगतान, ट्यूटोरियल और परीक्षा चेकपॉइंट्स रिफ्रेश व बाधाओं के बाद भी सुरक्षित रहते हैं।',
+      checkpointFlow: true,
     },
     {
-      system: 'Failure-safe test',
-      systemHi: 'सुरक्षित परीक्षा',
-      value: '15 questions',
-      label: 'Answers checkpointed before each next step',
-      labelHi: 'हर अगले चरण से पहले उत्तर सहेजे जाते हैं',
+      icon: Scale,
+      principle: 'Fair by construction',
+      principleHi: 'संरचना से ही निष्पक्ष',
+      outcome: 'A retest changes the questions, not the difficulty.',
+      outcomeHi: 'पुनः परीक्षा में प्रश्न बदलते हैं, कठिनाई का स्तर नहीं।',
+      proof: 'Every attempt receives a seeded 15-question paper maintaining the difficulty blueprint from 50 reviewed questions.',
+      proofHi: 'प्रत्येक प्रयास में 50 परीक्षित प्रश्नों से समान कठिनाई संरचना वाला 15-प्रश्नों का संतुलित पेपर मिलता है।',
+      checkpointFlow: false,
     },
     {
-      system: 'Question bank',
-      systemHi: 'प्रश्न बैंक',
-      value: '50 reviewed',
-      label: 'Balanced seeded papers for fair retests',
-      labelHi: 'निष्पक्ष रीटेस्ट के लिए संतुलित प्रश्नपत्र',
+      icon: ShieldCheck,
+      principle: 'Observe, don’t accuse',
+      principleHi: 'समझें, आरोप न लगाएँ',
+      outcome: 'A camera signal is context—not a verdict.',
+      outcomeHi: 'कैमरा संकेत केवल संदर्भ है—दोष का प्रमाण नहीं।',
+      proof: 'Short disruptions receive guidance; sustained pauses safely. One camera event never fails a candidate.',
+      proofHi: 'हल्की रुकावट पर मार्गदर्शन मिलता है; बड़ी बाधा पर सुरक्षित ठहराव, स्वतः फेल नहीं।',
+      checkpointFlow: false,
     },
     {
-      system: 'Privacy boundary',
-      systemHi: 'गोपनीयता सीमा',
-      value: 'On device',
-      label: 'Prototype state and camera signals stay in-browser',
-      labelHi: 'डेमो स्थिति और कैमरा संकेत ब्राउज़र में रहते हैं',
+      icon: Cpu,
+      principle: 'Private by architecture',
+      principleHi: 'संरचनात्मक गोपनीयता',
+      outcome: 'Camera analysis stays on the applicant’s device.',
+      outcomeHi: 'कैमरा विश्लेषण आवेदक की डिवाइस पर ही रहता है।',
+      proof: 'Local on-device vision model; records no video, transmits no biometric data, and keeps state in browser storage.',
+      proofHi: 'स्थानीय ऑन-डिवाइस विज़न मॉडल; कोई वीडियो रिकॉर्ड या बायोमेट्रिक डेटा प्रसारित नहीं होता।',
+      checkpointFlow: false,
     },
   ]
 
@@ -507,11 +523,6 @@ function NationalHomePage({ onUnavailable, onDrivingServices, onPrototypeDetails
 
   return (
     <div className="national-home">
-      <aside className="home-prototype-banner" role="note">
-        <Info size={19} aria-hidden="true" />
-        <p><strong>{copy(language, 'Interactive prototype — not a government service.', 'इंटरैक्टिव प्रोटोटाइप — सरकारी सेवा नहीं।')}</strong> {copy(language, 'All applicants, records, payments and credentials shown here are synthetic.', 'यहाँ दिखाए गए सभी आवेदक, रिकॉर्ड, भुगतान और प्रमाण सिंथेटिक हैं।')}</p>
-        <button type="button" onClick={onPrototypeDetails}>{copy(language, 'See what is simulated', 'जानें क्या सिम्युलेटेड है')}</button>
-      </aside>
       <section className="national-hero" aria-labelledby="home-title">
         <img src="/assets/parivahan-transport-hero.webp" alt="Indian road transport connecting citizens, buses and commercial vehicles" fetchPriority="high" />
         <div className="national-hero__shade" aria-hidden="true" />
@@ -526,17 +537,54 @@ function NationalHomePage({ onUnavailable, onDrivingServices, onPrototypeDetails
         </div>
       </section>
 
-      <section className="national-pulse-strip" aria-label={copy(language, 'Prototype capability summary', 'प्रोटोटाइप क्षमता सारांश')}>
-        {pulseMetrics.map((item, idx) => (
-          <div className="national-pulse-item" key={idx}>
-            <div className="national-pulse-indicator">
-              <span className="pulse-dot" aria-hidden="true" />
-              <span>{copy(language, item.system, item.systemHi)}</span>
-            </div>
-            <strong className="national-pulse-val">{item.value}</strong>
-            <span className="national-pulse-lbl">{copy(language, item.label, item.labelHi)}</span>
+      {/* Engineering Evidence Dossier Strip */}
+      <section className="engineering-dossier-strip" aria-label={copy(language, 'Engineering decisions', 'इंजीनियरिंग निर्णय')}>
+        <div className="engineering-dossier-header">
+          <div className="engineering-dossier-header__title-group">
+            <p className="eyebrow">{copy(language, 'Engineering Decisions', 'इंजीनियरिंग निर्णय')}</p>
+            <h2>{copy(language, 'Designed around the moments that usually make applicants start again', 'उन रुकावटों के लिए डिज़ाइन किया गया जहाँ अक्सर दोबारा शुरू करना पड़ता है')}</h2>
           </div>
-        ))}
+          <p className="engineering-dossier-header__desc">
+            {copy(language, 'LicenceFlow protects continuity, fairness and privacy when the journey becomes unreliable.', 'लाइसेंसफ़्लो निरंतरता, निष्पक्षता और गोपनीयता की सुरक्षा करता है जब परिस्थितियाँ अस्थिर हो जाएँ।')}
+          </p>
+        </div>
+
+        <div className="engineering-dossier-grid">
+          {engineeringPrinciples.map((item, idx) => {
+            const Icon = item.icon
+            return (
+              <article className="engineering-dossier-card" key={idx}>
+                <div className="engineering-dossier-card__header">
+                  <span className="engineering-dossier-card__marker" aria-hidden="true">
+                    <Icon size={16} />
+                  </span>
+                  <strong className="engineering-dossier-card__principle">
+                    {copy(language, item.principle, item.principleHi)}
+                  </strong>
+                </div>
+                <p className="engineering-dossier-card__outcome">
+                  {copy(language, item.outcome, item.outcomeHi)}
+                </p>
+                <div className="engineering-dossier-card__proof">
+                  <p>{copy(language, item.proof, item.proofHi)}</p>
+                  {item.checkpointFlow && (
+                    <div className="engineering-dossier-card__flow" aria-label={copy(language, 'Preserved journey stages', 'सुरक्षित यात्रा चरण')}>
+                      <span>Form</span>
+                      <span className="flow-arrow">→</span>
+                      <span>Payment</span>
+                      <span className="flow-arrow">→</span>
+                      <span>Learning</span>
+                      <span className="flow-arrow">→</span>
+                      <span>Test</span>
+                      <span className="flow-arrow">→</span>
+                      <span>Result</span>
+                    </div>
+                  )}
+                </div>
+              </article>
+            )
+          })}
+        </div>
       </section>
 
       {/* 4 Primary Service Cards with 3D Showcase */}
@@ -1894,6 +1942,7 @@ function PortalApp() {
   else if (route.name === 'test') page = <TestPage applicationId={route.applicationId} onStageChange={updateApplicationStage} language={language} />
   else if (route.name === 'test-interruption') page = <InterruptionPage applicationId={route.applicationId} onStageChange={updateApplicationStage} language={language} />
   else if (route.name === 'result') page = <ResultPage applicationId={route.applicationId} onStageChange={updateApplicationStage} language={language} />
+  else if (route.name === 'result-review') page = <ResultReviewPage applicationId={route.applicationId} onStageChange={updateApplicationStage} language={language} />
   else if (route.name === 'application') page = <ApplicationPage language={language} application={demoApplication ?? { version: 1, id: route.applicationId, applicant: copy(language, 'Sample applicant', 'नमूना आवेदक'), lastStage: copy(language, 'Device compatibility', 'डिवाइस अनुकूलता'), savedAt: new Date().toISOString() }} />
   else if (route.name === 'service') {
     const service = getService(route.serviceId)
@@ -1904,7 +1953,9 @@ function PortalApp() {
         : service ? <ServicePage service={service} language={language} /> : <NotFoundPage language={language} />
   } else page = <NotFoundPage language={language} />
 
-  if (route.name === 'gateway') return <Suspense fallback={<RouteLoading language={language} />}>{page}</Suspense>
+  if (route.name === 'gateway' || route.name === 'rehearsal' || route.name === 'test' || route.name === 'test-interruption') {
+    return <Suspense fallback={<RouteLoading language={language} />}>{page}</Suspense>
+  }
 
   const national = route.name === 'home' || route.name === 'login'
   return <div className="portal-app"><PortalHeader pathname={pathname} language={language} textScale={textScale} national={national} session={session} onLanguage={() => setLanguage((value) => value === 'en' ? 'hi' : 'en')} onTextScale={() => setTextScale((value) => value === 'normal' ? 'large' : 'normal')} onHelp={() => setHelpOpen(true)} onAccount={() => setAccountOpen(true)} /><main id="main-content" className={`portal-container portal-main ${route.name === 'home' ? 'portal-main--home' : ''}`}><Suspense fallback={<RouteLoading language={language} />}>{page}</Suspense></main><PortalFooter language={language} national={national} onPrototypeDetails={() => setPrototypeDetailsOpen(true)} />{helpOpen && <HelpDialog route={route} language={language} onClose={() => setHelpOpen(false)} />}{prototypeDetailsOpen && <PrototypeDetailsDialog language={language} onClose={() => setPrototypeDetailsOpen(false)} />}{unavailableDestination && <UnavailableServiceDialog destination={unavailableDestination} language={language} onClose={() => setUnavailableDestination(null)} />}{stateSelectionOpen && <StateSelectionDialog language={language} onClose={() => setStateSelectionOpen(false)} />}{accountOpen && session && <Suspense fallback={null}><AccountDialog language={language} session={session} onClose={() => setAccountOpen(false)} onSignOut={() => { clearDemoSession(); setSession(null); setAccountOpen(false); navigatePortal('/') }} /></Suspense>}</div>

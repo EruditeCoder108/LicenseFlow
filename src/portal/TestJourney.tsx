@@ -3,12 +3,13 @@ import {
   ArrowLeft, ArrowRight, BookOpenCheck, Camera, Check, CheckCircle2, CircleHelp, Clock3,
   ClipboardCheck, Download, Eraser, FastForward, FileCheck2, FileText, Flag, Info, LockKeyhole, Network, Printer,
   RefreshCcw, RotateCcw, ShieldCheck, Signal, TriangleAlert, UserRound, Volume2, VolumeX, WifiOff,
+  Maximize2, Minimize2, ChevronRight, Filter, Slash, CheckCircle, X,
 } from 'lucide-react'
 import type { Question } from '../content/questions'
 import { paperFingerprint, resolveQuestionPaper } from '../content/questionPaper'
 import { LL_TEST_CONFIG, OFFICIAL_QUESTION_BANK, ROAD_SAFETY_VIDEO } from '../content/testConfig'
 import { journeyReducer, type InterruptionKind, type JourneyEvent, type JourneyState } from '../domain/journey'
-import { useDeviceReadiness } from '../hooks/useDeviceReadiness'
+import { useDeviceReadiness, stopAllMediaTracks } from '../hooks/useDeviceReadiness'
 import { clearLicenceFlowDeviceData } from './devicePrivacy'
 import { loadApplicationDraft } from './application'
 import { ageOnDate, createDemonstrationLicencePdf, createJourneyReceiptPdf, demonstrationLicenceNumber, downloadPdf, isDemonstrationLicenceEligible, type DemonstrationLicenceData, type JourneyReceiptData } from './downloadDocuments'
@@ -17,6 +18,7 @@ import { isPaymentConfirmed } from './payment'
 import { completeTutorial, loadJourneyProgress, saveJourneyProgress, startTutorial, updateTutorialWatch } from './progress'
 import { navigatePortal } from './router'
 import { loadYouTubeIframeApi, type YouTubePlayer, type YouTubePlayerStateEvent } from './youtubeIframeApi'
+import { FocusedAssessmentShell, QuestionStatusMap, useFocusedFullscreen } from './FocusedAssessmentShell'
 
 type Language = 'en' | 'hi'
 type StageChange = (label: string) => void
@@ -426,7 +428,7 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
     } else if (!media.snapshot.started) {
       void media.start()
     }
-  }, [guided, media])
+  }, [guided, media.snapshot.started, media.start, media.useGuidedSignals])
 
   const preTestReady =
     media.snapshot.camera === 'ready' &&
@@ -439,9 +441,25 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
     media.snapshot.secureContext &&
     media.snapshot.online
 
+  useEffect(() => {
+    return () => {
+      media.stop()
+      stopAllMediaTracks()
+    }
+  }, [media.stop])
+
   if (progress.tutorial.status !== 'completed') return <Guard applicationId={applicationId} language={language} title={local(language, 'Complete the tutorial first', 'पहले सीखने का भाग पूरा करें')} body={local(language, 'The test starts only after the learning check is completed.', 'सीखने की जाँच पूरी होने के बाद ही परीक्षा शुरू होती है।')} route={`/mp/application/${applicationId}/tutorial`} action={local(language, 'Open road-safety tutorial', 'सड़क सुरक्षा सीख खोलें')} />
   const fresh = session.stage === 'exam-intro'
-  const start = () => {
+  const start = async () => {
+    try {
+      if (document.documentElement.requestFullscreen) {
+        await document.documentElement.requestFullscreen()
+      }
+    } catch {
+      // safe fallback
+    }
+    media.stop()
+    stopAllMediaTracks()
     const base = session.stage === 'result' ? resetExamSession(applicationId, progress) : session
     const next = journeyReducer(base, { type: 'START_EXAM' })
     saveExamSession(applicationId, next)
@@ -450,6 +468,8 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
     navigatePortal(`/mp/application/${applicationId}/test`)
   }
   const previewPassingResult = () => {
+    media.stop()
+    stopAllMediaTracks()
     const next = createPassingJudgeExamSession(applicationId, progress)
     setSession(next)
     onStageChange(local(language, 'Passing result preview · judge shortcut', 'पास परिणाम पूर्वावलोकन · जज शॉर्टकट'))
@@ -461,8 +481,8 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
       <section className="page-title">
         <div>
           <p className="eyebrow">{local(language, 'Demo test', 'डेमो टेस्ट')}</p>
-          <h1 tabIndex={-1}>{local(language, 'Instructions for the online test', 'ऑनलाइन टेस्ट के नियम और निर्देश')}</h1>
-          <p>{local(language, 'This prototype uses a configurable 15-question knowledge test. Exact official rules remain state-controlled.', 'यह प्रोटोटाइप 15 प्रश्नों की कॉन्फ़िगर की जा सकने वाली ज्ञान परीक्षा उपयोग करता है। सटीक आधिकारिक नियम राज्य के नियंत्रण में रहते हैं।')}</p>
+          <h1 tabIndex={-1}>{local(language, 'Final system check before your 15-question demo test', '15-प्रश्न डेमो परीक्षा से पहले अंतिम सिस्टम जाँच')}</h1>
+          <p>{local(language, 'Review your system signals and start the focused 15-question knowledge test. Each answer is saved locally as you proceed.', 'अपने सिस्टम संकेतों की समीक्षा करें और 15 प्रश्नों का फ़ोकस्ड टेस्ट शुरू करें। जैसे-जैसे आप आगे बढ़ेंगे, प्रत्येक उत्तर सुरक्षित रहेगा।')}</p>
         </div>
       </section>
       <section className="test-instruction-grid">
@@ -551,7 +571,7 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
       <div className="lf-actions">
         {fresh ? (
           <button className="button button--primary" disabled={!accepted || (!guided && !preTestReady)} onClick={start}>
-            {local(language, `Start ${LL_TEST_CONFIG.questionCount}-question test`, `${LL_TEST_CONFIG.questionCount} प्रश्नों का टेस्ट शुरू करें`)} <ArrowRight size={18} />
+            {local(language, `Enter focused mode and start ${LL_TEST_CONFIG.questionCount}-question test`, `फ़ोकस्ड मोड में प्रवेश करें और ${LL_TEST_CONFIG.questionCount}-प्रश्नों का टेस्ट शुरू करें`)} <ArrowRight size={18} />
           </button>
         ) : (
           <FlowLink className="button button--primary" href={routeForSession(applicationId, session)}>
@@ -601,11 +621,36 @@ export function TestPage({ applicationId, onStageChange, language }: { applicati
     if (!question) return
     window.speechSynthesis?.cancel()
     setSpeaking(false)
-    const next = journeyReducer(state, { type: 'ANSWER', answer, correct: answer === question.correct, isLast: state.exam.currentQuestion === paper.length - 1, passThreshold: LL_TEST_CONFIG.passMark, triggerDemoInterruption: state.exam.currentQuestion === LL_TEST_CONFIG.interruptionAfterQuestion - 1 })
-    saveExamSession(applicationId, next); setState(next); setSelected(null)
-    if (next.stage === 'interruption') navigatePortal(`/mp/application/${applicationId}/test-interruption`)
-    if (next.stage === 'result') { onStageChange(local(language, 'View result and receipt', 'परिणाम और रसीद देखें')); navigatePortal(`/mp/application/${applicationId}/result`) }
+    const next = journeyReducer(state, {
+      type: 'ANSWER',
+      answer,
+      correct: answer === question.correct,
+      isLast: state.exam.currentQuestion === paper.length - 1,
+      passThreshold: LL_TEST_CONFIG.passMark,
+      triggerDemoInterruption: state.exam.currentQuestion === LL_TEST_CONFIG.interruptionAfterQuestion - 1,
+    })
+    saveExamSession(applicationId, next)
+    setState(next)
+    setSelected(null)
+    if (next.stage === 'interruption') {
+      media.stop()
+      stopAllMediaTracks()
+      navigatePortal(`/mp/application/${applicationId}/test-interruption`)
+    }
+    if (next.stage === 'result') {
+      media.stop()
+      stopAllMediaTracks()
+      onStageChange(local(language, 'View result and receipt', 'परिणाम और रसीद देखें'))
+      navigatePortal(`/mp/application/${applicationId}/result`)
+    }
   }
+
+  useEffect(() => {
+    return () => {
+      media.stop()
+      stopAllMediaTracks()
+    }
+  }, [media.stop])
 
   useEffect(() => {
     if (state.stage !== 'exam' || state.exam.status !== 'active' || !state.exam.questionDeadlineAt) return
@@ -621,33 +666,66 @@ export function TestPage({ applicationId, onStageChange, language }: { applicati
     const interval = window.setInterval(tick, 250)
     return () => window.clearInterval(interval)
   }, [state.stage, state.exam.status, state.exam.currentQuestion, state.exam.questionDeadlineAt])
+
   useEffect(() => {
     if (guided) {
       if (!media.snapshot.started) media.useGuidedSignals()
     } else if (!media.snapshot.started) {
       void media.start()
     }
-  }, [guided, media])
+  }, [guided, media.snapshot.started, media.start, media.useGuidedSignals])
+
   useEffect(() => {
     const pauseForVisibility = () => {
       if (!document.hidden || state.stage !== 'exam' || state.exam.status !== 'active') return
-      const next = journeyReducer(state, { type: 'PAUSE_EXAM', kind: 'visibility', detail: 'The test page became hidden; the latest saved answer remains protected.', synthetic: false })
-      saveExamSession(applicationId, next); setState(next); navigatePortal(`/mp/application/${applicationId}/test-interruption`)
+      const next = journeyReducer(state, {
+        type: 'PAUSE_EXAM',
+        kind: 'visibility',
+        detail: 'The test page became hidden; the latest saved answer remains protected.',
+        synthetic: false,
+      })
+      saveExamSession(applicationId, next)
+      setState(next)
+      navigatePortal(`/mp/application/${applicationId}/test-interruption`)
     }
     document.addEventListener('visibilitychange', pauseForVisibility)
     return () => document.removeEventListener('visibilitychange', pauseForVisibility)
   }, [applicationId, state])
+
   useEffect(() => {
     if (state.stage !== 'exam' || state.exam.status !== 'active' || guided) return
     const reason = media.snapshot.blockingReason
     if (!reason && media.snapshot.online) return
-    const kind: InterruptionKind = !media.snapshot.online ? 'network-real' : reason === 'multiple-faces' ? 'multiple-faces' : 'camera'
-    const detail = !media.snapshot.online ? 'The browser reported a real network loss.' : reason === 'multiple-faces' ? 'More than one face remained visible in the camera field.' : 'The live camera signal could not verify one visible face.'
+    const kind: InterruptionKind = !media.snapshot.online
+      ? 'network-real'
+      : reason === 'multiple-faces'
+      ? 'multiple-faces'
+      : 'camera'
+    const detail = !media.snapshot.online
+      ? 'The browser reported a real network loss.'
+      : reason === 'multiple-faces'
+      ? 'More than one face remained visible in the camera field.'
+      : 'The live camera signal could not verify one visible face.'
     const next = journeyReducer(state, { type: 'PAUSE_EXAM', kind, detail, synthetic: false })
-    saveExamSession(applicationId, next); setState(next); navigatePortal(`/mp/application/${applicationId}/test-interruption`)
+    saveExamSession(applicationId, next)
+    setState(next)
+    navigatePortal(`/mp/application/${applicationId}/test-interruption`)
   }, [applicationId, guided, media.snapshot.blockingReason, media.snapshot.online, state])
+
   useEffect(() => () => window.speechSynthesis?.cancel(), [])
-  if (state.stage !== 'exam' || !question) return <Guard applicationId={applicationId} language={language} title={local(language, 'Open the saved test stage', 'सहेजा परीक्षा चरण खोलें')} body={local(language, 'This route follows the persisted exam state.', 'यह पेज सहेजी हुई परीक्षा स्थिति का अनुसरण करता है।')} route={routeForSession(applicationId, state)} action={local(language, 'Continue saved session', 'सहेजा सत्र जारी रखें')} />
+
+  if (state.stage !== 'exam' || !question) {
+    return (
+      <Guard
+        applicationId={applicationId}
+        language={language}
+        title={local(language, 'Open the saved test stage', 'सहेजा परीक्षा चरण खोलें')}
+        body={local(language, 'This route follows the persisted exam state.', 'यह पेज सहेजी हुई परीक्षा स्थिति का अनुसरण करता है।')}
+        route={routeForSession(applicationId, state)}
+        action={local(language, 'Continue saved session', 'सहेजा सत्र जारी रखें')}
+      />
+    )
+  }
 
   const mediaReady = guided
     ? media.snapshot.started
@@ -658,6 +736,7 @@ export function TestPage({ applicationId, onStageChange, language }: { applicati
       media.snapshot.framing === 'good' &&
       media.snapshot.online
   const needsCameraStart = !guided && !media.snapshot.started
+
   const coaching = media.snapshot.coachingReason === 'multiple-faces'
     ? { title: local(language, 'Only one person should be visible', 'कैमरे में सिर्फ एक व्यक्ति होना चाहिए'), body: local(language, 'Ask others to step away from the camera.', 'दूसरों को कैमरे से दूर जाने को कहें।') }
     : media.snapshot.coachingReason === 'no-face'
@@ -667,16 +746,24 @@ export function TestPage({ applicationId, onStageChange, language }: { applicati
         : media.snapshot.coachingReason === 'lighting'
           ? { title: local(language, 'Improve lighting on your face', 'चेहरे पर रोशनी ठीक करें'), body: local(language, 'Turn on light or move to a brighter spot.', 'उजाले में बैठें या लाइट चालू करें।') }
           : null
-  const saveAnswer = () => { if (selected !== null) submitAnswer(selected) }
+
+  const saveAnswer = () => {
+    if (selected !== null) submitAnswer(selected)
+  }
+
   const previewPassingResult = () => {
+    media.stop()
+    stopAllMediaTracks()
     const next = createPassingJudgeExamSession(applicationId, progress)
     setState(next)
     onStageChange(local(language, 'Passing result preview · judge shortcut', 'पास परिणाम पूर्वावलोकन · जज शॉर्टकट'))
     navigatePortal(`/mp/application/${applicationId}/result`)
   }
+
   const answers = questionOptions(question, language)
   const savedCount = Object.keys(state.exam.answers).length
   const speechAvailable = typeof window !== 'undefined' && 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window
+
   const toggleQuestionSpeech = () => {
     if (!speechAvailable) return
     if (speaking) {
@@ -695,72 +782,186 @@ export function TestPage({ applicationId, onStageChange, language }: { applicati
     window.speechSynthesis.speak(utterance)
   }
 
+  const isLastQuestion = state.exam.currentQuestion === paper.length - 1
+
   return (
-    <>
-      <Breadcrumbs applicationId={applicationId} current={local(language, 'Online test', 'ऑनलाइन टेस्ट')} language={language} />
-      <div className="test-live-bar">
-        <span><LockKeyhole size={16} />{local(language, 'Answers saved on device', 'उत्तर सुरक्षित')}</span>
-        <span><Signal size={16} />{media.snapshot.online ? local(language, 'Internet connected', 'इंटरनेट चालू') : local(language, 'Offline', 'ऑफलाइन')}</span>
-        <span><Camera size={16} />{guided ? local(language, 'Demo camera active', 'डेमो कैमरा सक्रिय') : mediaReady ? local(language, 'Camera active', 'कैमरा चालू') : local(language, 'Camera check required', 'कैमरा जाँच आवश्यक')}</span>
-      </div>
-      <section className="test-workspace">
-        <div className="test-question-area">
-          <div className="test-question-heading">
-            <div>
-              <p className="eyebrow">{local(language, `Question ${state.exam.currentQuestion + 1} of ${paper.length}`, `प्रश्न ${state.exam.currentQuestion + 1} / ${paper.length}`)}</p>
-              <h1 tabIndex={-1}>{questionPrompt(question, language)}</h1>
-              <button className="question-speech-button" type="button" onClick={toggleQuestionSpeech} disabled={!speechAvailable} aria-pressed={speaking}>
-                {speaking ? <VolumeX size={18} aria-hidden="true" /> : <Volume2 size={18} aria-hidden="true" />}
-                {speaking ? local(language, 'Stop reading', 'पढ़ना बंद करें') : local(language, 'Read question aloud', 'प्रश्न सुनें')}
-              </button>
-            </div>
-            <div className="test-question-timing"><span className={secondsLeft <= 10 ? 'test-timer test-timer--urgent' : 'test-timer'}><Clock3 size={16} />{secondsLeft}s</span><span>{local(language, `${savedCount} saved`, `${savedCount} सहेजे`)}</span></div>
-          </div>
-          <fieldset className="test-answer-fieldset">
-            <legend className="visually-hidden">{local(language, 'Choose one answer', 'एक उत्तर चुनें')}</legend>
-            {answers.map((option, index) => (
-              <label className={`${selected === index ? 'selected' : ''} ${!mediaReady ? 'disabled' : ''}`} key={option}>
-                <input type="radio" name="test-answer" disabled={!mediaReady} checked={selected === index} onChange={() => setSelected(index)} />
-                <span>{String.fromCharCode(65 + index)}</span>
-                <strong>{option}</strong>
-              </label>
-            ))}
-          </fieldset>
-          <div className="test-save-note">
-            <LockKeyhole size={17} />
-            <span>{local(language, 'Your answer is saved when you click “Save answer and continue”.', '“उत्तर सहेजें और आगे बढ़ें” दबाने पर उत्तर सुरक्षित होगा।')}</span>
-          </div>
-          <button className="button button--primary" disabled={selected === null || !mediaReady} onClick={saveAnswer}>
-            {state.exam.currentQuestion === paper.length - 1 ? local(language, 'Save answer and finish', 'उत्तर सहेजें और पूरा करें') : local(language, 'Save answer and continue', 'उत्तर सहेजें और आगे बढ़ें')} <ArrowRight size={18} />
+    <FocusedAssessmentShell
+      mode="exam"
+      title={local(language, 'Demo Learner’s Licence Test', 'डेमो लर्नर लाइसेंस परीक्षा')}
+      stageBadge={local(
+        language,
+        `Question ${state.exam.currentQuestion + 1} of ${paper.length}`,
+        `प्रश्न ${state.exam.currentQuestion + 1} / ${paper.length}`
+      )}
+      timerSeconds={secondsLeft}
+      online={media.snapshot.online}
+      cameraActive={mediaReady}
+      cameraGuided={guided}
+      statusMap={
+        <QuestionStatusMap
+          total={paper.length}
+          mode="exam"
+          currentIndex={state.exam.currentQuestion}
+          answers={state.exam.answers}
+          language={language}
+        />
+      }
+      language={language}
+      onExit={() => navigatePortal(`/mp/application/${applicationId}`)}
+      exitLabel={local(language, 'Exit test', 'टेस्ट से बाहर निकलें')}
+      bottomBar={
+        <div className="focused-bottom-actions">
+          <button
+            type="button"
+            className="button button--primary"
+            disabled={selected === null || !mediaReady}
+            onClick={saveAnswer}
+          >
+            {isLastQuestion
+              ? local(language, 'Lock answer and finish test', 'उत्तर लॉक करें और टेस्ट पूरा करें')
+              : local(language, 'Lock answer and continue', 'उत्तर लॉक करें और आगे बढ़ें')}{' '}
+            <ArrowRight size={17} />
           </button>
-        </div>
-        <aside className={`test-observation-panel ${coaching || needsCameraStart ? 'test-observation-panel--coach' : ''}`} aria-live="polite">
-          <div className="test-monitoring-state">
-            {coaching || needsCameraStart ? <TriangleAlert size={22} /> : <ShieldCheck size={22} />}
-            <div>
-              <h2>{needsCameraStart ? local(language, 'Camera check required', 'कैमरा जाँच आवश्यक') : coaching?.title ?? local(language, 'Monitoring quietly', 'निगरानी जारी है')}</h2>
-              <p>{needsCameraStart ? local(language, 'Reconnect camera before saving this answer.', 'यह उत्तर सहेजने से पहले कैमरा फिर जोड़ें।') : coaching?.body ?? local(language, 'Everything is working normally.', 'सब कुछ ठीक काम कर रहा है।')}</p>
-            </div>
+          <div className="focused-security-note">
+            <LockKeyhole size={15} aria-hidden="true" />
+            <span>
+              {local(
+                language,
+                'Answers are locked permanently upon clicking continue.',
+                'आगे बढ़ने पर उत्तर हमेशा के लिए लॉक हो जाते हैं।'
+              )}
+            </span>
           </div>
-          {needsCameraStart && (
-            <button className="button button--secondary button--full" onClick={() => void media.start()}>
-              {local(language, 'Reconnect camera', 'कैमरा फिर जोड़ें')}
-            </button>
-          )}
-          <details className="test-camera-details">
-            <summary>{local(language, 'View camera status', 'कैमरा स्थिति देखें')}</summary>
-            <MiniCamera guided={guided} stream={media.stream} language={language} />
+        </div>
+      }
+    >
+      <div className="focused-workspace-container focused-workspace-container--split">
+        <div className="focused-question-card">
+          <div className="focused-question-heading">
+            <div className="focused-question-meta">
+              <span className="focused-question-pill">
+                {local(
+                  language,
+                  `Question ${state.exam.currentQuestion + 1} of ${paper.length}`,
+                  `प्रश्न ${state.exam.currentQuestion + 1} / ${paper.length}`
+                )}
+              </span>
+              <span className="focused-question-saved-pill">
+                <LockKeyhole size={13} aria-hidden="true" />
+                {local(language, `${savedCount} locked`, `${savedCount} लॉक`)}
+              </span>
+            </div>
+            <h2>{questionPrompt(question, language)}</h2>
+            {speechAvailable && (
+              <button
+                type="button"
+                className="question-speech-button"
+                onClick={toggleQuestionSpeech}
+                aria-pressed={speaking}
+              >
+                {speaking ? <VolumeX size={17} aria-hidden="true" /> : <Volume2 size={17} aria-hidden="true" />}
+                <span>
+                  {speaking
+                    ? local(language, 'Stop reading', 'पढ़ना रोकें')
+                    : local(language, 'Read question aloud', 'प्रश्न सुनें')}
+                </span>
+              </button>
+            )}
+          </div>
+
+          <fieldset className="focused-option-grid">
+            <legend className="visually-hidden">
+              {local(language, 'Choose one answer', 'एक उत्तर चुनें')}
+            </legend>
+            {answers.map((option, index) => {
+              const isSelected = selected === index
+              return (
+                <label
+                  key={option}
+                  className={`focused-option-card ${
+                    isSelected ? 'focused-option-card--selected' : ''
+                  } ${!mediaReady ? 'focused-option-card--disabled' : ''}`}
+                >
+                  <input
+                    type="radio"
+                    name="exam-question-radio"
+                    disabled={!mediaReady}
+                    checked={isSelected}
+                    onChange={() => setSelected(index)}
+                  />
+                  <span className="focused-option-card__badge">
+                    {String.fromCharCode(65 + index)}
+                  </span>
+                  <strong className="focused-option-card__label">{option}</strong>
+                </label>
+              )
+            })}
+          </fieldset>
+        </div>
+
+        {/* Quiet Observation Panel */}
+        <aside className="focused-observation-panel" aria-label={local(language, 'System monitoring', 'सिस्टम निगरानी')}>
+          <div className={`focused-obs-card ${coaching || needsCameraStart ? 'focused-obs-card--coach' : ''}`}>
+            <div className="focused-obs-card__header">
+              {coaching || needsCameraStart ? (
+                <TriangleAlert size={18} aria-hidden="true" />
+              ) : (
+                <ShieldCheck size={18} aria-hidden="true" />
+              )}
+              <strong>
+                {needsCameraStart
+                  ? local(language, 'Camera check required', 'कैमरा जाँच आवश्यक')
+                  : coaching?.title ?? local(language, 'Monitoring quietly', 'निगरानी सक्रिय')}
+              </strong>
+            </div>
+            <p className="focused-obs-card__body">
+              {needsCameraStart
+                ? local(language, 'Reconnect camera to continue test.', 'टेस्ट जारी रखने के लिए कैमरा जोड़ें।')
+                : coaching?.body ?? local(language, 'All systems normal. Face detected and framed.', 'सब कुछ सामान्य है। चेहरा संरेखित है।')}
+            </p>
+            {needsCameraStart && (
+              <button
+                type="button"
+                className="button button--secondary button--compact"
+                onClick={() => void media.start()}
+              >
+                {local(language, 'Reconnect camera', 'कैमरा फिर जोड़ें')}
+              </button>
+            )}
+          </div>
+
+          <details className="focused-camera-drawer">
+            <summary className="focused-camera-drawer__summary">
+              <Camera size={15} aria-hidden="true" />
+              <span>{local(language, 'View camera preview', 'कैमरा पूर्वावलोकन देखें')}</span>
+            </summary>
+            <div className="focused-camera-drawer__content">
+              <MiniCamera guided={guided} stream={media.stream} language={language} />
+            </div>
           </details>
-          <h2>{local(language, 'Technical help only', 'केवल तकनीकी सहायता')}</h2>
-          <p>{local(language, 'We can assist with camera and connection issues. We cannot give exam answers.', 'हम कैमरा या इंटरनेट समस्या में मदद कर सकते हैं, उत्तर नहीं बता सकते।')}</p>
-          <dl>
-            <div><dt>{local(language, 'Payment', 'भुगतान')}</dt><dd>{local(language, 'Confirmed', 'पुष्ट')}</dd></div>
-            <div><dt>{local(language, 'Latest checkpoint', 'नवीनतम चेकपॉइंट')}</dt><dd>{savedCount === 0 ? local(language, 'No answer saved yet', 'अभी कोई उत्तर सहेजा नहीं') : local(language, `Question ${savedCount} saved`, `प्रश्न ${savedCount} सहेजा`)}</dd></div>
-          </dl>
-          <JudgePassShortcut language={language} onActivate={previewPassingResult} compact />
+
+          <div className="focused-status-summary-card">
+            <dl>
+              <div>
+                <dt>{local(language, 'Payment', 'भुगतान')}</dt>
+                <dd>✓ {local(language, 'Confirmed', 'पुष्ट')}</dd>
+              </div>
+              <div>
+                <dt>{local(language, 'Progress', 'प्रगति')}</dt>
+                <dd>
+                  {local(
+                    language,
+                    `${savedCount} of ${paper.length} saved`,
+                    `${paper.length} में से ${savedCount} सहेजे`
+                  )}
+                </dd>
+              </div>
+            </dl>
+            <JudgePassShortcut language={language} onActivate={previewPassingResult} compact />
+          </div>
         </aside>
-      </section>
-    </>
+      </div>
+    </FocusedAssessmentShell>
   )
 }
 
@@ -776,57 +977,123 @@ function translatedInterruptionDetail(detail: string, language: Language): strin
 export function InterruptionPage({ applicationId, onStageChange, language }: { applicationId: string; onStageChange: StageChange; language: Language }) {
   const progress = loadJourneyProgress(applicationId)
   const [state, setState] = useState(() => loadExamSession(applicationId, progress))
+  const { enterFullscreen } = useFocusedFullscreen()
   const paper = resolveQuestionPaper(state.exam.paperQuestionIds)
-  if (state.stage !== 'interruption') return <Guard applicationId={applicationId} language={language} title={local(language, 'No active interruption', 'कोई सक्रिय बाधा नहीं')} body={local(language, 'Continue from the current saved test stage.', 'वर्तमान सहेजे परीक्षा चरण से जारी रखें।')} route={routeForSession(applicationId, state)} action={local(language, 'Continue saved session', 'सहेजा सत्र जारी रखें')} />
+
+  if (state.stage !== 'interruption') {
+    return (
+      <Guard
+        applicationId={applicationId}
+        language={language}
+        title={local(language, 'No active interruption', 'कोई सक्रिय बाधा नहीं')}
+        body={local(language, 'Continue from the current saved test stage.', 'वर्तमान सहेजे परीक्षा चरण से जारी रखें।')}
+        route={routeForSession(applicationId, state)}
+        action={local(language, 'Continue saved session', 'सहेजा सत्र जारी रखें')}
+      />
+    )
+  }
+
   const integrity = state.exam.interruptionKind === 'multiple-faces'
-  const resume = () => {
+  const resume = async () => {
+    await enterFullscreen()
     const next = journeyReducer(state, { type: 'RESUME_EXAM' })
-    saveExamSession(applicationId, next); setState(next)
+    saveExamSession(applicationId, next)
+    setState(next)
     onStageChange(local(language, 'LL test in progress', 'एलएल परीक्षा जारी'))
     navigatePortal(`/mp/application/${applicationId}/test`)
   }
+
   return (
-    <>
-      <Breadcrumbs applicationId={applicationId} current={local(language, 'Test paused', 'परीक्षा रुकी')} language={language} />
-      <section className="interruption-card">
-        <div className="interruption-card__checkpoint-hero">
-          <div className="interruption-card__checkpoint-img-wrap">
-            <img
-              src="/assets/recovery-checkpoint.png"
-              alt="Safe Recovery Checkpoint"
-              className="interruption-card__checkpoint-img"
-            />
-          </div>
-          <div className="interruption-card__header-text">
-            <span className="interruption-card__icon">{integrity ? <Camera size={26} /> : <WifiOff size={26} />}</span>
-            <p className="eyebrow">{integrity ? local(language, 'Camera observation · Not a penalty', 'कैमरा संकेत · कोई पेनल्टी नहीं') : local(language, 'Technical checkpoint · Answers preserved', 'तकनीकी चेकपॉइंट · उत्तर सुरक्षित')}</p>
-            <h1 tabIndex={-1}>{integrity ? local(language, 'Multiple faces detected · Session paused safely', 'एक से अधिक चेहरे दिखे · सत्र सुरक्षित रूप से रुका') : local(language, 'The test paused safely without losing progress', 'आपकी प्रगति सुरक्षित रखकर परीक्षा रोकी गई')}</h1>
-          </div>
-        </div>
-        <p className="interruption-card__detail">{translatedInterruptionDetail(state.exam.interruptionDetail ?? '', language)}</p>
-        <div className="recovery-facts">
-          <div><span>{local(language, 'Latest answer', 'पिछला उत्तर')}</span><strong>{local(language, 'Saved in storage', 'मेमोरी में सुरक्षित')}</strong></div>
-          <div><span>{local(language, 'Payment', 'भुगतान')}</span><strong>{local(language, '₹250 Confirmed', '₹२५० पुष्ट')}</strong></div>
-          <div><span>{local(language, 'Test progress', 'प्रगति')}</span><strong>{local(language, '0 Answers lost', 'कोई उत्तर नष्ट नहीं')}</strong></div>
-          <div><span>{local(language, 'Resume checkpoint', 'यहाँ से जारी करें')}</span><strong>{local(language, `Question ${state.exam.currentQuestion + 1} of ${paper.length}`, `प्रश्न ${state.exam.currentQuestion + 1} / ${paper.length}`)}</strong></div>
-        </div>
-        <div className="interruption-card__principles">
-          <ShieldCheck size={19} />
-          <div>
-            <strong>{local(language, 'Fair Examination Assurance', 'निष्पक्ष परीक्षा का भरोसा')}</strong>
-            <p>{local(language, 'LicenceFlow treats network dips and temporary camera obstructions as technical pauses, not failures. Return to single-person framing and resume when ready.', 'लाइसेंसफ्लो नेटवर्क रुकावटों को विफलता नहीं मानता। कैमरे के सामने अकेले आएं और तैयार होने पर जारी रखें।')}</p>
-          </div>
-        </div>
-        <div className="lf-actions">
-          <button className="button button--primary" onClick={resume}>
-            {local(language, 'Resume test now', 'अभी टेस्ट जारी रखें')} <RefreshCcw size={18} />
+    <FocusedAssessmentShell
+      mode="interruption"
+      title="LicenceFlow"
+      stageBadge={local(language, 'Test paused safely', 'परीक्षा सुरक्षित रूप से रुकी')}
+      online={state.exam.interruptionKind !== 'network-real'}
+      cameraActive={state.exam.interruptionKind !== 'camera'}
+      language={language}
+      onExit={() => navigatePortal(`/mp/application/${applicationId}`)}
+      exitLabel={local(language, 'Application status', 'आवेदन स्थिति')}
+      bottomBar={
+        <div className="focused-bottom-actions">
+          <button type="button" className="button button--primary" onClick={resume}>
+            {local(language, 'Return to focused mode and resume', 'फ़ोकस्ड मोड में लौटें और टेस्ट जारी रखें')}{' '}
+            <RefreshCcw size={17} />
           </button>
           <FlowLink className="button button--secondary" href={`/mp/application/${applicationId}`}>
-            <ArrowLeft size={18} /> {local(language, 'Application status', 'आवेदन स्थिति')}
+            <ArrowLeft size={17} /> {local(language, 'Application status', 'आवेदन स्थिति')}
           </FlowLink>
         </div>
-      </section>
-    </>
+      }
+    >
+      <div className="focused-workspace-container">
+        <section className="interruption-card interruption-card--focused">
+          <div className="interruption-card__checkpoint-hero">
+            <div className="interruption-card__checkpoint-img-wrap">
+              <img
+                src="/assets/recovery-checkpoint.png"
+                alt="Safe Recovery Checkpoint"
+                className="interruption-card__checkpoint-img"
+              />
+            </div>
+            <div className="interruption-card__header-text">
+              <span className="interruption-card__icon">
+                {integrity ? <Camera size={26} /> : <WifiOff size={26} />}
+              </span>
+              <p className="eyebrow">
+                {integrity
+                  ? local(language, 'Camera observation · Not a penalty', 'कैमरा संकेत · कोई पेनल्टी नहीं')
+                  : local(language, 'Technical checkpoint · Answers preserved', 'तकनीकी चेकपॉइंट · उत्तर सुरक्षित')}
+              </p>
+              <h1 tabIndex={-1}>
+                {integrity
+                  ? local(language, 'Multiple faces detected · Session paused safely', 'एक से अधिक चेहरे दिखे · सत्र सुरक्षित रूप से रुका')
+                  : local(language, 'The test paused safely without losing progress', 'आपकी प्रगति सुरक्षित रखकर परीक्षा रोकी गई')}
+              </h1>
+            </div>
+          </div>
+          <p className="interruption-card__detail">
+            {translatedInterruptionDetail(state.exam.interruptionDetail ?? '', language)}
+          </p>
+          <div className="recovery-facts">
+            <div>
+              <span>{local(language, 'Latest answer', 'पिछला उत्तर')}</span>
+              <strong>{local(language, 'Saved in storage', 'मेमोरी में सुरक्षित')}</strong>
+            </div>
+            <div>
+              <span>{local(language, 'Payment', 'भुगतान')}</span>
+              <strong>{local(language, '₹250 Confirmed', '₹२५० पुष्ट')}</strong>
+            </div>
+            <div>
+              <span>{local(language, 'Test progress', 'प्रगति')}</span>
+              <strong>{local(language, '0 Answers lost', 'कोई उत्तर नष्ट नहीं')}</strong>
+            </div>
+            <div>
+              <span>{local(language, 'Resume checkpoint', 'यहाँ से जारी करें')}</span>
+              <strong>
+                {local(
+                  language,
+                  `Question ${state.exam.currentQuestion + 1} of ${paper.length}`,
+                  `प्रश्न ${state.exam.currentQuestion + 1} / ${paper.length}`
+                )}
+              </strong>
+            </div>
+          </div>
+          <div className="interruption-card__principles">
+            <ShieldCheck size={19} />
+            <div>
+              <strong>{local(language, 'Fair Examination Assurance', 'निष्पक्ष परीक्षा का भरोसा')}</strong>
+              <p>
+                {local(
+                  language,
+                  'LicenceFlow treats network dips and temporary camera obstructions as technical pauses, not failures. Return to single-person framing and resume when ready.',
+                  'लाइसेंसफ्लो नेटवर्क रुकावटों को विफलता नहीं मानता। कैमरे के सामने अकेले आएं और तैयार होने पर जारी रखें।'
+                )}
+              </p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </FocusedAssessmentShell>
   )
 }
 
@@ -869,6 +1136,11 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
   const [state, setState] = useState(() => loadExamSession(applicationId, progress))
   const [confirmClear, setConfirmClear] = useState(false)
   const [documentStatus, setDocumentStatus] = useState<'idle' | 'licence' | 'receipt' | 'licence-ready' | 'receipt-ready' | 'error'>('idle')
+
+  useEffect(() => {
+    stopAllMediaTracks()
+  }, [])
+
   if (state.stage !== 'result') return <Guard applicationId={applicationId} language={language} title={local(language, 'Result not available yet', 'परिणाम अभी उपलब्ध नहीं')} body={local(language, 'Complete the saved synthetic test before opening its outcome.', 'परिणाम खोलने से पहले सहेजी सिंथेटिक परीक्षा पूरी करें।')} route={routeForSession(applicationId, state)} action={local(language, 'Continue saved session', 'सहेजा सत्र जारी रखें')} />
   const passed = state.exam.knowledgeResult === 'passed'
   const paper = resolveQuestionPaper(state.exam.paperQuestionIds)
@@ -933,258 +1205,378 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
   }
   const clearDevice = () => { clearLicenceFlowDeviceData(); window.location.assign('/') }
   const busy = documentStatus === 'licence' || documentStatus === 'receipt'
-  const reviewItems = paper.map((question, index) => ({ question, index, answer: state.exam.answers[index] ?? -1 })).filter(({ question, answer }) => answer !== question.correct)
+
   return (
-    <>
-      <Breadcrumbs applicationId={applicationId} current={local(language, 'Test result', 'परीक्षा परिणाम')} language={language} />
-      <section className={`result-hero ${passed ? 'result-hero--passed' : ''}`}>
-        <span>{passed ? <CheckCircle2 size={34} /> : <Flag size={34} />}</span>
-        <div>
-          <p className="eyebrow">{passed ? local(language, 'Application complete', 'आवेदन पूरा हुआ') : local(language, 'Demo test result', 'डेमो टेस्ट परिणाम')}</p>
-          <h1 tabIndex={-1}>{passed ? local(language, 'Congratulations! You passed the demo test', 'बधाई हो! आपने डेमो टेस्ट पास कर लिया') : local(language, 'You did not pass the demo test this time', 'इस बार आप डेमो टेस्ट पास नहीं कर सके')}</h1>
-          <p>{local(language, `${state.exam.correctAnswers} of ${paper.length} answers correct · prototype pass mark is ${LL_TEST_CONFIG.passMark}.`, `${paper.length} में से ${state.exam.correctAnswers} उत्तर सही · प्रोटोटाइप पास अंक ${LL_TEST_CONFIG.passMark} हैं।`)}</p>
-        </div>
-      </section>
-      <section className="outcome-grid">
-        <article>
-          <span><BookOpenCheck size={23} /></span>
-          <div>
-            <small>{local(language, 'Test result', 'टेस्ट परिणाम')}</small>
-            <strong>{passed ? local(language, 'Passed', 'पास') : local(language, 'Not passed', 'पास नहीं')}</strong>
-            <p>{local(language, 'Based on saved answers.', 'सहेजे उत्तरों पर आधारित।')}</p>
+    <div className="result-dashboard">
+      <Breadcrumbs
+        applicationId={applicationId}
+        current={local(language, 'Test result', 'परीक्षा परिणाम')}
+        language={language}
+      />
+
+      {/* Unified Outcome Hero */}
+      <section className={`result-dashboard-hero ${passed ? 'result-dashboard-hero--passed' : 'result-dashboard-hero--failed'}`}>
+        <div className="result-dashboard-hero__main">
+          <div className="result-dashboard-hero__icon" aria-hidden="true">
+            {passed ? <CheckCircle2 size={36} /> : <Flag size={36} />}
           </div>
-        </article>
-        <article>
-          <span><Network size={23} /></span>
-          <div>
-            <small>{local(language, 'Technical status', 'तकनीकी स्थिति')}</small>
-            <strong>{state.exam.interruptionSeen ? local(language, 'Recovered safely', 'सुरक्षित वापसी') : local(language, 'Normal test', 'सामान्य टेस्ट')}</strong>
-            <p>{state.exam.interruptionSeen ? local(language, 'Answers and payment remained intact.', 'उत्तर और भुगतान सुरक्षित रहे।') : local(language, 'Completed normally.', 'प्रक्रिया सामान्य रूप से पूरी हुई।')}</p>
-          </div>
-        </article>
-        <article>
-          <span><ShieldCheck size={23} /></span>
-          <div>
-            <small>{local(language, 'Monitoring status', 'निगरानी स्थिति')}</small>
-            <strong>{state.exam.integrityStatus === 'observation-recorded' ? local(language, 'Observation recorded', 'अवलोकन दर्ज') : local(language, 'Completed with no flags', 'बिना किसी समस्या के पूरा हुआ')}</strong>
-            <p>{local(language, 'A camera signal is never taken as proof of cheating.', 'कैमरा संकेत को कभी नकल का प्रमाण नहीं माना जाता।')}</p>
-          </div>
-        </article>
-      </section>
-      <aside className="paper-audit-strip" aria-label={local(language, 'Assessment paper audit details', 'परीक्षा प्रश्नपत्र ऑडिट विवरण')}>
-        <ClipboardCheck size={20} aria-hidden="true" />
-        <div><small>{local(language, 'Attempt', 'प्रयास')}</small><strong>#{state.exam.attemptNumber}</strong></div>
-        <div><small>{local(language, 'Paper fingerprint', 'प्रश्नपत्र फिंगरप्रिंट')}</small><strong>{fingerprint}</strong></div>
-        <div><small>{local(language, 'Difficulty blueprint', 'कठिनाई संरचना')}</small><strong>{local(language, '6 easy · 7 medium · 2 applied', '६ आसान · ७ मध्यम · २ अनुप्रयोग')}</strong></div>
-      </aside>
-      <section className="answer-review" id="answer-review" aria-labelledby="answer-review-title">
-        <div className="section-heading">
-          <div><p className="eyebrow">{local(language, 'Learning review', 'सीखने की समीक्षा')}</p><h2 id="answer-review-title">{reviewItems.length ? local(language, 'Review answers that need attention', 'जिन उत्तरों पर ध्यान देना है उनकी समीक्षा करें') : local(language, 'Every answer was correct', 'हर उत्तर सही था')}</h2></div>
-          <BookOpenCheck size={24} />
-        </div>
-        {reviewItems.length ? <div className="answer-review__list">{reviewItems.map(({ question, index, answer }) => {
-          const options = questionOptions(question, language)
-          return <details key={question.id} open={!passed && index === reviewItems[0]?.index}>
-            <summary><span>{local(language, `Question ${index + 1}`, `प्रश्न ${index + 1}`)}</span><strong>{questionPrompt(question, language)}</strong></summary>
-            <div>
-              <p><b>{local(language, 'Your answer:', 'आपका उत्तर:')}</b> {answer < 0 ? local(language, 'Not answered before time expired', 'समय समाप्त होने से पहले उत्तर नहीं दिया') : options[answer]}</p>
-              <p><b>{local(language, 'Correct answer:', 'सही उत्तर:')}</b> {options[question.correct]}</p>
-              <p>{questionExplanation(question, language)}</p>
-            </div>
-          </details>
-        })}</div> : <p>{local(language, 'No corrections are needed. You may still revisit the learning material at any time.', 'किसी सुधार की जरूरत नहीं है। आप फिर भी कभी भी सीखने की सामग्री दोबारा देख सकते हैं।')}</p>}
-      </section>
-      {!passed && <section className="retest-guidance"><RefreshCcw size={24} /><div><p className="eyebrow">{local(language, 'Next attempt', 'अगला प्रयास')}</p><h2>{local(language, 'Review first, then try again', 'पहले समीक्षा करें, फिर दोबारा प्रयास करें')}</h2><p>{local(language, 'This prototype allows an immediate retest after review. In a real service, waiting periods, fees and appointments are controlled by the current state rules.', 'यह प्रोटोटाइप समीक्षा के बाद तुरंत दोबारा टेस्ट देता है। वास्तविक सेवा में प्रतीक्षा अवधि, शुल्क और अपॉइंटमेंट वर्तमान राज्य नियमों से नियंत्रित होते हैं।')}</p></div><div className="lf-actions"><FlowLink className="button button--secondary" href={`/mp/application/${applicationId}/tutorial`}>{local(language, 'Revisit learning material', 'सीखने की सामग्री फिर देखें')}</FlowLink><button className="button button--primary" onClick={reset}>{local(language, 'Start a new prototype attempt', 'नया प्रोटोटाइप प्रयास शुरू करें')} <ArrowRight size={18} /></button></div></section>}
-      {eligible ? (
-        <>
-          <section className="demo-licence" aria-label={local(language, "Demonstration Learner's Licence, not valid", 'डेमो लर्नर लाइसेंस, मान्य नहीं')}>
-            <div className="demo-licence__watermark">{local(language, 'DEMO · NOT VALID', 'डेमो · मान्य नहीं')}</div>
-            <header className="demo-licence__header">
-              <div className="demo-licence__brand">
-                <img
-                  src="/assets/licenceflow-brand-logo.png"
-                  alt="LicenceFlow"
-                  className="demo-licence__logo"
-                />
-                <div>
-                  <p className="demo-licence__state">{local(language, 'LicenceFlow prototype · Madhya Pradesh demo journey', 'LicenceFlow प्रोटोटाइप · मध्य प्रदेश डेमो यात्रा')}</p>
-                  <h3 className="demo-licence__form-title">{local(language, "DEMONSTRATION LEARNER'S LICENCE · NOT VALID", 'डेमो लर्नर लाइसेंस · मान्य नहीं')}</h3>
-                </div>
-              </div>
-              <div className="demo-licence__ll-number">
-                <small>{local(language, 'Demo licence number', 'डेमो लाइसेंस संख्या')}</small>
-                <strong>{demonstrationLicenceNumber(applicationId)}</strong>
-              </div>
-            </header>
-
-            <div className="demo-licence__body">
-              <div className="demo-licence__photo-col">
-                <div className="demo-licence__photo-wrap">
-                  <img
-                    src="/assets/demo-applicant-photo.jpg"
-                    alt={licenceData.holderName}
-                    width={819}
-                    height={1024}
-                    className="demo-licence__photo-img"
-                  />
-                  <span>{local(language, 'DIGITAL PHOTO', 'डिजिटल फोटो')}</span>
-                </div>
-                <div className="demo-licence__qr-wrap">
-                  <svg className="demo-licence__qr-svg" viewBox="0 0 100 100" role="img" aria-label={local(language, 'Decorative demo verification pattern; not scannable', 'सजावटी डेमो सत्यापन पैटर्न; स्कैन योग्य नहीं')}>
-                    <rect width="100" height="100" fill="white" rx="4" />
-                    <rect x="8" y="8" width="26" height="26" fill="#071a34" rx="2" />
-                    <rect x="12" y="12" width="18" height="18" fill="white" rx="1" />
-                    <rect x="16" y="16" width="10" height="10" fill="#1d4ed8" rx="1" />
-                    <rect x="66" y="8" width="26" height="26" fill="#071a34" rx="2" />
-                    <rect x="70" y="12" width="18" height="18" fill="white" rx="1" />
-                    <rect x="74" y="16" width="10" height="10" fill="#1d4ed8" rx="1" />
-                    <rect x="8" y="66" width="26" height="26" fill="#071a34" rx="2" />
-                    <rect x="12" y="70" width="18" height="18" fill="white" rx="1" />
-                    <rect x="16" y="74" width="10" height="10" fill="#1d4ed8" rx="1" />
-                    <rect x="40" y="12" width="6" height="6" fill="#071a34" rx="1" />
-                    <rect x="50" y="12" width="8" height="6" fill="#1d4ed8" rx="1" />
-                    <rect x="40" y="24" width="8" height="8" fill="#071a34" rx="1" />
-                    <rect x="52" y="22" width="6" height="8" fill="#1d4ed8" rx="1" />
-                    <rect x="12" y="42" width="8" height="6" fill="#1d4ed8" rx="1" />
-                    <rect x="24" y="42" width="6" height="8" fill="#071a34" rx="1" />
-                    <rect x="42" y="42" width="16" height="16" fill="#071a34" rx="3" />
-                    <circle cx="50" cy="50" r="5" fill="#2563eb" />
-                    <rect x="66" y="42" width="8" height="6" fill="#1d4ed8" rx="1" />
-                    <rect x="78" y="42" width="12" height="8" fill="#071a34" rx="1" />
-                    <rect x="40" y="66" width="8" height="8" fill="#071a34" rx="1" />
-                    <rect x="52" y="68" width="8" height="6" fill="#1d4ed8" rx="1" />
-                    <rect x="66" y="66" width="8" height="10" fill="#071a34" rx="1" />
-                    <rect x="78" y="66" width="12" height="6" fill="#1d4ed8" rx="1" />
-                    <rect x="40" y="80" width="10" height="8" fill="#1d4ed8" rx="1" />
-                    <rect x="54" y="80" width="6" height="8" fill="#071a34" rx="1" />
-                    <rect x="66" y="82" width="14" height="6" fill="#071a34" rx="1" />
-                    <rect x="84" y="80" width="6" height="8" fill="#1d4ed8" rx="1" />
-                  </svg>
-                  <small>{local(language, 'Decorative demo pattern · not scannable', 'सजावटी डेमो पैटर्न · स्कैन योग्य नहीं')}</small>
-                </div>
-              </div>
-
-              <div className="demo-licence__info-col">
-                <dl className="demo-licence__grid">
-                  <div>
-                    <dt>{local(language, 'Licence Holder Name', 'अनुज्ञप्ति धारक का नाम')}</dt>
-                    <dd><strong>{licenceData.holderName}</strong></dd>
-                  </div>
-                  <div>
-                    <dt>{local(language, 'Application Number', 'आवेदन संख्या')}</dt>
-                    <dd>{applicationId}</dd>
-                  </div>
-                  <div>
-                    <dt>{local(language, 'Date of Birth / Age', 'जन्म तिथि / आयु')}</dt>
-                    <dd>{licenceData.dateOfBirth ? `${licenceData.dateOfBirth}${holderAge === null ? '' : ` (${holderAge} yrs)`}` : local(language, 'Synthetic date not supplied', 'सिंथेटिक जन्मतिथि उपलब्ध नहीं')}</dd>
-                  </div>
-                  <div>
-                    <dt>{local(language, 'Demo workflow region', 'डेमो कार्यप्रवाह क्षेत्र')}</dt>
-                    <dd>{local(language, 'Simulated Bhopal RTO workflow', 'सिमुलेटेड भोपाल आरटीओ कार्यप्रवाह')}</dd>
-                  </div>
-                  <div>
-                    <dt>{local(language, 'Issue Date', 'जारी दिनांक')}</dt>
-                    <dd>{new Date(licenceData.completedAt).toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</dd>
-                  </div>
-                  <div>
-                    <dt>{local(language, 'Valid Up To (6 Months)', 'वैधता अवधि (६ माह)')}</dt>
-                    <dd>{new Date(new Date(licenceData.completedAt).setMonth(new Date(licenceData.completedAt).getMonth() + 6)).toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</dd>
-                  </div>
-                  <div className="demo-licence__grid-full">
-                    <dt>{local(language, 'Authorized Vehicle Classes', 'अधिकृत वाहन श्रेणियाँ')}</dt>
-                    <dd>
-                      <div className="demo-licence__classes">
-                        {(licenceData.vehicleClasses.length ? licenceData.vehicleClasses : ['MCWG', 'LMV']).map((cov) => (
-                          <span key={cov} className="demo-licence__class-pill">
-                            <strong>{cov}</strong>
-                            <small>{cov === 'MCWOG' ? 'Motorcycle Without Gear' : cov === 'MCWG' ? 'Motorcycle With Gear' : cov === 'LMV' ? 'Light Motor Vehicle (Car)' : cov}</small>
-                          </span>
-                        ))}
-                      </div>
-                    </dd>
-                  </div>
-                </dl>
-
-                <div className="demo-licence__auth-row">
-                  <div className="demo-licence__signature-box">
-                    <small>{local(language, 'Holder Signature', 'धारक के हस्ताक्षर')}</small>
-                    <img
-                      src="/assets/demo-applicant-signature.jpg"
-                      alt={local(language, 'Synthetic holder signature', 'सिंथेटिक धारक हस्ताक्षर')}
-                      width={1024}
-                      height={768}
-                      className="demo-licence__signature-img"
-                    />
-                  </div>
-                  <div className="demo-licence__seal-box">
-                    <small>{local(language, 'Prototype seal', 'प्रोटोटाइप मुहर')}</small>
-                    <span className="demo-licence__seal-badge">
-                      <ShieldCheck size={16} /> DEMO · NOT VALID
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <footer className="demo-licence__footer">
-              <p>{local(language, 'Synthetic Demonstration Document · All citizen profiles, photos, signatures and credentials are AI-generated demo samples for prototype evaluation. Any resemblance to real persons, living or dead, is purely coincidental.', 'सिंथेटिक डेमो दस्तावेज़ · सभी प्रोफ़ाइल, फ़ोटो, हस्ताक्षर और क्रेडेंशियल प्रोटोटाइप मूल्यांकन हेतु AI जनरेटेड हैं। किसी वास्तविक व्यक्ति से समानता मात्र संयोग है।')}</p>
-            </footer>
-          </section>
-          <section className="journey-receipt" aria-labelledby="document-download-title">
-            <div className="section-heading">
-              <div>
-                <p className="eyebrow">{local(language, 'Process complete', 'प्रक्रिया पूरी')}</p>
-                <h2 id="document-download-title">{local(language, 'Download your demo documents', 'अपने डेमो दस्तावेज़ डाउनलोड करें')}</h2>
-              </div>
-              <FileCheck2 size={24} />
-            </div>
-            <p>{local(language, 'Both PDFs are created privately on your device. They are clearly marked NOT VALID.', 'ये PDF आपकी डिवाइस पर सुरक्षित रूप से बनते हैं। इन पर मान्य नहीं लिखा है।')}</p>
-            <div className="lf-actions">
-              <button className="button button--primary" disabled={busy} onClick={() => void downloadLicence()}>
-                <Download size={18} /> {documentStatus === 'licence' ? local(language, 'Preparing LL PDF…', 'एलएल PDF तैयार हो रहा है…') : local(language, 'Download demo Learner’s Licence (PDF)', 'डेमो लर्नर लाइसेंस डाउनलोड करें (PDF)')}
-              </button>
-              <button className="button button--secondary" disabled={busy} onClick={() => void downloadReceipt()}>
-                <ClipboardCheck size={18} /> {documentStatus === 'receipt' ? local(language, 'Preparing receipt…', 'रसीद तैयार हो रही है…') : local(language, 'Download Journey Receipt (PDF)', 'जर्नी रसीद डाउनलोड करें (PDF)')}
-              </button>
-            </div>
-            <p role="status" aria-live="polite">
-              {documentStatus === 'licence-ready' ? local(language, 'The demo Learner’s Licence PDF was downloaded.', 'डेमो लर्नर लाइसेंस PDF डाउनलोड हो गया।') : documentStatus === 'receipt-ready' ? local(language, 'The Journey Receipt PDF was downloaded.', 'जर्नी रसीद PDF डाउनलोड हो गई।') : documentStatus === 'error' ? local(language, 'The PDF could not be created. You can retry or use Print.', 'PDF नहीं बन सकी। दोबारा कोशिश करें या प्रिंट का उपयोग करें।') : ''}
+          <div className="result-dashboard-hero__title-wrap">
+            <p className="eyebrow">
+              {passed
+                ? local(language, 'Assessment Passed · Prototype Complete', 'परीक्षा उत्तीर्ण · प्रोटोटाइप पूर्ण')
+                : local(language, 'Assessment Result · Retest Available', 'परीक्षा परिणाम · पुनः प्रयास उपलब्ध')}
             </p>
-          </section>
-        </>
-      ) : (
-        <section className="lf-alert">
-          <Info size={20} />
-          <div>
-            <strong>{local(language, 'No demonstration licence was generated.', 'डेमो लाइसेंस नहीं बनाया गया।')}</strong>
-            <p>{local(language, 'A demo LL is available only after confirmed payment and passing the demo test. You can still download your Journey Receipt.', 'डेमो LL केवल पुष्ट भुगतान और टेस्ट पास करने के बाद मिलता है। आप फिर भी अपनी जर्नी रसीद डाउनलोड कर सकते हैं।')}</p>
+            <h1 tabIndex={-1}>
+              {passed
+                ? local(language, 'Congratulations! You passed the demo test', 'बधाई हो! आपने डेमो टेस्ट पास कर लिया')
+                : local(language, 'You did not pass the demo test this time', 'इस बार आप डेमो टेस्ट पास नहीं कर सके')}
+            </h1>
+            <p className="result-dashboard-hero__score">
+              <strong>{state.exam.correctAnswers} / {paper.length}</strong> {local(language, 'correct answers', 'सही उत्तर')}
+              <span className="result-dashboard-hero__score-sep">·</span>
+              <span>{local(language, `Pass mark is ${LL_TEST_CONFIG.passMark} of ${paper.length}`, `पास अंक ${paper.length} में से ${LL_TEST_CONFIG.passMark} हैं`)}</span>
+            </p>
           </div>
-        </section>
-      )}
-      <section className="journey-receipt">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">{local(language, 'Journey receipt', 'यात्रा रसीद')}</p>
-            <h2>{local(language, 'What happened during your test', 'आपकी परीक्षा का क्रमवार विवरण')}</h2>
-          </div>
-          <ClipboardCheck size={24} />
         </div>
-        <ol>
-          {state.events.map((event) => {
-            const translated = eventText(event, language)
-            return (
-              <li key={event.id}>
-                <span><Check size={14} /></span>
-                <div>
-                  <strong>{translated.title}</strong>
-                  <p>{translated.detail}</p>
-                  <small>{eventTime(event.at, language)} · {translated.source}</small>
-                </div>
-              </li>
-            )
-          })}
-        </ol>
+
+        <div className="result-dashboard-hero__meta-strip" aria-label={local(language, 'Session summary details', 'सत्र सारांश विवरण')}>
+          <div className="result-meta-chip">
+            <small>{local(language, 'Attempt', 'प्रयास')}</small>
+            <strong>#{state.exam.attemptNumber}</strong>
+          </div>
+          <div className="result-meta-chip">
+            <small>{local(language, 'Paper Fingerprint', 'प्रश्नपत्र फिंगरप्रिंट')}</small>
+            <strong>{fingerprint}</strong>
+          </div>
+          <div className="result-meta-chip">
+            <small>{local(language, 'Technical Status', 'तकनीकी स्थिति')}</small>
+            <strong>{state.exam.interruptionSeen ? local(language, 'Recovered safely', 'सुरक्षित वापसी') : local(language, 'Normal session', 'सामान्य सत्र')}</strong>
+          </div>
+          <div className="result-meta-chip">
+            <small>{local(language, 'Monitoring Status', 'निगरानी स्थिति')}</small>
+            <strong>{state.exam.integrityStatus === 'observation-recorded' ? local(language, 'Observation recorded', 'अवलोकन दर्ज') : local(language, 'No flags recorded', 'कोई समस्या नहीं')}</strong>
+          </div>
+        </div>
       </section>
+
+      {/* 2-Column Responsive Dashboard Layout */}
+      <div className="result-dashboard-grid">
+        {/* Primary Left Column */}
+        <div className="result-dashboard-grid__main">
+          {/* Answer Review Callout Card */}
+          <section className="result-card result-card--review-hero">
+            <div className="result-card__header">
+              <div className="result-card__icon-badge" aria-hidden="true">
+                <BookOpenCheck size={26} />
+              </div>
+              <div>
+                <p className="eyebrow">{local(language, 'Comprehensive Review', 'विस्तृत समीक्षा')}</p>
+                <h2>{local(language, 'Review all 15 answers and explanations', 'सभी 15 उत्तरों और स्पष्टीकरणों की समीक्षा करें')}</h2>
+              </div>
+            </div>
+            <p className="result-card__body">
+              {local(
+                language,
+                `Examine all ${paper.length} questions, your selected choices, correct answers, and road-safety explanations with interactive filter tabs.`,
+                `सभी ${paper.length} प्रश्नों, अपने चुने हुए उत्तरों, सही उत्तरों और विस्तृत सड़क सुरक्षा स्पष्टीकरणों की फ़िल्टर सहित समीक्षा करें।`
+              )}
+            </p>
+            <div className="result-card__actions">
+              <FlowLink
+                className="button button--primary"
+                href={`/mp/application/${applicationId}/result/review`}
+              >
+                <BookOpenCheck size={18} />{' '}
+                {local(language, 'Open 15-Question Answer Review', '15-प्रश्नों की उत्तर समीक्षा खोलें')}{' '}
+                <ArrowRight size={18} />
+              </FlowLink>
+            </div>
+          </section>
+
+          {/* Next Steps / Certificate Actions */}
+          {!passed ? (
+            <section className="result-card result-card--retest">
+              <div className="result-card__header">
+                <div className="result-card__icon-badge result-card__icon-badge--amber" aria-hidden="true">
+                  <RefreshCcw size={24} />
+                </div>
+                <div>
+                  <p className="eyebrow">{local(language, 'Next Attempt', 'अगला प्रयास')}</p>
+                  <h2>{local(language, 'Ready to try again?', 'क्या आप दोबारा प्रयास करने के लिए तैयार हैं?')}</h2>
+                </div>
+              </div>
+              <p className="result-card__body">
+                {local(
+                  language,
+                  'In this prototype simulation, you can immediately start a fresh test attempt or revisit the video tutorial to reinforce rules.',
+                  'इस प्रोटोटाइप में आप तुरंत नया प्रयास शुरू कर सकते हैं या नियमों को दोहराने के लिए वीडियो ट्यूटोरियल फिर से देख सकते हैं।'
+                )}
+              </p>
+              <div className="result-card__actions lf-actions--stack-mobile">
+                <button type="button" className="button button--primary" onClick={reset}>
+                  <RefreshCcw size={17} /> {local(language, 'Start a new prototype attempt', 'नया प्रोटोटाइप प्रयास शुरू करें')} <ArrowRight size={17} />
+                </button>
+                <FlowLink
+                  className="button button--secondary"
+                  href={`/mp/application/${applicationId}/tutorial`}
+                >
+                  <BookOpenCheck size={17} /> {local(language, 'Revisit road-safety tutorial', 'सड़क सुरक्षा ट्यूटोरियल फिर देखें')}
+                </FlowLink>
+              </div>
+            </section>
+          ) : (
+            <section className="result-card result-card--licence-pass">
+              <div className="result-card__header">
+                <div className="result-card__icon-badge result-card__icon-badge--green" aria-hidden="true">
+                  <FileCheck2 size={24} />
+                </div>
+                <div>
+                  <p className="eyebrow">{local(language, 'Demonstration Credential', 'डेमो दस्तावेज़')}</p>
+                  <h2>{local(language, 'Download your demonstration documents', 'अपने डेमो दस्तावेज़ डाउनलोड करें')}</h2>
+                </div>
+              </div>
+              <p className="result-card__body">
+                {local(
+                  language,
+                  'Your synthetic Learner’s Licence and Journey Receipt PDFs are ready to download. Both documents are generated securely in your browser.',
+                  'आपका सिंथेटिक लर्नर लाइसेंस और जर्नी रसीद PDF डाउनलोड के लिए तैयार हैं। ये दस्तावेज़ आपके ब्राउज़र में सुरक्षित रूप से बनाए गए हैं।'
+                )}
+              </p>
+              <div className="result-card__actions lf-actions--stack-mobile">
+                <button
+                  type="button"
+                  className="button button--primary"
+                  disabled={busy}
+                  onClick={() => void downloadLicence()}
+                >
+                  <Download size={18} />{' '}
+                  {documentStatus === 'licence'
+                    ? local(language, 'Preparing LL PDF…', 'एलएल PDF तैयार हो रहा है…')
+                    : local(language, 'Download Demo Learner’s Licence (PDF)', 'डेमो लर्नर लाइसेंस डाउनलोड करें (PDF)')}
+                </button>
+                <button
+                  type="button"
+                  className="button button--secondary"
+                  disabled={busy}
+                  onClick={() => void downloadReceipt()}
+                >
+                  <ClipboardCheck size={18} />{' '}
+                  {documentStatus === 'receipt'
+                    ? local(language, 'Preparing receipt…', 'रसीद तैयार हो रही है…')
+                    : local(language, 'Download Journey Receipt (PDF)', 'जर्नी रसीद डाउनलोड करें (PDF)')}
+                </button>
+              </div>
+              <details className="result-licence-preview-accordion">
+                <summary>{local(language, 'View demonstration Form 3 card preview', 'डेमो फॉर्म ३ कार्ड पूर्वावलोकन देखें')}</summary>
+                <div className="demo-licence demo-licence--compact" aria-label={local(language, "Demonstration Learner's Licence, not valid", 'डेमो लर्नर लाइसेंस, मान्य नहीं')}>
+                  <div className="demo-licence__watermark">{local(language, 'DEMO · NOT VALID', 'डेमो · मान्य नहीं')}</div>
+                  <header className="demo-licence__header">
+                    <div className="demo-licence__brand">
+                      <img
+                        src="/assets/licenceflow-brand-logo.png"
+                        alt="LicenceFlow"
+                        className="demo-licence__logo"
+                      />
+                      <div>
+                        <p className="demo-licence__state">{local(language, 'LicenceFlow prototype · Madhya Pradesh demo journey', 'LicenceFlow प्रोटोटाइप · मध्य प्रदेश डेमो यात्रा')}</p>
+                        <h3 className="demo-licence__form-title">{local(language, "DEMONSTRATION LEARNER'S LICENCE · NOT VALID", 'डेमो लर्नर लाइसेंस · मान्य नहीं')}</h3>
+                      </div>
+                    </div>
+                    <div className="demo-licence__ll-number">
+                      <small>{local(language, 'Demo licence number', 'डेमो लाइसेंस संख्या')}</small>
+                      <strong>{demonstrationLicenceNumber(applicationId)}</strong>
+                    </div>
+                  </header>
+
+                  <div className="demo-licence__body">
+                    <div className="demo-licence__photo-col">
+                      <div className="demo-licence__photo-wrap">
+                        <img
+                          src="/assets/demo-applicant-photo.jpg"
+                          alt={licenceData.holderName}
+                          width={819}
+                          height={1024}
+                          className="demo-licence__photo-img"
+                        />
+                        <span>{local(language, 'DIGITAL PHOTO', 'डिजिटल फोटो')}</span>
+                      </div>
+                      <div className="demo-licence__qr-wrap">
+                        <svg className="demo-licence__qr-svg" viewBox="0 0 100 100" role="img" aria-label={local(language, 'Decorative demo verification pattern; not scannable', 'सजावटी डेमो सत्यापन पैटर्न; स्कैन योग्य नहीं')}>
+                          <rect width="100" height="100" fill="white" rx="4" />
+                          <rect x="8" y="8" width="26" height="26" fill="#071a34" rx="2" />
+                          <rect x="12" y="12" width="18" height="18" fill="white" rx="1" />
+                          <rect x="16" y="16" width="10" height="10" fill="#1d4ed8" rx="1" />
+                          <rect x="66" y="8" width="26" height="26" fill="#071a34" rx="2" />
+                          <rect x="70" y="12" width="18" height="18" fill="white" rx="1" />
+                          <rect x="74" y="16" width="10" height="10" fill="#1d4ed8" rx="1" />
+                          <rect x="8" y="66" width="26" height="26" fill="#071a34" rx="2" />
+                          <rect x="12" y="70" width="18" height="18" fill="white" rx="1" />
+                          <rect x="16" y="74" width="10" height="10" fill="#1d4ed8" rx="1" />
+                          <rect x="40" y="12" width="6" height="6" fill="#071a34" rx="1" />
+                          <rect x="50" y="12" width="8" height="6" fill="#1d4ed8" rx="1" />
+                          <rect x="40" y="24" width="8" height="8" fill="#071a34" rx="1" />
+                          <rect x="52" y="22" width="6" height="8" fill="#1d4ed8" rx="1" />
+                          <rect x="12" y="42" width="8" height="6" fill="#1d4ed8" rx="1" />
+                          <rect x="24" y="42" width="6" height="8" fill="#071a34" rx="1" />
+                          <rect x="42" y="42" width="16" height="16" fill="#071a34" rx="3" />
+                          <circle cx="50" cy="50" r="5" fill="#2563eb" />
+                          <rect x="66" y="42" width="8" height="6" fill="#1d4ed8" rx="1" />
+                          <rect x="78" y="42" width="12" height="8" fill="#071a34" rx="1" />
+                          <rect x="40" y="66" width="8" height="8" fill="#071a34" rx="1" />
+                          <rect x="52" y="68" width="8" height="6" fill="#1d4ed8" rx="1" />
+                          <rect x="66" y="66" width="8" height="10" fill="#071a34" rx="1" />
+                          <rect x="78" y="66" width="12" height="6" fill="#1d4ed8" rx="1" />
+                          <rect x="40" y="80" width="10" height="8" fill="#1d4ed8" rx="1" />
+                          <rect x="54" y="80" width="6" height="8" fill="#071a34" rx="1" />
+                          <rect x="66" y="82" width="14" height="6" fill="#071a34" rx="1" />
+                          <rect x="84" y="80" width="6" height="8" fill="#1d4ed8" rx="1" />
+                        </svg>
+                        <small>{local(language, 'Decorative demo pattern · not scannable', 'सजावटी डेमो पैटर्न · स्कैन योग्य नहीं')}</small>
+                      </div>
+                    </div>
+
+                    <div className="demo-licence__info-col">
+                      <dl className="demo-licence__grid">
+                        <div>
+                          <dt>{local(language, 'Licence Holder Name', 'अनुज्ञप्ति धारक का नाम')}</dt>
+                          <dd><strong>{licenceData.holderName}</strong></dd>
+                        </div>
+                        <div>
+                          <dt>{local(language, 'Application Number', 'आवेदन संख्या')}</dt>
+                          <dd>{applicationId}</dd>
+                        </div>
+                        <div>
+                          <dt>{local(language, 'Date of Birth / Age', 'जन्म तिथि / आयु')}</dt>
+                          <dd>{licenceData.dateOfBirth ? `${licenceData.dateOfBirth}${holderAge === null ? '' : ` (${holderAge} yrs)`}` : local(language, 'Synthetic date not supplied', 'सिंथेटिक जन्मतिथि उपलब्ध नहीं')}</dd>
+                        </div>
+                        <div>
+                          <dt>{local(language, 'Issue Date', 'जारी दिनांक')}</dt>
+                          <dd>{new Date(licenceData.completedAt).toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}</dd>
+                        </div>
+                        <div className="demo-licence__grid-full">
+                          <dt>{local(language, 'Authorized Vehicle Classes', 'अधिकृत वाहन श्रेणियाँ')}</dt>
+                          <dd>
+                            <div className="demo-licence__classes">
+                              {(licenceData.vehicleClasses.length ? licenceData.vehicleClasses : ['MCWG', 'LMV']).map((cov) => (
+                                <span key={cov} className="demo-licence__class-pill">
+                                  <strong>{cov}</strong>
+                                  <small>{cov === 'MCWOG' ? 'Motorcycle Without Gear' : cov === 'MCWG' ? 'Motorcycle With Gear' : cov === 'LMV' ? 'Light Motor Vehicle (Car)' : cov}</small>
+                                </span>
+                              ))}
+                            </div>
+                          </dd>
+                        </div>
+                      </dl>
+
+                      <div className="demo-licence__auth-row">
+                        <div className="demo-licence__signature-box">
+                          <small>{local(language, 'Holder Signature', 'धारक के हस्ताक्षर')}</small>
+                          <img
+                            src="/assets/demo-applicant-signature.jpg"
+                            alt={local(language, 'Synthetic holder signature', 'सिंथेटिक धारक हस्ताक्षर')}
+                            width={1024}
+                            height={768}
+                            className="demo-licence__signature-img"
+                          />
+                        </div>
+                        <div className="demo-licence__seal-box">
+                          <small>{local(language, 'Prototype seal', 'प्रोटोटाइप मुहर')}</small>
+                          <span className="demo-licence__seal-badge">
+                            <ShieldCheck size={16} /> DEMO · NOT VALID
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <footer className="demo-licence__footer">
+                    <p>{local(language, 'Synthetic Demonstration Document · All citizen profiles, photos, signatures and credentials are AI-generated demo samples for prototype evaluation. Any resemblance to real persons, living or dead, is purely coincidental.', 'सिंथेटिक डेमो दस्तावेज़ · सभी प्रोफ़ाइल, फ़ोटो, हस्ताक्षर और क्रेडेंशियल प्रोटोटाइप मूल्यांकन हेतु AI जनरेटेड हैं। किसी वास्तविक व्यक्ति से समानता मात्र संयोग है।')}</p>
+                  </footer>
+                </div>
+              </details>
+            </section>
+          )}
+        </div>
+
+        {/* Sidebar Column: Session Integrity & Event Audit */}
+        <aside className="result-dashboard-grid__sidebar">
+          <section className="result-card result-card--audit-summary">
+            <div className="result-card__header">
+              <div className="result-card__icon-badge result-card__icon-badge--blue" aria-hidden="true">
+                <ShieldCheck size={22} />
+              </div>
+              <div>
+                <p className="eyebrow">{local(language, 'Technical Audit', 'तकनीकी ऑडिट')}</p>
+                <h2>{local(language, 'Session Integrity Log', 'सत्र अखंडता विवरण')}</h2>
+              </div>
+            </div>
+
+            <div className="result-audit-stats-grid">
+              <div className="result-audit-stat">
+                <small>{local(language, 'Questions', 'कुल प्रश्न')}</small>
+                <strong>{paper.length} {local(language, 'total', 'कुल')}</strong>
+              </div>
+              <div className="result-audit-stat">
+                <small>{local(language, 'Pass Threshold', 'पासिंग सीमा')}</small>
+                <strong>{LL_TEST_CONFIG.passMark} {local(language, 'correct', 'सही')}</strong>
+              </div>
+              <div className="result-audit-stat">
+                <small>{local(language, 'Checkpoints', 'चेकपॉइंट्स')}</small>
+                <strong>15 / 15 {local(language, 'saved', 'सुरक्षित')}</strong>
+              </div>
+              <div className="result-audit-stat">
+                <small>{local(language, 'Camera Stream', 'कैमरा स्ट्रीम')}</small>
+                <strong>{local(language, 'Released after test', 'परीक्षा के बाद बंद')}</strong>
+              </div>
+            </div>
+
+            {/* Compact Scrollable Journey Timeline */}
+            <div className="result-events-container">
+              <div className="result-events-container__header">
+                <strong>{local(language, 'Journey Timeline', 'यात्रा समयरेखा')}</strong>
+                <span className="result-events-badge">{state.events.length} {local(language, 'events', 'घटनाएँ')}</span>
+              </div>
+              <ol className="result-events-list">
+                {state.events.map((event) => {
+                  const translated = eventText(event, language)
+                  return (
+                    <li key={event.id} className="result-event-item">
+                      <span className="result-event-item__dot" aria-hidden="true">
+                        <Check size={11} strokeWidth={2.5} />
+                      </span>
+                      <div className="result-event-item__content">
+                        <div className="result-event-item__top">
+                          <strong>{translated.title}</strong>
+                          <time>{eventTime(event.at, language)}</time>
+                        </div>
+                        <p>{translated.detail}</p>
+                      </div>
+                    </li>
+                  )
+                })}
+              </ol>
+            </div>
+
+            {!eligible && (
+              <div className="result-audit-receipt-action">
+                <button
+                  type="button"
+                  className="button button--secondary button--full"
+                  disabled={busy}
+                  onClick={() => void downloadReceipt()}
+                >
+                  <ClipboardCheck size={16} />{' '}
+                  {documentStatus === 'receipt'
+                    ? local(language, 'Preparing receipt…', 'रसीद तैयार हो रही है…')
+                    : local(language, 'Download Journey Receipt (PDF)', 'जर्नी रसीद डाउनलोड करें (PDF)')}
+                </button>
+              </div>
+            )}
+          </section>
+        </aside>
+      </div>
+
+      {/* Device Data Clear Confirmation Modal */}
       {confirmClear && (
         <section className="clear-device-confirm" role="alertdialog" aria-labelledby="clear-device-title">
           <div>
@@ -1202,24 +1594,362 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
           </div>
         </section>
       )}
-      <div className="lf-actions">
-        {!eligible && (
-          <button className="button button--primary" disabled={busy} onClick={() => void downloadReceipt()}>
-            <Download size={18} /> {documentStatus === 'receipt' ? local(language, 'Preparing receipt…', 'रसीद तैयार हो रही है…') : local(language, 'Download Journey Receipt (PDF)', 'जर्नी रसीद डाउनलोड करें (PDF)')}
+
+      {/* Compact Utility Actions Bar */}
+      <div className="result-utility-bar">
+        <div className="result-utility-bar__left">
+          <button type="button" className="button button--secondary button--compact" onClick={() => window.print()}>
+            <Printer size={16} /> {local(language, 'Print Result', 'परिणाम प्रिंट करें')}
+          </button>
+          {passed && (
+            <button type="button" className="button button--secondary button--compact" onClick={reset}>
+              <RotateCcw size={16} /> {local(language, 'Try Demo Again', 'डेमो दोबारा दें')}
+            </button>
+          )}
+        </div>
+        <div className="result-utility-bar__right">
+          <button type="button" className="result-utility-link result-utility-link--danger" onClick={() => setConfirmClear(true)}>
+            <Eraser size={15} aria-hidden="true" /> {local(language, 'Reset demo data', 'डेमो डेटा रीसेट करें')}
+          </button>
+          <FlowLink className="result-utility-link" href={`/mp/application/${applicationId}`}>
+            <ArrowLeft size={15} aria-hidden="true" /> {local(language, 'Application status', 'आवेदन स्थिति')}
+          </FlowLink>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function ResultReviewPage({
+  applicationId,
+  onStageChange,
+  language,
+}: {
+  applicationId: string
+  onStageChange: StageChange
+  language: Language
+}) {
+  const progress = loadJourneyProgress(applicationId)
+  const [state, setState] = useState(() => loadExamSession(applicationId, progress))
+  const [activeFilter, setActiveFilter] = useState<'all' | 'incorrect' | 'unanswered' | 'correct'>('all')
+  const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | null>(null)
+
+  useEffect(() => {
+    stopAllMediaTracks()
+  }, [])
+
+  if (state.stage !== 'result') {
+    return (
+      <Guard
+        applicationId={applicationId}
+        language={language}
+        title={local(language, 'Result review not available yet', 'परिणाम समीक्षा अभी उपलब्ध नहीं')}
+        body={local(language, 'Complete the saved test before opening answer explanations.', 'उत्तर स्पष्टीकरण देखने से पहले सहेजी गई परीक्षा पूरी करें।')}
+        route={routeForSession(applicationId, state)}
+        action={local(language, 'Continue saved session', 'सहेजा सत्र जारी रखें')}
+      />
+    )
+  }
+
+  const paper = resolveQuestionPaper(state.exam.paperQuestionIds)
+  const correctMap: Record<number, number> = {}
+  paper.forEach((q, i) => {
+    correctMap[i] = q.correct
+  })
+
+  const reset = () => {
+    const next = resetExamSession(applicationId, progress)
+    setState(next)
+    onStageChange(local(language, 'LL test entry', 'एलएल परीक्षा प्रवेश'))
+    navigatePortal(`/mp/application/${applicationId}/test-entry`)
+  }
+
+  const allItems = paper.map((question, index) => {
+    const chosenAnswer = state.exam.answers[index] ?? -1
+    const isUnanswered = chosenAnswer === -1
+    const isCorrect = chosenAnswer === question.correct
+    const status: 'correct' | 'incorrect' | 'unanswered' = isCorrect
+      ? 'correct'
+      : isUnanswered
+      ? 'unanswered'
+      : 'incorrect'
+    return {
+      question,
+      index,
+      chosenAnswer,
+      status,
+    }
+  })
+
+  const correctCount = allItems.filter((item) => item.status === 'correct').length
+  const incorrectCount = allItems.filter((item) => item.status === 'incorrect').length
+  const unansweredCount = allItems.filter((item) => item.status === 'unanswered').length
+
+  const filteredItems = allItems.filter((item) => {
+    if (selectedQuestionIndex !== null) {
+      return item.index === selectedQuestionIndex
+    }
+    if (activeFilter === 'correct') return item.status === 'correct'
+    if (activeFilter === 'incorrect') return item.status === 'incorrect'
+    if (activeFilter === 'unanswered') return item.status === 'unanswered'
+    return true
+  })
+
+  const handleSelectFromMap = (index: number) => {
+    setSelectedQuestionIndex(index)
+    const el = document.getElementById(`review-question-${index}`)
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      el.focus()
+    }
+  }
+
+  return (
+    <>
+      <nav className="breadcrumbs" aria-label={local(language, 'Breadcrumb', 'पथ')}>
+        <ol>
+          <li>
+            <FlowLink href="/mp/services">{local(language, 'Services', 'सेवाएँ')}</FlowLink>
+          </li>
+          <li>
+            <FlowLink href={`/mp/application/${applicationId}`}>
+              {local(language, 'Application status', 'आवेदन स्थिति')}
+            </FlowLink>
+          </li>
+          <li>
+            <FlowLink href={`/mp/application/${applicationId}/result`}>
+              {local(language, 'Test result', 'परीक्षा परिणाम')}
+            </FlowLink>
+          </li>
+          <li>
+            <span aria-current="page">{local(language, 'Answer review', 'उत्तर समीक्षा')}</span>
+          </li>
+        </ol>
+      </nav>
+
+      <section className="page-title">
+        <div>
+          <p className="eyebrow">
+            {local(language, 'Comprehensive assessment review', 'विस्तृत परीक्षा समीक्षा')}
+          </p>
+          <h1 tabIndex={-1}>
+            {local(language, 'Review all 15 answers and explanations', 'सभी 15 उत्तरों और स्पष्टीकरणों की समीक्षा करें')}
+          </h1>
+          <p>
+            {local(
+              language,
+              `${correctCount} of ${paper.length} correct. Select any question to view the correct answer and its road-safety explanation.`,
+              `${paper.length} में से ${correctCount} सही। आधिकारिक नियम, सही उत्तर और विस्तृत स्पष्टीकरण देखने के लिए कोई भी प्रश्न चुनें।`
+            )}
+          </p>
+        </div>
+      </section>
+
+      <section
+        className="review-status-map-section"
+        aria-label={local(language, 'Question correctness grid', 'प्रश्न परिणाम ग्रिड')}
+      >
+        <div className="review-status-map-header">
+          <h2>{local(language, 'Question Overview Grid', 'प्रश्न स्थिति अवलोकन')}</h2>
+          <div className="review-map-legend">
+            <span className="review-map-legend__item">
+              <span className="focused-status-cell focused-status-cell--correct">
+                <Check size={12} aria-hidden="true" />
+              </span>
+              <span>{local(language, `Correct (${correctCount})`, `सही (${correctCount})`)}</span>
+            </span>
+            <span className="review-map-legend__item">
+              <span className="focused-status-cell focused-status-cell--incorrect">
+                <X size={12} aria-hidden="true" />
+              </span>
+              <span>{local(language, `Incorrect (${incorrectCount})`, `गलत (${incorrectCount})`)}</span>
+            </span>
+            <span className="review-map-legend__item">
+              <span className="focused-status-cell focused-status-cell--unanswered">
+                <Slash size={10} aria-hidden="true" />
+              </span>
+              <span>{local(language, `Unanswered (${unansweredCount})`, `अनुत्तरित (${unansweredCount})`)}</span>
+            </span>
+          </div>
+        </div>
+        <QuestionStatusMap
+          total={paper.length}
+          mode="review"
+          answers={state.exam.answers}
+          correctAnswers={correctMap}
+          activeIndex={selectedQuestionIndex}
+          onSelectQuestion={handleSelectFromMap}
+          language={language}
+        />
+      </section>
+
+      <div className="review-filter-tabs" role="tablist" aria-label={local(language, 'Filter review questions', 'समीक्षा प्रश्न फ़िल्टर')}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeFilter === 'all' && selectedQuestionIndex === null}
+          className={`review-filter-tab ${
+            activeFilter === 'all' && selectedQuestionIndex === null ? 'review-filter-tab--active' : ''
+          }`}
+          onClick={() => {
+            setActiveFilter('all')
+            setSelectedQuestionIndex(null)
+          }}
+        >
+          {local(language, `All Questions (${paper.length})`, `सभी प्रश्न (${paper.length})`)}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeFilter === 'incorrect' && selectedQuestionIndex === null}
+          className={`review-filter-tab review-filter-tab--incorrect ${
+            activeFilter === 'incorrect' && selectedQuestionIndex === null ? 'review-filter-tab--active' : ''
+          }`}
+          onClick={() => {
+            setActiveFilter('incorrect')
+            setSelectedQuestionIndex(null)
+          }}
+        >
+          {local(language, `Incorrect (${incorrectCount})`, `गलत (${incorrectCount})`)}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeFilter === 'unanswered' && selectedQuestionIndex === null}
+          className={`review-filter-tab review-filter-tab--unanswered ${
+            activeFilter === 'unanswered' && selectedQuestionIndex === null ? 'review-filter-tab--active' : ''
+          }`}
+          onClick={() => {
+            setActiveFilter('unanswered')
+            setSelectedQuestionIndex(null)
+          }}
+        >
+          {local(language, `Unanswered (${unansweredCount})`, `अनुत्तरित (${unansweredCount})`)}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={activeFilter === 'correct' && selectedQuestionIndex === null}
+          className={`review-filter-tab review-filter-tab--correct ${
+            activeFilter === 'correct' && selectedQuestionIndex === null ? 'review-filter-tab--active' : ''
+          }`}
+          onClick={() => {
+            setActiveFilter('correct')
+            setSelectedQuestionIndex(null)
+          }}
+        >
+          {local(language, `Correct (${correctCount})`, `सही (${correctCount})`)}
+        </button>
+        {selectedQuestionIndex !== null && (
+          <button
+            type="button"
+            className="review-filter-tab review-filter-tab--clear"
+            onClick={() => setSelectedQuestionIndex(null)}
+          >
+            {local(language, 'Clear focus', 'फ़िल्टर हटाएं')}
           </button>
         )}
-        <button className="button button--secondary" onClick={() => window.print()}>
-          <Printer size={18} /> {local(language, 'Print result', 'परिणाम प्रिंट करें')}
-        </button>
-        {passed && <button className="button button--secondary" onClick={reset}>
-          <RotateCcw size={18} /> {local(language, 'Try demo test again', 'डेमो टेस्ट दोबारा दें')}
-        </button>}
-        <button className="text-button" onClick={() => setConfirmClear(true)}>
-          <Eraser size={17} /> {local(language, 'Reset demo and return home', 'डेमो रीसेट करें और होम पर जाएँ')}
-        </button>
-        <FlowLink className="text-button" href={`/mp/application/${applicationId}`}>
-          {local(language, 'Application status', 'आवेदन स्थिति')}
+      </div>
+
+      <div className="review-questions-list">
+        {filteredItems.map(({ question, index, chosenAnswer, status }) => {
+          const options = questionOptions(question, language)
+          const prompt = questionPrompt(question, language)
+          const explanation = questionExplanation(question, language)
+
+          return (
+            <article
+              key={question.id}
+              id={`review-question-${index}`}
+              className={`review-question-card review-question-card--${status}`}
+              tabIndex={-1}
+            >
+              <header className="review-question-card__header">
+                <div className="review-question-card__tags">
+                  <span className="review-question-card__num">
+                    {local(language, `Question ${index + 1} of ${paper.length}`, `प्रश्न ${index + 1} / ${paper.length}`)}
+                  </span>
+                  <span
+                    className={`review-status-badge review-status-badge--${status}`}
+                  >
+                    {status === 'correct' ? (
+                      <>
+                        <Check size={14} aria-hidden="true" />
+                        {local(language, 'Correct', 'सही')}
+                      </>
+                    ) : status === 'incorrect' ? (
+                      <>
+                        <X size={14} aria-hidden="true" />
+                        {local(language, 'Incorrect', 'गलत')}
+                      </>
+                    ) : (
+                      <>
+                        <Slash size={12} aria-hidden="true" />
+                        {local(language, 'Unanswered', 'अनुत्तरित')}
+                      </>
+                    )}
+                  </span>
+                </div>
+                <h2>{prompt}</h2>
+              </header>
+
+              <div className="review-question-card__answers">
+                <div
+                  className={`review-answer-box ${
+                    status === 'correct'
+                      ? 'review-answer-box--correct'
+                      : status === 'unanswered'
+                      ? 'review-answer-box--unanswered'
+                      : 'review-answer-box--incorrect'
+                  }`}
+                >
+                  <small>{local(language, 'Your Answer', 'आपका उत्तर')}</small>
+                  <strong>
+                    {chosenAnswer < 0
+                      ? local(
+                          language,
+                          'Not answered before time expired',
+                          'समय समाप्त होने से पहले उत्तर नहीं दिया'
+                        )
+                      : options[chosenAnswer]}
+                  </strong>
+                </div>
+
+                {status !== 'correct' && (
+                  <div className="review-answer-box review-answer-box--correct">
+                    <small>{local(language, 'Correct Answer', 'सही उत्तर')}</small>
+                    <strong>{options[question.correct]}</strong>
+                  </div>
+                )}
+              </div>
+
+              <div className="review-explanation-box">
+                <strong>{local(language, 'Official Rule & Explanation:', 'आधिकारिक नियम और स्पष्टीकरण:')}</strong>
+                <p>{explanation}</p>
+              </div>
+            </article>
+          )
+        })}
+      </div>
+
+      <div className="lf-actions lf-actions--stack-mobile">
+        <FlowLink
+          className="button button--primary"
+          href={`/mp/application/${applicationId}/result`}
+        >
+          <ArrowLeft size={18} /> {local(language, 'Return to test result', 'परीक्षा परिणाम पर लौटें')}
         </FlowLink>
+        <FlowLink
+          className="button button--secondary"
+          href={`/mp/application/${applicationId}/tutorial`}
+        >
+          <BookOpenCheck size={18} /> {local(language, 'Revisit road-safety tutorial', 'सड़क सुरक्षा ट्यूटोरियल फिर देखें')}
+        </FlowLink>
+        {state.exam.knowledgeResult !== 'passed' && (
+          <button type="button" className="button button--secondary" onClick={reset}>
+            <RefreshCcw size={18} /> {local(language, 'Start a new prototype attempt', 'नया प्रोटोटाइप प्रयास शुरू करें')}
+          </button>
+        )}
       </div>
     </>
   )

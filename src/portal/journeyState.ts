@@ -507,8 +507,8 @@ export function getRouteAccess(input: {
     return { allowed: true }
   }
 
-  // Result check
-  if (route.name === 'result') {
+  // Result and Review check
+  if (route.name === 'result' || route.name === 'result-review') {
     const testStage = stages.find((s) => s.id === 'test')
     if (testStage?.status !== 'completed') {
       return {

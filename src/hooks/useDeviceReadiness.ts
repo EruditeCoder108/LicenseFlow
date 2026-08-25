@@ -110,6 +110,16 @@ function getFaceMetrics(landmarks: NormalizedLandmark[]) {
   }
 }
 
+export function matchesRequestedHeadTurn(
+  direction: HeadTurnDirection,
+  signedYaw: number,
+  threshold = 0.15,
+): boolean {
+  // MediaPipe is analysed in raw camera coordinates while the applicant sees
+  // a mirrored selfie preview. Keep this mapping in applicant-relative terms.
+  return direction === 'left' ? signedYaw < -threshold : signedYaw > threshold
+}
+
 function measureBrightness(video: HTMLVideoElement, canvas: HTMLCanvasElement): number | null {
   if (video.readyState < 2 || video.videoWidth === 0) return null
   const context = canvas.getContext('2d', { willReadFrequently: true })
@@ -136,8 +146,33 @@ function measureAudio(analyser: AnalyserNode | null, buffer: Float32Array<ArrayB
   return Math.min(1, Math.sqrt(sum / buffer.length) * 8)
 }
 
+export function stopAllMediaTracks() {
+  if (typeof document !== 'undefined') {
+    document.querySelectorAll('video, audio').forEach((el) => {
+      const mediaEl = el as HTMLMediaElement
+      if (mediaEl.srcObject instanceof MediaStream) {
+        mediaEl.srcObject.getTracks().forEach((track) => {
+          try {
+            track.stop()
+          } catch {
+            // ignore
+          }
+        })
+        mediaEl.srcObject = null
+      }
+      try {
+        mediaEl.pause()
+      } catch {
+        // ignore
+      }
+    })
+  }
+}
+
 export function useDeviceReadiness() {
   const [snapshot, setSnapshot] = useState<DeviceReadinessSnapshot>(initialSnapshot)
+  const isMountedRef = useRef(true)
+  const lifecycleGenerationRef = useRef(0)
   const streamRef = useRef<MediaStream | null>(null)
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
@@ -155,16 +190,38 @@ export function useDeviceReadiness() {
   const turnFramesRef = useRef<number>(0)
 
   const releaseResources = useCallback(() => {
-    streamRef.current?.getTracks().forEach((track) => track.stop())
-    streamRef.current = null
-    if (videoRef.current) videoRef.current.srcObject = null
-    videoRef.current = null
-    landmarkerRef.current?.close()
-    landmarkerRef.current = null
-    void audioContextRef.current?.close()
-    audioContextRef.current = null
+    lifecycleGenerationRef.current += 1
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => {
+        try {
+          track.stop()
+        } catch {
+          // ignore
+        }
+      })
+      streamRef.current = null
+    }
+    if (videoRef.current) {
+      try {
+        videoRef.current.pause()
+        videoRef.current.srcObject = null
+      } catch {
+        // ignore
+      }
+      videoRef.current = null
+    }
+    if (audioContextRef.current) {
+      void audioContextRef.current.close().catch(() => {})
+      audioContextRef.current = null
+    }
     analyserRef.current = null
     audioBufferRef.current = null
+    try {
+      landmarkerRef.current?.close()
+    } catch {
+      // ignore
+    }
+    landmarkerRef.current = null
     noFaceSinceRef.current = null
     multipleFaceSinceRef.current = null
     framingIssueSinceRef.current = null
@@ -173,10 +230,14 @@ export function useDeviceReadiness() {
     headTurnDirectionRef.current = Math.random() < 0.5 ? 'left' : 'right'
     centeredFramesRef.current = 0
     turnFramesRef.current = 0
+    stopAllMediaTracks()
   }, [])
 
   const start = useCallback(async () => {
     releaseResources()
+    const generation = lifecycleGenerationRef.current
+    const isCurrentGeneration = () =>
+      isMountedRef.current && lifecycleGenerationRef.current === generation
     const storage = testLocalStorage()
     setSnapshot({
       ...initialSnapshot,
@@ -212,6 +273,18 @@ export function useDeviceReadiness() {
           noiseSuppression: true,
         },
       })
+
+      if (!isCurrentGeneration()) {
+        stream.getTracks().forEach((track) => {
+          try {
+            track.stop()
+          } catch {
+            // ignore
+          }
+        })
+        return
+      }
+
       streamRef.current = stream
 
       const analysisVideo = document.createElement('video')
@@ -219,12 +292,21 @@ export function useDeviceReadiness() {
       analysisVideo.playsInline = true
       analysisVideo.srcObject = stream
       await analysisVideo.play()
+
+      if (!isCurrentGeneration()) {
+        stream.getTracks().forEach((track) => track.stop())
+        analysisVideo.pause()
+        analysisVideo.srcObject = null
+        return
+      }
+
       videoRef.current = analysisVideo
       canvasRef.current = document.createElement('canvas')
 
       const videoTrack = stream.getVideoTracks()[0]
       const audioTrack = stream.getAudioTracks()[0]
       videoTrack?.addEventListener('ended', () => {
+        if (!isCurrentGeneration()) return
         setSnapshot((current) => ({
           ...current,
           camera: 'error',
@@ -237,6 +319,11 @@ export function useDeviceReadiness() {
       if (audioTrack) {
         const audioContext = new AudioContext()
         await audioContext.resume()
+        if (!isCurrentGeneration()) {
+          void audioContext.close().catch(() => {})
+          stream.getTracks().forEach((track) => track.stop())
+          return
+        }
         const source = audioContext.createMediaStreamSource(new MediaStream([audioTrack]))
         const analyser = audioContext.createAnalyser()
         analyser.fftSize = 1024
@@ -262,9 +349,19 @@ export function useDeviceReadiness() {
         minFacePresenceConfidence: 0.45,
         minTrackingConfidence: 0.45,
       })
+      if (!isCurrentGeneration()) {
+        try {
+          landmarker.close()
+        } catch {
+          // ignore late MediaPipe teardown errors
+        }
+        stream.getTracks().forEach((track) => track.stop())
+        return
+      }
       landmarkerRef.current = landmarker
       setSnapshot((current) => ({ ...current, model: 'ready' }))
     } catch (error) {
+      if (!isCurrentGeneration()) return
       const permissionDenied =
         error instanceof DOMException && (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError')
       setSnapshot((current) => ({
@@ -396,10 +493,7 @@ export function useDeviceReadiness() {
         } else if (currentTurnStep === 'turn_requested' || currentTurnStep === 'turning') {
           headTurnProgress = 0.5
           if (metrics && metrics.framing && faceCount === 1) {
-            const isTargetTurn =
-              currentTurnDirection === 'left'
-                ? metrics.signedYaw > 0.15
-                : metrics.signedYaw < -0.15
+            const isTargetTurn = matchesRequestedHeadTurn(currentTurnDirection, metrics.signedYaw)
 
             if (isTargetTurn) {
               turnFramesRef.current++
@@ -455,7 +549,13 @@ export function useDeviceReadiness() {
     return () => window.clearInterval(timer)
   }, [snapshot.guided, snapshot.model])
 
-  useEffect(() => releaseResources, [releaseResources])
+  useEffect(() => {
+    isMountedRef.current = true
+    return () => {
+      isMountedRef.current = false
+      releaseResources()
+    }
+  }, [releaseResources])
 
   const ready = useMemo(
     () =>

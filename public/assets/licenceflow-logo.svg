@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="48" height="48" fill="none">
+  <defs>
+    <linearGradient id="lf-grad-bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1e40af" />
+      <stop offset="100%" stop-color="#0f172a" />
+    </linearGradient>
+    <linearGradient id="lf-grad-shield" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#3b82f6" />
+      <stop offset="100%" stop-color="#1d4ed8" />
+    </linearGradient>
+    <linearGradient id="lf-grad-road" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#38bdf8" />
+      <stop offset="100%" stop-color="#60a5fa" />
+    </linearGradient>
+    <linearGradient id="lf-grad-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fbbf24" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+  </defs>
+  <!-- Shield Base -->
+  <path d="M24 4L7 11V22C7 33.2 14.3 43.4 24 46C33.7 43.4 41 33.2 41 22V11L24 4Z" fill="url(#lf-grad-shield)" stroke="#60a5fa" stroke-width="1.5" stroke-linejoin="round" />
+  <!-- Inner Shield Depth -->
+  <path d="M24 6.5L9.5 12.5V22C9.5 31.8 15.7 40.8 24 43.2C32.3 40.8 38.5 31.8 38.5 22V12.5L24 6.5Z" fill="url(#lf-grad-bg)" opacity="0.9" />
+  <!-- Dynamic Road / Mobility Path (Flow) -->
+  <path d="M15 36C18 28 22 23 31 16" stroke="url(#lf-grad-road)" stroke-width="4.5" stroke-linecap="round" />
+  <path d="M19 37C22 30 25 26 33 20" stroke="#93c5fd" stroke-width="2" stroke-linecap="round" opacity="0.8" />
+  <!-- Dashed Center Lane Line -->
+  <path d="M17 36.5L21 31" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" />
+  <path d="M24.5 26.5L28.5 21" stroke="#ffffff" stroke-width="1.5" stroke-linecap="round" />
+  <!-- Star / Verified Emblem -->
+  <path d="M33 13L34.2 15.5L37 15.8L34.9 17.7L35.5 20.4L33 19L30.5 20.4L31.1 17.7L29 15.8L31.8 15.5L33 13Z" fill="url(#lf-grad-gold)" />
+</svg>

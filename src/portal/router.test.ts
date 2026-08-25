@@ -38,6 +38,7 @@ describe('portal routes', () => {
     expect(parsePortalRoute('/mp/application/MP-LL-01/test')).toEqual({ name: 'test', applicationId: 'MP-LL-01' })
     expect(parsePortalRoute('/mp/application/MP-LL-01/test-interruption')).toEqual({ name: 'test-interruption', applicationId: 'MP-LL-01' })
     expect(parsePortalRoute('/mp/application/MP-LL-01/result')).toEqual({ name: 'result', applicationId: 'MP-LL-01' })
+    expect(parsePortalRoute('/mp/application/MP-LL-01/result/review')).toEqual({ name: 'result-review', applicationId: 'MP-LL-01' })
   })
 
   it('parses reusable service destinations and rejects other states', () => {
