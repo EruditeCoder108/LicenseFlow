@@ -88,14 +88,34 @@ export function resetExamSession(applicationId: string, progress: LLJourneyProgr
   return state
 }
 
-export function createPassingJudgeExamSession(applicationId: string, progress: LLJourneyProgress): JourneyState {
-  const current = loadExamSession(applicationId, progress)
-  const base = createExamSession(
+export function createPassingJudgeExamSession(
+  applicationId: string,
+  progress: LLJourneyProgress,
+  currentSession?: JourneyState,
+): JourneyState {
+  const current = currentSession ?? loadExamSession(applicationId, progress)
+  const freshBase = createExamSession(
     applicationId,
     progress,
     current.stage === 'result' ? (current.exam.attemptNumber || 1) + 1 : current.exam.attemptNumber || 1,
     current.stage === 'result' ? current.exam.paperQuestionIds : current.exam.previousPaperQuestionIds,
   )
+  // When the judge first previews safe recovery, carry that evidence into the
+  // generated passing result instead of erasing the strongest proof point.
+  const recoveryEvents = current.exam.interruptionSeen
+    ? current.events.filter((event) => event.kind === 'TEST_PAUSED' || event.kind === 'TEST_RESUMED')
+    : []
+  const base = current.exam.interruptionSeen
+    ? {
+        ...freshBase,
+        exam: {
+          ...freshBase.exam,
+          interruptionSeen: true,
+          integrityStatus: current.exam.integrityStatus,
+        },
+        events: [...freshBase.events, ...recoveryEvents],
+      }
+    : freshBase
   let state = journeyReducer(base, { type: 'START_EXAM' })
   const now = new Date().toISOString()
   state = {

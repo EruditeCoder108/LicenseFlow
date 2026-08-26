@@ -1,4 +1,4 @@
-import { ArrowRight, Sparkles, X } from 'lucide-react'
+import { ArrowRight, Play, Sparkles, X } from 'lucide-react'
 import type { Language } from './types'
 import { useJudgeTour } from './useJudgeTour'
 import { RAAHI_ASSETS } from './tourSteps'
@@ -44,7 +44,7 @@ export function JudgeTourFloatingPill({ tour, language }: JudgeTourPromptProps) 
 }
 
 export function JudgeTourHeroCard({ tour, language }: JudgeTourPromptProps) {
-  const { shouldShowHeroPrompt, startTour, dismissPrompt } = tour
+  const { shouldShowHeroPrompt, startTour, startCinematicTour, dismissPrompt } = tour
 
   if (!shouldShowHeroPrompt) return null
 
@@ -71,21 +71,29 @@ export function JudgeTourHeroCard({ tour, language }: JudgeTourPromptProps) {
         </div>
         <h2 id="judge-onboarding-title">
           {language === 'en'
-            ? 'Meet Raahi — Full Guided Walkthrough'
-            : 'राही से मिलें — पूर्ण निर्देशित वॉकथ्रू'}
+            ? 'Meet Raahi — Your guide through LicenceFlow'
+            : 'राही से मिलें — LicenceFlow में आपका मार्गदर्शक'}
         </h2>
         <p>
           {language === 'en'
-            ? 'See every application screen, demo interaction, readiness check, payment handoff, tutorial, test and result in about 2–3 minutes.'
-            : 'लगभग 2–3 मिनट में हर आवेदन स्क्रीन, डेमो क्रिया, डिवाइस जाँच, भुगतान, ट्यूटोरियल, टेस्ट और परिणाम देखें।'}
+            ? 'Watch Raahi complete the entire journey automatically in about 45 seconds, or take the detailed walkthrough at your own pace.'
+            : 'राही को लगभग 45 सेकंड में पूरी यात्रा अपने-आप पूरी करते देखें, या विस्तृत वॉकथ्रू अपनी गति से लें।'}
         </p>
         <div className="judge-onboarding-hero-card__actions">
           <button
             type="button"
             className="button button--primary judge-onboarding-cta"
+            onClick={startCinematicTour}
+          >
+            <Play size={16} fill="currentColor" aria-hidden="true" />
+            <span>{language === 'en' ? 'Play automatic tour' : 'स्वचालित टूर चलाएँ'}</span>
+          </button>
+          <button
+            type="button"
+            className="button button--secondary judge-onboarding-detailed"
             onClick={startTour}
           >
-            <span>{language === 'en' ? 'Take the full guided walkthrough' : 'पूर्ण निर्देशित वॉकथ्रू लें'}</span>
+            <span>{language === 'en' ? 'Take the detailed tour' : 'विस्तृत टूर लें'}</span>
             <ArrowRight size={17} aria-hidden="true" />
           </button>
           <button

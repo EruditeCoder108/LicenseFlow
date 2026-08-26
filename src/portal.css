@@ -32,9 +32,10 @@
 }
 
 * { box-sizing: border-box; }
-html { min-width: 320px; scroll-behavior: smooth; }
+html { min-width: 320px; max-width: 100%; overflow-x: hidden; overflow-x: clip; scroll-behavior: smooth; }
 html[data-text-scale='large'] { font-size: 112.5%; }
-body { min-width: 320px; min-height: 100dvh; margin: 0; background: #f8fafc; }
+body { min-width: 320px; max-width: 100%; min-height: 100dvh; margin: 0; overflow-x: hidden; overflow-x: clip; background: #f8fafc; }
+#root, .portal-app { min-width: 0; max-width: 100%; }
 button, input, select { font: inherit; }
 button, a { touch-action: manipulation; }
 button { cursor: pointer; }
@@ -1317,6 +1318,7 @@ main h1:focus { outline: none; }
 .services-filter-search svg { color: var(--slate-400); }
 .services-filter-search input {
   width: 100%;
+  min-width: 0;
   border: 0;
   outline: 0;
   font-size: 0.92rem;
@@ -2648,9 +2650,11 @@ main h1:focus { outline: none; }
 .judge-result-shortcut strong { display: block; margin-bottom: 3px; font-size: .88rem; }
 .judge-result-shortcut p { max-width: 760px; margin: 0; color: var(--slate-600); font-size: .8rem; line-height: 1.4; }
 .judge-result-shortcut .button { min-height: 44px; white-space: nowrap; }
+.judge-result-shortcut__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
 .judge-result-shortcut--compact { grid-template-columns: auto minmax(0, 1fr); margin-top: 16px; padding: 12px; }
 .judge-result-shortcut--compact .judge-result-shortcut__icon { width: 34px; height: 34px; }
-.judge-result-shortcut--compact .button { grid-column: 1 / -1; width: 100%; justify-content: center; white-space: normal; }
+.judge-result-shortcut--compact .judge-result-shortcut__actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr; width: 100%; }
+.judge-result-shortcut--compact .button { width: 100%; justify-content: center; white-space: normal; }
 .test-feedback--success { color: var(--green-700); background: var(--green-50); border: 1px solid #b8e5cd; }
 .test-feedback--retry { color: #7a2e0e; background: var(--amber-50); border: 1px solid #fedf89; }
 .test-live-bar { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
@@ -2924,10 +2928,12 @@ main h1:focus { outline: none; }
   .spotlight-img--mock-test { width: 80px; max-height: 80px; }
   .spotlight-img--print-ll { width: 85px; max-height: 85px; }
   .featured-spotlight-card__footer { margin-top: auto; padding-top: 10px; font-size: 0.82rem; }
-  .services-filter-strip { flex-direction: column; align-items: stretch; gap: 10px; padding: 10px; }
-  .services-filter-search { min-width: 100%; }
-  .services-filter-pills { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; -webkit-overflow-scrolling: touch; }
+  .services-section { width: 100%; min-width: 0; max-width: 100%; }
+  .services-filter-strip { width: 100%; min-width: 0; max-width: 100%; flex-direction: column; align-items: stretch; gap: 10px; padding: 10px; overflow: hidden; }
+  .services-filter-search { width: 100%; min-width: 0; max-width: 100%; }
+  .services-filter-pills { width: 100%; min-width: 0; max-width: 100%; overflow-x: auto; overflow-y: hidden; flex-wrap: nowrap; padding-bottom: 4px; overscroll-behavior-inline: contain; -webkit-overflow-scrolling: touch; }
   .category-pill-btn { white-space: nowrap; flex-shrink: 0; }
+  .service-directory, .service-group, .service-grid, .service-card, .service-card__body { min-width: 0; max-width: 100%; }
   .service-grid { grid-template-columns: 1fr; gap: 10px; }
   .service-card { padding: 14px 16px; border-radius: 12px; }
   .service-card__arrow { display: none; }
@@ -2963,7 +2969,8 @@ main h1:focus { outline: none; }
   .lf-fee-row strong { font-size: 2.8rem; }
   .test-learning-grid, .test-instruction-grid, .outcome-grid, .demo-licence dl { grid-template-columns: 1fr; }
   .judge-result-shortcut { grid-template-columns: auto minmax(0, 1fr); align-items: start; }
-  .judge-result-shortcut .button { grid-column: 1 / -1; width: 100%; justify-content: center; white-space: normal; }
+  .judge-result-shortcut__actions { grid-column: 1 / -1; display: grid; grid-template-columns: 1fr; width: 100%; }
+  .judge-result-shortcut .button { width: 100%; justify-content: center; white-space: normal; }
   .learning-video-shell__heading, .learning-resource-card, .retest-guidance { align-items: stretch; grid-template-columns: 1fr; }
   .learning-video-frame { min-height: 200px; }
   .learning-status { width: fit-content; }

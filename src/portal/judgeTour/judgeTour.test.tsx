@@ -58,6 +58,7 @@ describe('JudgeTour UI Components Rendering', () => {
     isDismissed: false,
     isFormShowcasePlaying: false,
     isUserExploring: false,
+    isCinematic: false,
     isResumable: false,
     currentStep: JUDGE_TOUR_STEPS[0] as typeof JUDGE_TOUR_STEPS[number],
     totalSteps: JUDGE_TOUR_STEPS.length,
@@ -66,6 +67,7 @@ describe('JudgeTour UI Components Rendering', () => {
     shouldShowReplayPill: true,
     shouldShowHeroPrompt: true,
     startTour: () => {},
+    startCinematicTour: () => {},
     dismissPrompt: () => {},
     skipTour: () => {},
     replayTour: () => {},
@@ -78,16 +80,18 @@ describe('JudgeTour UI Components Rendering', () => {
     const htmlEn = renderToStaticMarkup(
       <JudgeTourHeroCard tour={mockTour} language="en" />
     )
-    expect(htmlEn).toContain('Meet Raahi — Full Guided Walkthrough')
-    expect(htmlEn).toContain('Take the full guided walkthrough')
+    expect(htmlEn).toContain('Meet Raahi — Your guide through LicenceFlow')
+    expect(htmlEn).toContain('Play automatic tour')
+    expect(htmlEn).toContain('Take the detailed tour')
     expect(htmlEn).toContain('Explore myself')
     expect(htmlEn).toContain('/assets/raahi/raahi-welcome.webp')
 
     const htmlHi = renderToStaticMarkup(
       <JudgeTourHeroCard tour={mockTour} language="hi" />
     )
-    expect(htmlHi).toContain('राही से मिलें — पूर्ण निर्देशित वॉकथ्रू')
-    expect(htmlHi).toContain('पूर्ण निर्देशित वॉकथ्रू लें')
+    expect(htmlHi).toContain('राही से मिलें — LicenceFlow में आपका मार्गदर्शक')
+    expect(htmlHi).toContain('स्वचालित टूर चलाएँ')
+    expect(htmlHi).toContain('विस्तृत टूर लें')
     expect(htmlHi).toContain('स्वयं देखें')
   })
 

@@ -8,6 +8,35 @@ export const STORAGE_KEY_STEP = 'mp-portal-judge-tour-step'
 export const STORAGE_KEY_DISMISSED = 'mp-portal-judge-tour-dismissed'
 const FORM_SHOWCASE_PREFIX = 'application-showcase-'
 
+// Temporary capture mode for the hackathon film. It reuses the real tour
+// actions, but removes the need for a person to click through every beat.
+const CINEMATIC_DEFAULT_STEP_DELAY = 360
+const CINEMATIC_STEP_DELAYS: Record<string, number> = {
+  'home-overview': 1100,
+  'home-service-cards': 900,
+  'services-overview': 700,
+  'll-start-overview': 600,
+  'application-category-overview': 850,
+  'application-review-submit': 650,
+  'submitted-overview': 600,
+  'uploads-overview': 650,
+  'readiness-overview': 1050,
+  'readiness-demo-complete': 650,
+  'rehearsal-overview': 750,
+  'payment-overview': 850,
+  'payment-return': 700,
+  'tutorial-overview': 1100,
+  'test-entry-overview': 950,
+  'test-overview': 1350,
+  'test-preview-recovery': 650,
+  'interruption-overview': 1450,
+  'interruption-resume': 650,
+  'test-resumed-overview': 1050,
+  'result-overview': 1250,
+  'result-review-overview': 1050,
+  'tour-complete': 1200,
+}
+
 function routeMatchesPattern(pattern: string, pathname: string): boolean {
   const expression = pattern
     .split('/')
@@ -68,6 +97,7 @@ export function useJudgeTour(pathname: string, activeApplicationId?: string) {
   const [targetFound, setTargetFound] = useState<boolean>(false)
   const [isFormShowcasePlaying, setIsFormShowcasePlaying] = useState(false)
   const [isUserExploring, setIsUserExploring] = useState(false)
+  const [isCinematic, setIsCinematic] = useState(false)
   const animationFrameRef = useRef<number | null>(null)
   const explorationTimerRef = useRef<number | null>(null)
 
@@ -114,7 +144,7 @@ export function useJudgeTour(pathname: string, activeApplicationId?: string) {
         block: 'start',
         inline: 'nearest',
       })
-    }, 550)
+    }, isCinematic ? 90 : 550)
 
     const advanceTimer = window.setTimeout(() => {
       if (isFinalShowcaseStep) {
@@ -130,13 +160,13 @@ export function useJudgeTour(pathname: string, activeApplicationId?: string) {
       }
       continueButton.click()
       setStepIndex((current) => Math.min(current + 1, JUDGE_TOUR_STEPS.length - 1))
-    }, 2200)
+    }, isCinematic ? 520 : 2200)
 
     return () => {
       window.clearTimeout(contentTimer)
       window.clearTimeout(advanceTimer)
     }
-  }, [currentStep.id, isActive, isFormShowcasePlaying, isUserExploring])
+  }, [currentStep.id, isActive, isCinematic, isFormShowcasePlaying, isUserExploring])
 
   // Yield the screen whenever the evaluator chooses to explore independently.
   // Wheel, touch, keyboard scrolling and scrollbar drags all restart the same
@@ -231,6 +261,9 @@ export function useJudgeTour(pathname: string, activeApplicationId?: string) {
   useEffect(() => {
     if (!isActive || !currentStep) return
 
+    setTargetRect(null)
+    setTargetFound(false)
+
     let timer: number | undefined
     let attempts = 0
     const locateAndScroll = () => {
@@ -304,6 +337,7 @@ export function useJudgeTour(pathname: string, activeApplicationId?: string) {
         event.preventDefault()
         setIsActive(false)
         setIsDismissed(true)
+        setIsCinematic(false)
       }
     }
 
@@ -314,6 +348,19 @@ export function useJudgeTour(pathname: string, activeApplicationId?: string) {
   const startTour = useCallback(() => {
     setIsUserExploring(false)
     setIsFormShowcasePlaying(false)
+    setIsCinematic(false)
+    setIsActive(true)
+    setStepIndex(0)
+    setIsDismissed(false)
+    if (pathname !== '/') {
+      navigatePortal('/')
+    }
+  }, [pathname])
+
+  const startCinematicTour = useCallback(() => {
+    setIsUserExploring(false)
+    setIsFormShowcasePlaying(false)
+    setIsCinematic(true)
     setIsActive(true)
     setStepIndex(0)
     setIsDismissed(false)
@@ -325,6 +372,7 @@ export function useJudgeTour(pathname: string, activeApplicationId?: string) {
   const dismissPrompt = useCallback(() => {
     setIsUserExploring(false)
     setIsFormShowcasePlaying(false)
+    setIsCinematic(false)
     setIsDismissed(true)
     setIsActive(false)
   }, [])
@@ -332,6 +380,7 @@ export function useJudgeTour(pathname: string, activeApplicationId?: string) {
   const skipTour = useCallback(() => {
     setIsUserExploring(false)
     setIsFormShowcasePlaying(false)
+    setIsCinematic(false)
     setIsActive(false)
     setIsDismissed(true)
   }, [])
@@ -339,6 +388,7 @@ export function useJudgeTour(pathname: string, activeApplicationId?: string) {
   const replayTour = useCallback(() => {
     setIsUserExploring(false)
     setIsFormShowcasePlaying(false)
+    setIsCinematic(false)
     setIsActive(true)
     setIsDismissed(false)
 
@@ -376,6 +426,7 @@ export function useJudgeTour(pathname: string, activeApplicationId?: string) {
     if (currentStep.action === 'finish') {
       setIsActive(false)
       setIsDismissed(true)
+      setIsCinematic(false)
       setStepIndex(0)
       return
     }
@@ -408,6 +459,18 @@ export function useJudgeTour(pathname: string, activeApplicationId?: string) {
 
     setStepIndex((current) => Math.min(current + 1, JUDGE_TOUR_STEPS.length - 1))
   }, [currentStep])
+
+  // In cinematic mode the same tested controls are activated automatically.
+  // Waiting for the highlighted target keeps route changes deterministic and
+  // avoids clicks racing ahead of lazy-rendered screens.
+  useEffect(() => {
+    if (!isActive || !isCinematic || isUserExploring || isFormShowcasePlaying) return
+    if (currentStep.id.startsWith(FORM_SHOWCASE_PREFIX) || !targetFound) return
+
+    const delay = CINEMATIC_STEP_DELAYS[currentStep.id] ?? CINEMATIC_DEFAULT_STEP_DELAY
+    const timer = window.setTimeout(performStepAction, delay)
+    return () => window.clearTimeout(timer)
+  }, [currentStep.id, isActive, isCinematic, isFormShowcasePlaying, isUserExploring, performStepAction, targetFound])
 
   // Context-aware replay pill visibility rule:
   // Visible ONLY on: '/', '/mp/services', '/mp/ll/start', '/mp/service/application-status', '/mp/service/fee-payment', '/mp/application/:id', '/mp/application/:id/result'
@@ -456,6 +519,7 @@ export function useJudgeTour(pathname: string, activeApplicationId?: string) {
     isDismissed,
     isFormShowcasePlaying,
     isUserExploring,
+    isCinematic,
     isResumable,
     currentStep,
     totalSteps: JUDGE_TOUR_STEPS.length,
@@ -464,6 +528,7 @@ export function useJudgeTour(pathname: string, activeApplicationId?: string) {
     shouldShowReplayPill,
     shouldShowHeroPrompt,
     startTour,
+    startCinematicTour,
     dismissPrompt,
     skipTour,
     replayTour,

@@ -400,7 +400,17 @@ function routeForSession(applicationId: string, state: JourneyState): string {
   return `/mp/application/${applicationId}/test-entry`
 }
 
-function JudgePassShortcut({ language, onActivate, compact = false }: { language: Language; onActivate: () => void; compact?: boolean }) {
+function JudgePassShortcut({
+  language,
+  onActivate,
+  onRecovery,
+  compact = false,
+}: {
+  language: Language
+  onActivate: () => void
+  onRecovery?: () => void
+  compact?: boolean
+}) {
   return (
     <aside className={`judge-result-shortcut${compact ? ' judge-result-shortcut--compact' : ''}`} aria-label={local(language, 'Judge result preview control', 'जज परिणाम पूर्वावलोकन नियंत्रण')}>
       <span className="judge-result-shortcut__icon"><ClipboardCheck size={20} aria-hidden="true" /></span>
@@ -408,9 +418,16 @@ function JudgePassShortcut({ language, onActivate, compact = false }: { language
         <strong>{local(language, 'Judge review controls', 'जज समीक्षा नियंत्रण')}</strong>
         <p>{local(language, 'Generate a passing prototype attempt through the normal scoring flow and open the result, receipt and demo licence.', 'सामान्य स्कोरिंग प्रवाह से पासिंग प्रोटोटाइप प्रयास बनाएँ और परिणाम, रसीद तथा डेमो लाइसेंस खोलें।')}</p>
       </div>
-      <button type="button" className="button button--secondary" onClick={onActivate} data-tour="preview-result-judge">
-        <FastForward size={17} aria-hidden="true" /> {local(language, 'Preview passing result', 'पास परिणाम देखें')}
-      </button>
+      <div className="judge-result-shortcut__actions">
+        {onRecovery && (
+          <button type="button" className="button button--secondary" onClick={onRecovery} data-tour="preview-recovery-judge">
+            <WifiOff size={17} aria-hidden="true" /> {local(language, 'Preview safe recovery', 'सुरक्षित रिकवरी देखें')}
+          </button>
+        )}
+        <button type="button" className="button button--secondary" onClick={onActivate} data-tour="preview-result-judge">
+          <FastForward size={17} aria-hidden="true" /> {local(language, 'Preview passing result', 'पास परिणाम देखें')}
+        </button>
+      </div>
     </aside>
   )
 }
@@ -475,6 +492,7 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
     onStageChange(local(language, 'Passing result preview · judge shortcut', 'पास परिणाम पूर्वावलोकन · जज शॉर्टकट'))
     navigatePortal(`/mp/application/${applicationId}/result`)
   }
+
   return (
     <>
       <Breadcrumbs applicationId={applicationId} current={local(language, 'Online test instructions', 'ऑनलाइन टेस्ट निर्देश')} language={language} />
@@ -754,10 +772,27 @@ export function TestPage({ applicationId, onStageChange, language }: { applicati
   const previewPassingResult = () => {
     media.stop()
     stopAllMediaTracks()
-    const next = createPassingJudgeExamSession(applicationId, progress)
+    const next = createPassingJudgeExamSession(applicationId, progress, state)
     setState(next)
     onStageChange(local(language, 'Passing result preview · judge shortcut', 'पास परिणाम पूर्वावलोकन · जज शॉर्टकट'))
     navigatePortal(`/mp/application/${applicationId}/result`)
+  }
+
+  const previewSafeRecovery = () => {
+    const next = journeyReducer(state, {
+      type: 'ANSWER',
+      answer: question.correct,
+      correct: true,
+      isLast: false,
+      passThreshold: LL_TEST_CONFIG.passMark,
+      triggerDemoInterruption: true,
+    })
+    media.stop()
+    stopAllMediaTracks()
+    saveExamSession(applicationId, next)
+    setState(next)
+    onStageChange(local(language, 'Test paused safely · judge recovery preview', 'टेस्ट सुरक्षित रूप से रुका · जज रिकवरी पूर्वावलोकन'))
+    navigatePortal(`/mp/application/${applicationId}/test-interruption`)
   }
 
   const answers = questionOptions(question, language)
@@ -957,7 +992,7 @@ export function TestPage({ applicationId, onStageChange, language }: { applicati
                 </dd>
               </div>
             </dl>
-            <JudgePassShortcut language={language} onActivate={previewPassingResult} compact />
+            <JudgePassShortcut language={language} onActivate={previewPassingResult} onRecovery={previewSafeRecovery} compact />
           </div>
         </aside>
       </div>
@@ -1015,7 +1050,7 @@ export function InterruptionPage({ applicationId, onStageChange, language }: { a
       exitLabel={local(language, 'Application status', 'आवेदन स्थिति')}
       bottomBar={
         <div className="focused-bottom-actions">
-          <button type="button" className="button button--primary" onClick={resume}>
+          <button type="button" className="button button--primary" onClick={resume} data-tour="interruption-resume">
             {local(language, 'Return to focused mode and resume', 'फ़ोकस्ड मोड में लौटें और टेस्ट जारी रखें')}{' '}
             <RefreshCcw size={17} />
           </button>
@@ -1026,7 +1061,7 @@ export function InterruptionPage({ applicationId, onStageChange, language }: { a
       }
     >
       <div className="focused-workspace-container">
-        <section className="interruption-card interruption-card--focused">
+        <section className="interruption-card interruption-card--focused" data-tour="interruption-overview">
           <div className="interruption-card__checkpoint-hero">
             <div className="interruption-card__checkpoint-img-wrap">
               <img
