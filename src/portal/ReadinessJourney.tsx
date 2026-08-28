@@ -38,12 +38,10 @@ import {
 } from './progress'
 import { navigatePortal } from './router'
 import { FocusedAssessmentShell, useFocusedFullscreen } from './FocusedAssessmentShell'
+import { translate as local, type Language } from './i18n'
 
 type StageChange = (label: string) => void
 type CheckTone = 'idle' | 'working' | 'pass' | 'attention'
-type Language = 'en' | 'hi'
-const local = (language: Language, en: string, hi: string) => language === 'en' ? en : hi
-
 function FlowLink({ href, className, children }: { href: string; className?: string; children: ReactNode }) {
   const open = (event: MouseEvent<HTMLAnchorElement>) => {
     if (event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return
@@ -130,7 +128,7 @@ function readinessError(language: Language, error: string) {
     'The private camera analysis could not start. You can retry or use the labelled guided scenario.': 'कैमरा जाँच शुरू नहीं हो सकी। दोबारा कोशिश करें या डेमो सिमुलेशन का इस्तेमाल करें।',
     'Face analysis stopped unexpectedly. Retry the device check.': 'चेहरा पहचान अचानक रुक गई। डिवाइस जाँच दोबारा करें।',
   }
-  return language === 'en' ? error : translations[error] ?? error
+  return local(language, error, translations[error] ?? error)
 }
 
 function statusFor(value: boolean | null, working = false): CheckTone {
@@ -529,10 +527,14 @@ export function RehearsalPage({ language, applicationId, onStageChange }: { lang
   const [speaking, setSpeaking] = useState(false)
   const { exitFullscreen } = useFocusedFullscreen()
   const saved = progress.rehearsal.status === 'completed'
-  const rehearsalQuestion = language === 'en' ? practiceQuestion : {
+  const rehearsalQuestion = language === 'en' ? practiceQuestion : language === 'hi' ? {
     ...practiceQuestion,
     prompt: 'चौराहे पर बाएँ मुड़ने से पहले आपको सबसे पहले क्या करना चाहिए?',
     options: ['संकेत दें और आसपास के सड़क उपयोगकर्ताओं को जाँचें', 'लगातार हॉर्न बजाएँ', 'सड़क के दाहिने भाग में जाएँ'],
+  } : {
+    ...practiceQuestion,
+    prompt: local(language, practiceQuestion.prompt, practiceQuestion.prompt),
+    options: practiceQuestion.options.map((option) => local(language, option, option)),
   }
 
   useEffect(() => () => window.speechSynthesis?.cancel(), [])

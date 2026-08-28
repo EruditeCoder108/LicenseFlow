@@ -2,6 +2,7 @@ import { ArrowRight, Sparkles, X } from 'lucide-react'
 import type { Language } from './types'
 import { useJudgeTour } from './useJudgeTour'
 import { RAAHI_ASSETS } from './tourSteps'
+import { translate as copy } from '../i18n'
 
 interface JudgeTourPromptProps {
   tour: ReturnType<typeof useJudgeTour>
@@ -14,14 +15,12 @@ export function JudgeTourFloatingPill({ tour, language }: JudgeTourPromptProps) 
   if (!shouldShowReplayPill) return null
 
   return (
-    <aside className="judge-tour-floating-dock" aria-label={language === 'en' ? 'Judge Onboarding Guide' : 'जज गाइड'}>
+    <aside className="judge-tour-floating-dock" aria-label={copy(language, 'Judge Onboarding Guide', 'जज गाइड')}>
       <button
         type="button"
         className="judge-tour-pill-btn"
         onClick={replayTour}
-        aria-label={language === 'en'
-          ? isResumable ? 'Resume the Judge Walkthrough with Raahi' : 'Start the full Judge Walkthrough with Raahi'
-          : isResumable ? 'राही के साथ जज वॉकथ्रू जारी रखें' : 'राही के साथ पूर्ण जज वॉकथ्रू शुरू करें'}
+        aria-label={isResumable ? copy(language, 'Resume the Judge Walkthrough with Raahi', 'राही के साथ जज वॉकथ्रू जारी रखें') : copy(language, 'Start the full Judge Walkthrough with Raahi', 'राही के साथ पूर्ण जज वॉकथ्रू शुरू करें')}
       >
         <span className="judge-tour-pill__avatar" aria-hidden="true">
           <img
@@ -36,9 +35,7 @@ export function JudgeTourFloatingPill({ tour, language }: JudgeTourPromptProps) 
           />
         </span>
         <span className="judge-tour-pill__label">
-          <strong>{language === 'en'
-            ? isResumable ? 'Resume Judge Walkthrough' : 'Full Judge Walkthrough'
-            : isResumable ? 'जज वॉकथ्रू जारी रखें' : 'पूर्ण जज वॉकथ्रू'}</strong>
+          <strong>{isResumable ? copy(language, 'Resume Judge Walkthrough', 'जज वॉकथ्रू जारी रखें') : copy(language, 'Full Judge Walkthrough', 'पूर्ण जज वॉकथ्रू')}</strong>
         </span>
       </button>
     </aside>
@@ -71,17 +68,13 @@ export function JudgeTourHeroCard({ tour, language }: JudgeTourPromptProps) {
       <div className="judge-onboarding-hero-card__content">
         <div className="judge-onboarding-hero-card__tag">
           <Sparkles size={14} aria-hidden="true" />
-          <span>{language === 'en' ? 'Judge walkthrough' : 'जज वॉकथ्रू'}</span>
+          <span>{copy(language, 'Judge walkthrough', 'जज वॉकथ्रू')}</span>
         </div>
         <h2 id="judge-onboarding-title">
-          {language === 'en'
-            ? 'Meet Raahi — Full Guided Walkthrough'
-            : 'राही से मिलें — पूर्ण निर्देशित वॉकथ्रू'}
+          {copy(language, 'Meet Raahi — Full Guided Walkthrough', 'राही से मिलें — पूर्ण निर्देशित वॉकथ्रू')}
         </h2>
         <p>
-          {language === 'en'
-            ? 'See every application screen, demo interaction, readiness check, payment handoff, tutorial, test and result in about 2–3 minutes.'
-            : 'लगभग 2–3 मिनट में हर आवेदन स्क्रीन, डेमो क्रिया, डिवाइस जाँच, भुगतान, ट्यूटोरियल, टेस्ट और परिणाम देखें।'}
+          {copy(language, 'See every application screen, demo interaction, readiness check, payment handoff, tutorial, test and result in about 2–3 minutes.', 'लगभग 2–3 मिनट में हर आवेदन स्क्रीन, डेमो क्रिया, डिवाइस जाँच, भुगतान, ट्यूटोरियल, टेस्ट और परिणाम देखें।')}
         </p>
         <div className="judge-onboarding-hero-card__actions">
           <button
@@ -89,7 +82,7 @@ export function JudgeTourHeroCard({ tour, language }: JudgeTourPromptProps) {
             className="button button--primary judge-onboarding-cta"
             onClick={startTour}
           >
-            <span>{language === 'en' ? 'Take the full guided walkthrough' : 'पूर्ण निर्देशित वॉकथ्रू लें'}</span>
+            <span>{copy(language, 'Take the full guided walkthrough', 'पूर्ण निर्देशित वॉकथ्रू लें')}</span>
             <ArrowRight size={17} aria-hidden="true" />
           </button>
           <button
@@ -97,7 +90,7 @@ export function JudgeTourHeroCard({ tour, language }: JudgeTourPromptProps) {
             className="button button--secondary judge-onboarding-dismiss"
             onClick={dismissPrompt}
           >
-            <span>{language === 'en' ? 'Explore myself' : 'स्वयं देखें'}</span>
+            <span>{copy(language, 'Explore myself', 'स्वयं देखें')}</span>
           </button>
         </div>
       </div>
@@ -105,8 +98,8 @@ export function JudgeTourHeroCard({ tour, language }: JudgeTourPromptProps) {
         type="button"
         className="judge-onboarding-close-btn"
         onClick={dismissPrompt}
-        aria-label={language === 'en' ? 'Dismiss onboarding prompt' : 'प्रॉम्प्ट हटाएँ'}
-        title={language === 'en' ? 'Dismiss onboarding prompt' : 'प्रॉम्प्ट हटाएँ'}
+        aria-label={copy(language, 'Dismiss onboarding prompt', 'प्रॉम्प्ट हटाएँ')}
+        title={copy(language, 'Dismiss onboarding prompt', 'प्रॉम्प्ट हटाएँ')}
       >
         <X size={18} />
       </button>

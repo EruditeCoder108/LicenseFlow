@@ -41,16 +41,12 @@ import {
   type LLJourneyProgress,
 } from './progress'
 import { navigatePortal } from './router'
+import { localeFor, translate as local, type Language } from './i18n'
 
-type Language = 'en' | 'hi'
 type StageChange = (label: string) => void
 
-function local(language: Language, en: string, hi: string) {
-  return language === 'en' ? en : hi
-}
-
 function money(paise: number, language: Language) {
-  return new Intl.NumberFormat(language === 'en' ? 'en-IN' : 'hi-IN', { style: 'currency', currency: 'INR' }).format(paise / 100)
+  return new Intl.NumberFormat(localeFor(language), { style: 'currency', currency: 'INR' }).format(paise / 100)
 }
 
 function FlowLink({ href, className, children, dataTour }: { href: string; className?: string; children: ReactNode; dataTour?: string }) {
@@ -85,7 +81,7 @@ function statusCopy(language: Language, status: PaymentStatus) {
     'timed-out': ['Gateway timed out', 'गेटवे का समय समाप्त'],
     unknown: ['Status needs checking', 'स्थिति की जाँच आवश्यक'],
   }
-  return values[status][language === 'en' ? 0 : 1]
+  return local(language, values[status][0], values[status][1])
 }
 
 function paymentAttemptId() {

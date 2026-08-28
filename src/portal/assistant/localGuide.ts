@@ -1,4 +1,5 @@
 import type { Language } from '../judgeTour'
+import { translate } from '../i18n'
 
 export interface LocalGuideContext {
   pathname: string
@@ -11,7 +12,7 @@ interface GuideTopic {
   answer: (context: LocalGuideContext) => string
 }
 
-const say = (context: LocalGuideContext, en: string, hi: string) => context.language === 'hi' ? hi : en
+const say = (context: LocalGuideContext, en: string, hi: string) => translate(context.language, en, hi)
 
 const normalize = (value: string) => value
   .toLocaleLowerCase()

@@ -2,9 +2,7 @@ import { useMemo, useState, type FormEvent } from 'react'
 import { ArrowLeft, ArrowRight, CheckCircle2, Eye, EyeOff, KeyRound, LockKeyhole, ShieldCheck, Sparkles, UserRound } from 'lucide-react'
 import { JUDGE_CREDENTIALS, authenticateDemo, createDemoSession, type DemoSession } from './auth'
 import { navigatePortal } from './router'
-
-type Language = 'en' | 'hi'
-const local = (language: Language, en: string, hi: string) => language === 'en' ? en : hi
+import { localeFor, translate as local, type Language } from './i18n'
 
 export function LoginPage({ language, onSignedIn }: { language: Language; onSignedIn: (session: DemoSession) => void }) {
   const [username, setUsername] = useState('')
@@ -175,7 +173,7 @@ export function LoginPage({ language, onSignedIn }: { language: Language; onSign
 }
 
 export function AccountDialog({ language, session, onClose, onSignOut }: { language: Language; session: DemoSession; onClose: () => void; onSignOut: () => void }) {
-  const signedInTime = useMemo(() => new Date(session.signedInAt).toLocaleString(language === 'en' ? 'en-IN' : 'hi-IN', { dateStyle: 'medium', timeStyle: 'short' }), [language, session.signedInAt])
+  const signedInTime = useMemo(() => new Date(session.signedInAt).toLocaleString(localeFor(language), { dateStyle: 'medium', timeStyle: 'short' }), [language, session.signedInAt])
   return (
     <div className="dialog-layer" onMouseDown={onClose}>
       <section className="help-dialog account-dialog" role="dialog" aria-modal="true" aria-labelledby="account-title" onMouseDown={(event) => event.stopPropagation()}>

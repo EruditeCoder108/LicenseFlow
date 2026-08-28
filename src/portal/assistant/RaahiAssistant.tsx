@@ -3,6 +3,7 @@ import { BookOpenCheck, Info, LoaderCircle, RotateCcw, Send, X } from 'lucide-re
 import { RAAHI_ASSETS, type Language } from '../judgeTour'
 import type { AssistantMessageInput } from './chatClient'
 import { containsSensitiveDetails, getLocalRaahiReply } from './localGuide'
+import { translate as copy } from '../i18n'
 
 interface RaahiAssistantProps {
   pathname: string
@@ -14,8 +15,6 @@ interface RaahiAssistantProps {
 interface DisplayMessage extends AssistantMessageInput {
   id: string
 }
-
-const copy = (language: Language, en: string, hi: string) => language === 'en' ? en : hi
 
 const createId = () => typeof crypto !== 'undefined' && 'randomUUID' in crypto
   ? crypto.randomUUID()
@@ -34,39 +33,26 @@ const welcomeMessage = (language: Language): DisplayMessage => ({
 })
 
 function suggestionsFor(pathname: string, language: Language) {
+  const choose = (english: string[], hindi: string[]) => english.map((item, index) => copy(language, item, hindi[index] ?? item))
   if (pathname.includes('/mp/services')) {
-    return language === 'en'
-      ? ['What should I do next?', 'How does LicenceFlow protect my progress?', 'Is this an official government site?']
-      : ['अब मुझे क्या करना है?', 'LicenceFlow मेरी प्रगति कैसे बचाता है?', 'क्या यह आधिकारिक सरकारी वेबसाइट है?']
+    return choose(['What should I do next?', 'How does LicenceFlow protect my progress?', 'Is this an official government site?'], ['अब मुझे क्या करना है?', 'LicenceFlow मेरी प्रगति कैसे बचाता है?', 'क्या यह आधिकारिक सरकारी वेबसाइट है?'])
   }
   if (pathname.includes('/readiness')) {
-    return language === 'en'
-      ? ['Why check my device before payment?', 'Will the camera video be uploaded?', 'What should I do next?']
-      : ['भुगतान से पहले डिवाइस की जाँच क्यों?', 'क्या कैमरा वीडियो अपलोड होगा?', 'अब मुझे क्या करना है?']
+    return choose(['Why check my device before payment?', 'Will the camera video be uploaded?', 'What should I do next?'], ['भुगतान से पहले डिवाइस की जाँच क्यों?', 'क्या कैमरा वीडियो अपलोड होगा?', 'अब मुझे क्या करना है?'])
   }
   if (pathname.includes('/payment')) {
-    return language === 'en'
-      ? ['What happens if payment is uncertain?', 'Can I be charged twice?', 'What should I do next?']
-      : ['भुगतान की स्थिति साफ़ न हो तो क्या होगा?', 'क्या दो बार शुल्क लग सकता है?', 'अब मुझे क्या करना है?']
+    return choose(['What happens if payment is uncertain?', 'Can I be charged twice?', 'What should I do next?'], ['भुगतान की स्थिति साफ़ न हो तो क्या होगा?', 'क्या दो बार शुल्क लग सकता है?', 'अब मुझे क्या करना है?'])
   }
   if (pathname.includes('/tutorial')) {
-    return language === 'en'
-      ? ['Why is the tutorial required?', 'Is my progress saved?', 'What happens after this?']
-      : ['ट्यूटोरियल क्यों ज़रूरी है?', 'क्या मेरी प्रगति सुरक्षित है?', 'इसके बाद क्या होगा?']
+    return choose(['Why is the tutorial required?', 'Is my progress saved?', 'What happens after this?'], ['ट्यूटोरियल क्यों ज़रूरी है?', 'क्या मेरी प्रगति सुरक्षित है?', 'इसके बाद क्या होगा?'])
   }
   if (pathname.includes('/result')) {
-    return language === 'en'
-      ? ['How do I review my answers?', 'What do the monitoring notes mean?', 'Is this an official licence?']
-      : ['मैं उत्तर कैसे देखूँ?', 'निगरानी नोट्स का क्या अर्थ है?', 'क्या यह आधिकारिक लाइसेंस है?']
+    return choose(['How do I review my answers?', 'What do the monitoring notes mean?', 'Is this an official licence?'], ['मैं उत्तर कैसे देखूँ?', 'निगरानी नोट्स का क्या अर्थ है?', 'क्या यह आधिकारिक लाइसेंस है?'])
   }
   if (pathname.includes('/application') || pathname.includes('/ll/')) {
-    return language === 'en'
-      ? ['What information will I need?', 'Is my progress saved?', 'What should I do next?']
-      : ['मुझे कौन-सी जानकारी चाहिए?', 'क्या मेरी प्रगति सुरक्षित है?', 'अब मुझे क्या करना है?']
+    return choose(['What information will I need?', 'Is my progress saved?', 'What should I do next?'], ['मुझे कौन-सी जानकारी चाहिए?', 'क्या मेरी प्रगति सुरक्षित है?', 'अब मुझे क्या करना है?'])
   }
-  return language === 'en'
-    ? ['What can I do here?', 'How does LicenceFlow protect my progress?', 'Is this an official government site?']
-    : ['मैं यहाँ क्या कर सकता हूँ?', 'LicenceFlow मेरी प्रगति कैसे बचाता है?', 'क्या यह आधिकारिक सरकारी वेबसाइट है?']
+  return choose(['What can I do here?', 'How does LicenceFlow protect my progress?', 'Is this an official government site?'], ['मैं यहाँ क्या कर सकता हूँ?', 'LicenceFlow मेरी प्रगति कैसे बचाता है?', 'क्या यह आधिकारिक सरकारी वेबसाइट है?'])
 }
 
 export function RaahiAssistant({ pathname, language, applicationStage, hidden = false }: RaahiAssistantProps) {

@@ -66,6 +66,7 @@ import { clearDemoSession, loadDemoSession, saveDemoSession, type DemoSession } 
 import { deriveJourneyState, getRouteAccess } from './portal/journeyState'
 import { JudgeTourCoachmark, JudgeTourFloatingPill, JudgeTourHeroCard, useJudgeTour } from './portal/judgeTour'
 import { RaahiAssistant } from './portal/assistant'
+import { LANGUAGES, isLanguage, languageMeta, localeFor, translate as copy, type Language } from './portal/i18n'
 
 const ApplicationFlow = lazy(() => import('./portal/ApplicationFlow').then((module) => ({ default: module.ApplicationFlow })))
 const SubmittedPage = lazy(() => import('./portal/ApplicationFlow').then((module) => ({ default: module.SubmittedPage })))
@@ -89,11 +90,8 @@ const FeeAndReceiptHub = lazy(() => import('./portal/StatusUtilities').then((mod
 const PaymentReceiptPage = lazy(() => import('./portal/StatusUtilities').then((module) => ({ default: module.PaymentReceiptPage })))
 const PaymentStatusPage = lazy(() => import('./portal/StatusUtilities').then((module) => ({ default: module.PaymentStatusPage })))
 
-type Language = 'en' | 'hi'
 type TextScale = 'normal' | 'large'
 export type HomeDestination = 'vehicle' | 'permit' | 'safety' | 'information'
-
-const copy = (language: Language, en: string, hi: string) => language === 'en' ? en : hi
 
 function useAccessibleDialog(onClose: () => void) {
   const dialogRef = useRef<HTMLElement | null>(null)
@@ -240,7 +238,9 @@ function PortalHeader({ pathname, language, textScale, national, session, onLang
             <button onClick={onTextScale} aria-label={textScale === 'normal' ? copy(language, 'Increase text size', 'अक्षर बड़े करें') : copy(language, 'Use standard text size', 'सामान्य अक्षर आकार रखें')}>
               <Accessibility size={16} aria-hidden="true" /> {textScale === 'normal' ? 'A+' : 'A'}
             </button>
-            <button onClick={onLanguage}><Languages size={16} aria-hidden="true" /> {language === 'en' ? 'हिंदी' : 'English'}</button>
+            <button onClick={onLanguage} aria-haspopup="dialog" aria-label={copy(language, 'Choose language', 'भाषा चुनें')}>
+              <Languages size={16} aria-hidden="true" /> <span className="language-button__label">{languageMeta(language).nativeName}</span> <ChevronDown size={13} aria-hidden="true" />
+            </button>
             <button onClick={onHelp}><CircleHelp size={16} aria-hidden="true" /> {copy(language, 'Help', 'सहायता')}</button>
             {session ? <button onClick={onAccount}><UserRoundCheck size={16} aria-hidden="true" /> {copy(language, 'Account', 'खाता')}</button> : <PortalLink href="/login" className="government-login"><LogIn size={16} aria-hidden="true" /> {copy(language, 'Login', 'लॉगिन')}</PortalLink>}
           </div>
@@ -592,15 +592,15 @@ function NationalHomePage({ onUnavailable, onDrivingServices, onPrototypeDetails
                   <p>{copy(language, item.proof, item.proofHi)}</p>
                   {item.checkpointFlow && (
                     <div className="engineering-dossier-card__flow" aria-label={copy(language, 'Preserved journey stages', 'सुरक्षित यात्रा चरण')}>
-                      <span>Form</span>
+                      <span>{copy(language, 'Application', 'आवेदन')}</span>
                       <span className="flow-arrow">→</span>
-                      <span>Payment</span>
+                      <span>{copy(language, 'Device ready', 'डिवाइस तैयार')}</span>
                       <span className="flow-arrow">→</span>
-                      <span>Learning</span>
+                      <span>{copy(language, 'Practice', 'अभ्यास')}</span>
                       <span className="flow-arrow">→</span>
-                      <span>Test</span>
+                      <span>{copy(language, 'Payment', 'भुगतान')}</span>
                       <span className="flow-arrow">→</span>
-                      <span>Result</span>
+                      <span>{copy(language, 'Learning & test', 'सीखना और परीक्षा')}</span>
                     </div>
                   )}
                 </div>
@@ -869,8 +869,8 @@ function ServiceCard({ service, language }: { service: ServiceDefinition; langua
     <PortalLink href={service.route ?? `/mp/service/${service.id}`} className="service-card">
       <span className="service-card__icon" aria-hidden="true"><Icon size={24} /></span>
       <span className="service-card__body">
-        <span className="service-card__title">{language === 'en' ? service.name : service.nameHi}</span>
-        <span className="service-card__summary">{language === 'en' ? service.summary : service.summaryHi}</span>
+        <span className="service-card__title">{copy(language, service.name, service.nameHi)}</span>
+        <span className="service-card__summary">{copy(language, service.summary, service.summaryHi)}</span>
       </span>
       <ArrowRight className="service-card__arrow" size={19} aria-hidden="true" />
     </PortalLink>
@@ -1199,7 +1199,7 @@ function ServicesPage({ language, demoApplication }: { language: Language; demoA
             {groups.map((group) => (
               <section key={group.category} className="service-group">
                 <div className="service-group__header">
-                  <h3>{serviceCategoryLabels[group.category][language]}</h3>
+                  <h3>{copy(language, serviceCategoryLabels[group.category].en, serviceCategoryLabels[group.category].hi)}</h3>
                   <span className="service-group__badge">
                     {group.items.length} {copy(language, 'services', 'सेवाएँ')}
                   </span>
@@ -1489,7 +1489,7 @@ function ApplicationPage({ application, language }: { application: DemoApplicati
     { title: copy(language, 'Application saved', 'आवेदन सहेजा गया'), detail: copy(language, 'Application details and declaration were recorded.', 'आवेदन जानकारी और घोषणा दर्ज हुई।'), time: application.savedAt },
     ...(progress.readiness.completedAt ? [{ title: copy(language, 'Device check passed', 'डिवाइस जाँच सफल'), detail: copy(language, 'Camera, microphone, browser and connection checks completed.', 'कैमरा, माइक्रोफोन, ब्राउज़र और कनेक्शन जाँच पूरी हुई।'), time: progress.readiness.completedAt }] : []),
     ...(progress.rehearsal.completedAt ? [{ title: copy(language, 'Test practice completed', 'परीक्षा अभ्यास पूरा'), detail: copy(language, 'Answer saving and recovery behavior was practiced.', 'उत्तर सहेजने और रिकवरी का अभ्यास हुआ।'), time: progress.rehearsal.completedAt }] : []),
-    ...progress.payment.activity.map((item) => ({ title: item[language === 'en' ? 'titleEn' : 'titleHi'], detail: item[language === 'en' ? 'detailEn' : 'detailHi'], time: item.at })),
+    ...progress.payment.activity.map((item) => ({ title: copy(language, item.titleEn, item.titleHi), detail: copy(language, item.detailEn, item.detailHi), time: item.at })),
     ...(progress.tutorial.completedAt ? [{ title: copy(language, 'Tutorial completed', 'ट्यूटोरियल पूरा'), detail: copy(language, 'Road-safety learning material was completed.', 'सड़क सुरक्षा अध्ययन सामग्री पूरी हुई।'), time: progress.tutorial.completedAt }] : []),
   ].sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
 
@@ -1502,7 +1502,7 @@ function ApplicationPage({ application, language }: { application: DemoApplicati
           <h1 tabIndex={-1}>{copy(language, 'Application status', 'आवेदन की स्थिति')}</h1>
           <p>{copy(language, 'See what is complete, what is pending and the next action required.', 'देखें कि क्या पूरा हुआ है, क्या बाकी है और अगला जरूरी काम क्या है।')}</p>
         </div>
-        <span className="saved-indicator"><CheckCircle2 size={17} /> {copy(language, 'Last saved', 'अंतिम बार सहेजा')} {new Date(application.savedAt).toLocaleTimeString(language === 'en' ? 'en-IN' : 'hi-IN', { hour: '2-digit', minute: '2-digit' })}</span>
+        <span className="saved-indicator"><CheckCircle2 size={17} /> {copy(language, 'Last saved', 'अंतिम बार सहेजा')} {new Date(application.savedAt).toLocaleTimeString(localeFor(language), { hour: '2-digit', minute: '2-digit' })}</span>
       </section>
 
       {journey.mode === 'prepared-demo' && (
@@ -1566,7 +1566,7 @@ function ApplicationPage({ application, language }: { application: DemoApplicati
                 <div>
                   <strong>{item.title}</strong>
                   <p>{item.detail}</p>
-                  <time dateTime={item.time}>{new Date(item.time).toLocaleString(language === 'en' ? 'en-IN' : 'hi-IN', { dateStyle: 'medium', timeStyle: 'short' })}</time>
+                  <time dateTime={item.time}>{new Date(item.time).toLocaleString(localeFor(language), { dateStyle: 'medium', timeStyle: 'short' })}</time>
                 </div>
               </li>
             ))}
@@ -1586,11 +1586,35 @@ function ServicePage({ service, language }: { service: ServiceDefinition; langua
   const available = service.delivery !== 'information-only'
   return (
     <>
-      <Breadcrumbs items={[{ label: copy(language, 'Home', 'होम'), href: '/' }, { label: copy(language, 'Driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ'), href: '/mp/services' }, { label: language === 'en' ? service.name : service.nameHi }]} />
-      <section className="page-title page-title--service"><span className="page-title__icon"><Icon size={28} /></span><div><p className="eyebrow">{copy(language, 'Service information', 'सेवा जानकारी')}</p><h1 tabIndex={-1}>{language === 'en' ? service.name : service.nameHi}</h1><p>{language === 'en' ? service.summary : service.summaryHi}</p></div></section>
+      <Breadcrumbs items={[{ label: copy(language, 'Home', 'होम'), href: '/' }, { label: copy(language, 'Driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ'), href: '/mp/services' }, { label: copy(language, service.name, service.nameHi) }]} />
+      <section className="page-title page-title--service"><span className="page-title__icon"><Icon size={28} /></span><div><p className="eyebrow">{copy(language, 'Service information', 'सेवा जानकारी')}</p><h1 tabIndex={-1}>{copy(language, service.name, service.nameHi)}</h1><p>{copy(language, service.summary, service.summaryHi)}</p></div></section>
       <div className="content-with-aside">
-        <div className="content-stack"><section className="content-card"><div className="section-heading"><div><p className="eyebrow">{copy(language, 'About this service', 'इस सेवा के बारे में')}</p><h2>{copy(language, 'Who can use it', 'इसका उपयोग कौन कर सकता है')}</h2></div><StatusPill delivery={service.delivery} language={language} /></div><p className="prose">{service.audience}</p><h3>{copy(language, 'What you may need', 'आपको क्या चाहिए')}</h3><ul className="check-list">{service.requirements.map((item) => <li key={item}><CheckCircle2 size={18} /><span>{item}</span></li>)}</ul></section></div>
-        <aside className="start-panel"><p className="eyebrow">{copy(language, 'Online service', 'ऑनलाइन सेवा')}</p><h2>{available ? copy(language, 'Continue online', 'ऑनलाइन आगे बढ़ें') : copy(language, 'Information available', 'जानकारी उपलब्ध है')}</h2><p>{available ? copy(language, 'Open the guided licence journey to continue with this service.', 'इस सेवा को जारी रखने के लिए निर्देशित लाइसेंस प्रक्रिया खोलें।') : copy(language, 'Read the requirements here. The online transaction is not available from this page.', 'यहाँ आवश्यकताएँ पढ़ें। इस पेज से ऑनलाइन लेन-देन उपलब्ध नहीं है।')}</p>{available && <PortalLink href="/mp/ll/start" className="button button--primary button--full">{copy(language, 'Continue', 'आगे बढ़ें')} <ArrowRight size={18} /></PortalLink>}<PortalLink href="/mp/services" className="button button--secondary button--full"><ArrowLeft size={18} /> {copy(language, 'All services', 'सभी सेवाएँ')}</PortalLink></aside>
+        <div className="content-stack">
+          <section className="content-card">
+            <div className="section-heading"><div><p className="eyebrow">{copy(language, 'About this service', 'इस सेवा के बारे में')}</p><h2>{copy(language, 'Who can use it', 'इसका उपयोग कौन कर सकता है')}</h2></div><StatusPill delivery={service.delivery} language={language} /></div>
+            <p className="prose">{copy(language, service.audience, service.audience)}</p>
+            <h3>{copy(language, 'What you may need', 'आपको क्या चाहिए')}</h3>
+            <ul className="check-list">{service.requirements.map((item) => <li key={item}><CheckCircle2 size={18} /><span>{copy(language, item, item)}</span></li>)}</ul>
+          </section>
+          {!available && (
+            <section className="content-card service-scope-card" aria-labelledby="service-scope-title">
+              <span className="service-scope-card__icon"><Info size={22} aria-hidden="true" /></span>
+              <div>
+                <p className="eyebrow">{copy(language, 'Prototype boundary', 'प्रोटोटाइप की सीमा')}</p>
+                <h2 id="service-scope-title">{copy(language, 'This is a useful directory page, not a fake transaction', 'यह उपयोगी जानकारी पेज है, नकली ऑनलाइन लेन-देन नहीं')}</h2>
+                <p>{copy(language, 'The hackathon build deliberately completes the Madhya Pradesh Learner’s Licence journey end to end. Permanent-DL and other licence transactions remain clearly marked references.', 'हैकाथॉन बिल्ड जानबूझकर मध्य प्रदेश की लर्नर लाइसेंस प्रक्रिया को शुरू से अंत तक पूरा करता है। स्थायी डीएल और अन्य लाइसेंस लेन-देन स्पष्ट रूप से संदर्भ मात्र हैं।')}</p>
+              </div>
+            </section>
+          )}
+        </div>
+        <aside className="start-panel">
+          <p className="eyebrow">{available ? copy(language, 'Prototype service', 'प्रोटोटाइप सेवा') : copy(language, 'Directory preview', 'सेवा सूची पूर्वावलोकन')}</p>
+          <h2>{available ? copy(language, 'Continue in LicenceFlow', 'LicenceFlow में आगे बढ़ें') : copy(language, 'Choose a real next step', 'सही अगला कदम चुनें')}</h2>
+          <p>{available ? copy(language, 'Open the guided Learner’s Licence journey. Identity, payment and issuance remain explicitly simulated.', 'निर्देशित लर्नर लाइसेंस प्रक्रिया खोलें। पहचान, भुगतान और लाइसेंस जारी करना स्पष्ट रूप से सिम्युलेटेड है।') : copy(language, 'Use LicenceFlow’s complete Learner’s Licence prototype, or leave this demo for the official Sarathi service.', 'LicenceFlow की पूरी लर्नर लाइसेंस प्रोटोटाइप प्रक्रिया उपयोग करें, या आधिकारिक सारथी सेवा के लिए इस डेमो से बाहर जाएँ।')}</p>
+          <PortalLink href="/mp/ll/start" className="button button--primary button--full">{copy(language, 'Open Learner’s Licence journey', 'लर्नर लाइसेंस प्रक्रिया खोलें')} <ArrowRight size={18} /></PortalLink>
+          {!available && <a href="https://sarathi.parivahan.gov.in/sarathiservice/stateSelection.do" target="_blank" rel="noreferrer" className="button button--secondary button--full">{copy(language, 'Open official Sarathi', 'आधिकारिक सारथी खोलें')} <ExternalLink size={17} /></a>}
+          <PortalLink href="/mp/services" className="button button--secondary button--full"><ArrowLeft size={18} /> {copy(language, 'All services', 'सभी सेवाएँ')}</PortalLink>
+        </aside>
       </div>
     </>
   )
@@ -1721,6 +1745,57 @@ function PrototypeDetailsDialog({ onClose, language }: { onClose: () => void; la
   return <div className="dialog-layer" onMouseDown={onClose}><section ref={dialogRef} tabIndex={-1} className="help-dialog prototype-dialog" role="dialog" aria-modal="true" aria-labelledby="prototype-title" onMouseDown={(event) => event.stopPropagation()}><div className="dialog-heading"><div><p className="eyebrow">{copy(language, 'Safe demo', 'सुरक्षित डेमो')}</p><h2 id="prototype-title">{copy(language, 'What is real and what is simulated?', 'क्या वास्तविक है और क्या सिम्युलेट किया गया है?')}</h2></div><button className="icon-button" onClick={onClose} aria-label={copy(language, 'Close details', 'जानकारी बंद करें')} autoFocus><X size={21} /></button></div><dl className="prototype-facts"><div><dt>{copy(language, 'Runs on this device', 'इस डिवाइस पर वास्तविक रूप से चलता है')}</dt><dd>{copy(language, 'Form saving, camera and microphone checks, saving test answers and restart recovery.', 'फॉर्म सहेजना, कैमरा-माइक्रोफोन जाँच, उत्तर सहेजना और टेस्ट फिर शुरू करना।')}</dd></div><div><dt>{copy(language, 'Simulated for demo', 'डेमो के लिए सिम्युलेट किया गया')}</dt><dd>{copy(language, 'Identity verification, government records, fees, payment approval and official licence issuance.', 'पहचान सत्यापन, सरकारी रिकॉर्ड, शुल्क, भुगतान स्वीकृति और आधिकारिक लाइसेंस जारी करना।')}</dd></div></dl><p className="prototype-dialog__note">{copy(language, 'This independent hackathon prototype is not connected to Sarathi, NIC, UIDAI, a bank or the Government of Madhya Pradesh.', 'यह स्वतंत्र हैकाथॉन प्रोटोटाइप सारथी, एनआईसी, यूआईडीएआई, किसी बैंक या मध्य प्रदेश शासन से जुड़ा नहीं है।')}</p><button className="button button--primary button--full" onClick={onClose}>{copy(language, 'Close', 'बंद करें')}</button></section></div>
 }
 
+function LanguageDialog({ language, onSelect, onClose }: { language: Language; onSelect: (language: Language) => void; onClose: () => void }) {
+  const [query, setQuery] = useState('')
+  const dialogRef = useAccessibleDialog(onClose)
+  const normalizedQuery = query.trim().toLocaleLowerCase()
+  const visibleLanguages = LANGUAGES.filter((item) => !normalizedQuery || `${item.nativeName} ${item.englishName} ${item.code}`.toLocaleLowerCase().includes(normalizedQuery))
+
+  return (
+    <div className="dialog-layer" onMouseDown={onClose}>
+      <section ref={dialogRef} tabIndex={-1} className="help-dialog language-dialog" role="dialog" aria-modal="true" aria-labelledby="language-dialog-title" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="dialog-heading">
+          <div>
+            <p className="eyebrow">{copy(language, 'Language access', 'भाषा सुविधा')}</p>
+            <h2 id="language-dialog-title">{copy(language, 'Choose your language', 'अपनी भाषा चुनें')}</h2>
+            <p>{copy(language, 'English and Hindi are reviewed references. The other 21 scheduled languages are listed but remain disabled until their drafts receive language review.', 'अंग्रेज़ी और हिन्दी समीक्षा किए गए मुख्य संस्करण हैं। अन्य 21 अनुसूचित भाषाएँ सूचीबद्ध हैं, लेकिन भाषा समीक्षा पूरी होने तक बंद रहेंगी।')}</p>
+          </div>
+          <button className="icon-button" onClick={onClose} aria-label={copy(language, 'Close language selection', 'भाषा चयन बंद करें')}>
+            <X size={21} />
+          </button>
+        </div>
+        <label className="language-dialog__search">
+          <span className="sr-only">{copy(language, 'Search languages', 'भाषाएँ खोजें')}</span>
+          <Search size={19} aria-hidden="true" />
+          <input autoFocus value={query} onChange={(event) => setQuery(event.target.value)} placeholder={copy(language, 'Search 23 languages…', '23 भाषाओं में खोजें…')} />
+        </label>
+        <div className="language-dialog__count" aria-live="polite">{visibleLanguages.length} {copy(language, 'languages shown', 'भाषाएँ दिखाई गईं')}</div>
+        <div className="language-dialog__list" role="listbox" aria-label={copy(language, 'Available interface languages', 'उपलब्ध इंटरफ़ेस भाषाएँ')}>
+          {visibleLanguages.map((item) => {
+            const selected = item.code === language
+            return (
+              <button
+                key={item.code}
+                type="button"
+                role="option"
+                aria-selected={selected}
+                disabled={item.translationStatus === 'pending'}
+                className={selected ? 'language-dialog__option language-dialog__option--selected' : 'language-dialog__option'}
+                dir={item.direction}
+                onClick={() => { onSelect(item.code); onClose() }}
+              >
+                <span><strong>{item.nativeName}</strong><small>{item.englishName} · {item.translationStatus === 'reviewed' ? copy(language, 'Reviewed', 'समीक्षित') : item.translationStatus === 'pending' ? copy(language, 'Translation pending', 'अनुवाद लंबित') : copy(language, 'AI-assisted draft', 'एआई-सहायित प्रारूप')}</small></span>
+                {selected && <Check size={18} aria-hidden="true" />}
+              </button>
+            )
+          })}
+        </div>
+        <p className="language-dialog__note"><Info size={16} aria-hidden="true" /> {copy(language, 'Before public-service use, every draft must be reviewed by native speakers and legal/policy teams.', 'सार्वजनिक सेवा में उपयोग से पहले हर प्रारूप की स्थानीय भाषा विशेषज्ञों और कानूनी/नीति टीम द्वारा समीक्षा आवश्यक है।')}</p>
+      </section>
+    </div>
+  )
+}
+
 function UnavailableServiceDialog({ destination, language, onClose }: { destination: HomeDestination; language: Language; onClose: () => void }) {
   const titles: Record<HomeDestination, [string, string]> = {
     vehicle: ['Vehicle registration services', 'वाहन पंजीकरण सेवाएँ'],
@@ -1743,14 +1818,18 @@ function UnavailableServiceDialog({ destination, language, onClose }: { destinat
           </button>
         </div>
         <div className="service-preview-dialog__body">
-          <CircleHelp size={28} />
+          <SignpostBig size={28} />
           <div>
-            <strong>{copy(language, 'This service is not available in this demo.', 'यह सेवा इस डेमो में उपलब्ध नहीं है।')}</strong>
-            <p>{copy(language, 'You can view it in the service directory, but online applications are not available in this demo.', 'आप इसे सेवा सूची में देख सकते हैं, लेकिन इस डेमो में ऑनलाइन आवेदन उपलब्ध नहीं है।')}</p>
+            <strong>{copy(language, 'Directory preview—not a working transaction', 'केवल सेवा सूची—काम करने वाला ऑनलाइन लेन-देन नहीं')}</strong>
+            <p>{copy(language, 'LicenceFlow implements one Madhya Pradesh Learner’s Licence journey in depth. This card shows how other transport services would be discovered without pretending they are connected.', 'LicenceFlow मध्य प्रदेश की एक लर्नर लाइसेंस प्रक्रिया को विस्तार से लागू करता है। यह कार्ड दिखाता है कि अन्य परिवहन सेवाएँ कैसे मिलेंगी—उन्हें जुड़ी हुई सेवा बताने का दिखावा किए बिना।')}</p>
           </div>
         </div>
+        <div className="service-preview-dialog__scope">
+          <span><CheckCircle2 size={17} /> {copy(language, 'Working here: complete Learner’s Licence prototype', 'यहाँ कार्यरत: पूरी लर्नर लाइसेंस प्रोटोटाइप प्रक्रिया')}</span>
+          <span><Info size={17} /> {copy(language, 'Mocked: identity, government records, payment approval and licence issuance', 'सिम्युलेटेड: पहचान, सरकारी रिकॉर्ड, भुगतान स्वीकृति और लाइसेंस जारी करना')}</span>
+        </div>
         <PortalLink href="/mp/services" className="button button--primary button--full" onNavigate={onClose}>
-          {copy(language, 'Open driving licence services', 'ड्राइविंग लाइसेंस सेवाएँ खोलें')}
+          {copy(language, 'Open the working Learner’s Licence journey', 'कार्यरत लर्नर लाइसेंस प्रक्रिया खोलें')}
         </PortalLink>
       </section>
     </div>
@@ -1871,7 +1950,7 @@ function PortalFooter({ language, national, onPrototypeDetails }: { language: La
           <strong>{copy(language, 'Portal & Support', 'पोर्टल एवं सहायता')}</strong>
           <PortalLink href="/">{copy(language, 'Home', 'होम')}</PortalLink>
           <button type="button" onClick={onPrototypeDetails}>{copy(language, 'About this demo', 'इस डेमो के बारे में')}</button>
-          <span>{copy(language, 'English/Hindi • Screen-reader friendly', 'द्विभाषी • स्क्रीन-रीडर सुलभ')}</span>
+          <span>{copy(language, '2 reviewed languages • 21 listed for review • Screen-reader friendly', '2 समीक्षित भाषाएँ • 21 समीक्षा के लिए सूचीबद्ध • स्क्रीन-रीडर सुलभ')}</span>
           <div className="portal-footer__counter">
             <small>{copy(language, 'Prototype storage:', 'प्रोटोटाइप स्टोरेज:')}</small>
             <strong>{copy(language, 'This browser only', 'केवल यह ब्राउज़र')}</strong>
@@ -1895,8 +1974,12 @@ function RouteLoading({ language }: { language: Language }) {
 function PortalApp() {
   const pathname = usePathname()
   const route = parsePortalRoute(pathname)
-  const [language, setLanguage] = useState<Language>(() => readPreference('mp-portal-language') === 'hi' ? 'hi' : 'en')
+  const [language, setLanguage] = useState<Language>(() => {
+    const saved = readPreference('mp-portal-language')
+    return isLanguage(saved) ? saved : 'en'
+  })
   const [textScale, setTextScale] = useState<TextScale>(() => readPreference('mp-portal-text-scale') === 'large' ? 'large' : 'normal')
+  const [languageOpen, setLanguageOpen] = useState(false)
   const [helpOpen, setHelpOpen] = useState(false)
   const [prototypeDetailsOpen, setPrototypeDetailsOpen] = useState(false)
   const [unavailableDestination, setUnavailableDestination] = useState<HomeDestination | null>(null)
@@ -1907,7 +1990,9 @@ function PortalApp() {
   const tour = useJudgeTour(pathname, demoApplication?.id)
 
   useEffect(() => {
-    document.documentElement.lang = language === 'hi' ? 'hi' : 'en-IN'
+    const metadata = languageMeta(language)
+    document.documentElement.lang = metadata.locale
+    document.documentElement.dir = metadata.direction
     savePreference('mp-portal-language', language)
   }, [language])
   useEffect(() => {
@@ -2014,7 +2099,7 @@ function PortalApp() {
         textScale={textScale}
         national={national}
         session={session}
-        onLanguage={() => setLanguage((value) => value === 'en' ? 'hi' : 'en')}
+        onLanguage={() => setLanguageOpen(true)}
         onTextScale={() => setTextScale((value) => value === 'normal' ? 'large' : 'normal')}
         onHelp={() => setHelpOpen(true)}
         onAccount={() => setAccountOpen(true)}
@@ -2027,6 +2112,7 @@ function PortalApp() {
       <JudgeTourFloatingPill tour={tour} language={language} />
       <JudgeTourCoachmark tour={tour} language={language} />
       {helpOpen && <HelpDialog route={route} language={language} onClose={() => setHelpOpen(false)} />}
+      {languageOpen && <LanguageDialog language={language} onSelect={setLanguage} onClose={() => setLanguageOpen(false)} />}
       {prototypeDetailsOpen && <PrototypeDetailsDialog language={language} onClose={() => setPrototypeDetailsOpen(false)} />}
       {unavailableDestination && <UnavailableServiceDialog destination={unavailableDestination} language={language} onClose={() => setUnavailableDestination(null)} />}
       {stateSelectionOpen && <StateSelectionDialog language={language} onClose={() => setStateSelectionOpen(false)} />}

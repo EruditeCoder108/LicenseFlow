@@ -16,3 +16,6 @@ playwright-report/
 *.aac
 *.ogg
 images/
+
+# Maintainer-only local translation experiments (never shipped).
+.translation-tools/

@@ -16,11 +16,7 @@ import {
   X,
   Slash,
 } from 'lucide-react'
-
-type Language = 'en' | 'hi'
-
-const copy = (language: Language, en: string, hi: string) =>
-  language === 'en' ? en : hi
+import { translate as copy, type Language } from './i18n'
 
 export function useFocusedFullscreen() {
   const [isFullscreen, setIsFullscreen] = useState(false)

@@ -31,9 +31,7 @@ import {
   type LLApplicationDraft,
 } from './application'
 import { navigatePortal } from './router'
-
-type AppLanguage = 'en' | 'hi'
-const local = (language: AppLanguage, en: string, hi: string) => (language === 'en' ? en : hi)
+import { localeFor, translate as local, type Language as AppLanguage } from './i18n'
 
 const stepCopy: Record<ApplicationStep, { label: string; title: string; description: string }> = {
   category: {
@@ -110,6 +108,12 @@ const stepCopyHi: Record<ApplicationStep, { label: string; title: string; descri
     description: 'दर्ज जानकारी की जाँच करें, आवश्यकतानुसार सुधार करें और जमा करें।',
   },
 }
+
+const stepText = (language: AppLanguage, step: ApplicationStep) => ({
+  label: local(language, stepCopy[step].label, stepCopyHi[step].label),
+  title: local(language, stepCopy[step].title, stepCopyHi[step].title),
+  description: local(language, stepCopy[step].description, stepCopyHi[step].description),
+})
 
 const validationHi: Record<string, string> = {
   'Choose the option that describes the applicant.': 'अपने लिए सही विकल्प चुनें।',
@@ -205,7 +209,7 @@ function ApplicationProgress({
   language: AppLanguage
 }) {
   const current = applicationSteps.indexOf(step)
-  const labels = language === 'en' ? stepCopy : stepCopyHi
+  const labels = Object.fromEntries(applicationSteps.map((item) => [item, stepText(language, item)])) as typeof stepCopy
   const renderSteps = () =>
     applicationSteps.map((item, index) => {
       const valid = Object.keys(validateApplicationStep(draft, item)).length === 0
@@ -1259,8 +1263,8 @@ function VehiclesStep({ draft, setDraft, errors, language }: StepProps) {
                   {vehiclesData.map((v) => (
                     <tr key={v.id}>
                       <td><strong>{v.code}</strong></td>
-                      <td>{language === 'en' ? v.nameEn : v.nameHi}</td>
-                      <td>{language === 'en' ? v.examplesEn : v.examplesHi}</td>
+                      <td>{local(language, v.nameEn, v.nameHi)}</td>
+                      <td>{local(language, v.examplesEn, v.examplesHi)}</td>
                       <td>{v.minAge}</td>
                     </tr>
                   ))}
@@ -1305,9 +1309,9 @@ function VehiclesStep({ draft, setDraft, errors, language }: StepProps) {
                 </div>
 
                 <div className="vehicle-card-3d__content">
-                  <h3 className="vehicle-card-3d__title">{language === 'en' ? v.nameEn : v.nameHi}</h3>
-                  <p className="vehicle-card-3d__category">{language === 'en' ? v.categoryEn : v.categoryHi}</p>
-                  <div className="vehicle-card-3d__models-pill">{language === 'en' ? v.examplesEn : v.examplesHi}</div>
+                  <h3 className="vehicle-card-3d__title">{local(language, v.nameEn, v.nameHi)}</h3>
+                  <p className="vehicle-card-3d__category">{local(language, v.categoryEn, v.categoryHi)}</p>
+                  <div className="vehicle-card-3d__models-pill">{local(language, v.examplesEn, v.examplesHi)}</div>
                 </div>
               </div>
             )
@@ -1468,7 +1472,7 @@ function ReviewStep({ draft, setDraft, errors, language }: StepProps) {
     .filter((step) => step !== 'review')
     .map((step) => ({ step, complete: Object.keys(allErrors[step]).length === 0 }))
   const address = draft.presentAddress
-  const stepLabels = language === 'en' ? stepCopy : stepCopyHi
+  const stepLabels = Object.fromEntries(applicationSteps.map((item) => [item, stepText(language, item)])) as typeof stepCopy
   const completeCount = sections.filter((s) => s.complete).length
 
   return (
@@ -1723,7 +1727,7 @@ export function ApplicationFlow({
   const headerRef = useRef<HTMLElement | null>(null)
   const isHeaderSticky = useHeaderSticky(headerRef)
   const index = applicationSteps.indexOf(step)
-  const pageCopy = (language === 'en' ? stepCopy : stepCopyHi)[step]
+  const pageCopy = stepText(language, step)
 
   useEffect(() => {
     saveApplicationDraft(draft)
@@ -1933,7 +1937,7 @@ export function SubmittedPage({
             <dt>{local(language, 'Submitted', 'सहेजने का समय')}</dt>
             <dd>
               {draft.submittedAt
-                ? new Date(draft.submittedAt).toLocaleString(language === 'en' ? 'en-IN' : 'hi-IN')
+                ? new Date(draft.submittedAt).toLocaleString(localeFor(language))
                 : local(language, 'Saved now', 'अभी सहेजा गया')}
             </dd>
           </div>

@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process'
 
 const forwardedArgs = process.argv.slice(2)
-const server = spawn(process.execPath, ['./node_modules/vite/bin/vite.js', '--host', '127.0.0.1', '--port', '4173'], {
+const server = spawn(process.execPath, ['./node_modules/vite/bin/vite.js', 'preview', '--host', '127.0.0.1', '--port', '4173'], {
   stdio: 'inherit',
 })
 

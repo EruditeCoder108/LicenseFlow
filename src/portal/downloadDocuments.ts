@@ -1,6 +1,7 @@
 import type { JourneyEvent } from '../domain/journey'
+import { localeFor, type Language } from './i18n'
 
-export type DocumentLanguage = 'en' | 'hi'
+export type DocumentLanguage = Language
 
 export type LicenceEligibility = {
   paymentConfirmed: boolean
@@ -139,7 +140,7 @@ function formatDate(value: string, language: DocumentLanguage): string {
   const date = new Date(value)
   return Number.isNaN(date.getTime())
     ? 'Not available'
-    : date.toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+    : date.toLocaleDateString(localeFor(language), { day: '2-digit', month: 'short', year: 'numeric' })
 }
 
 function addMonths(value: string, months: number): string {

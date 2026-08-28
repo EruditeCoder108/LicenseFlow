@@ -3,6 +3,7 @@ import { ArrowRight, Check, LoaderCircle, Sparkles, X } from 'lucide-react'
 import type { Language } from './types'
 import { JUDGE_TOUR_PHASES, RAAHI_ASSETS } from './tourSteps'
 import { useJudgeTour } from './useJudgeTour'
+import { translate as copy, translatedText } from '../i18n'
 
 interface JudgeTourCoachmarkProps {
   tour: ReturnType<typeof useJudgeTour>
@@ -51,7 +52,7 @@ export function JudgeTourCoachmark({ tour, language }: JudgeTourCoachmarkProps) 
   return (
     <aside
       className={`judge-tour-root ${isUserExploring ? 'judge-tour-root--exploring' : ''}`}
-      aria-label={language === 'en' ? 'Full Judge Walkthrough' : 'पूर्ण जज वॉकथ्रू'}
+      aria-label={copy(language, 'Full Judge Walkthrough', 'पूर्ण जज वॉकथ्रू')}
       aria-hidden={isUserExploring || undefined}
       inert={isUserExploring || undefined}
     >
@@ -66,9 +67,7 @@ export function JudgeTourCoachmark({ tour, language }: JudgeTourCoachmarkProps) 
       )}
 
       <div className="visually-hidden" aria-live="polite">
-        {language === 'en'
-          ? `Guide Step ${stepIndex + 1} of ${totalSteps}: ${currentStep.title.en}. ${currentStep.dialogue.en}`
-          : `मार्गदर्शिका चरण ${stepIndex + 1} / ${totalSteps}: ${currentStep.title.hi}। ${currentStep.dialogue.hi}`}
+        {copy(language, 'Guide step', 'मार्गदर्शिका चरण')} {stepIndex + 1} / {totalSteps}: {translatedText(language, currentStep.title)}. {translatedText(language, currentStep.dialogue)}
       </div>
 
       <section
@@ -96,15 +95,13 @@ export function JudgeTourCoachmark({ tour, language }: JudgeTourCoachmarkProps) 
             <div className="judge-tour-card__tag">
               <Sparkles size={14} aria-hidden="true" />
               <span>
-                {language === 'en'
-                  ? `Raahi · ${stepIndex + 1} of ${totalSteps}`
-                  : `राही · ${stepIndex + 1} / ${totalSteps}`}
+                Raahi · {stepIndex + 1} {copy(language, 'of', '/')} {totalSteps}
               </span>
             </div>
-            <ol className="judge-tour-card__progress" aria-label={language === 'en' ? 'Walkthrough phases' : 'वॉकथ्रू चरण'}>
+            <ol className="judge-tour-card__progress" aria-label={copy(language, 'Walkthrough phases', 'वॉकथ्रू चरण')}>
               {JUDGE_TOUR_PHASES.map((phase, index) => (
                 <li key={phase.id} className={index === currentPhaseIndex ? 'is-current' : index < currentPhaseIndex ? 'is-complete' : ''}>
-                  <span>{language === 'en' ? phase.en : phase.hi}</span>
+                  <span>{translatedText(language, phase)}</span>
                 </li>
               ))}
             </ol>
@@ -112,8 +109,8 @@ export function JudgeTourCoachmark({ tour, language }: JudgeTourCoachmarkProps) 
               type="button"
               className="judge-tour-card__close-btn"
               onClick={skipTour}
-              aria-label={language === 'en' ? 'Close tour (Escape)' : 'टूर बंद करें (Escape)'}
-              title={language === 'en' ? 'Close tour (Escape)' : 'टूर बंद करें (Escape)'}
+              aria-label={copy(language, 'Close tour (Escape)', 'टूर बंद करें (Escape)')}
+              title={copy(language, 'Close tour (Escape)', 'टूर बंद करें (Escape)')}
             >
               <X size={18} />
             </button>
@@ -121,14 +118,14 @@ export function JudgeTourCoachmark({ tour, language }: JudgeTourCoachmarkProps) 
 
           <div className="judge-tour-card__speech" key={currentStep.id}>
             <strong id="raahi-card-title" className="judge-tour-card__title">
-              {language === 'en' ? currentStep.title.en : currentStep.title.hi}
+              {translatedText(language, currentStep.title)}
             </strong>
             <p className="judge-tour-card__dialogue">
-              {language === 'en' ? currentStep.dialogue.en : currentStep.dialogue.hi}
+              {translatedText(language, currentStep.dialogue)}
             </p>
             {!targetFound && (
               <small className="judge-tour-card__notice">
-                {language === 'en' ? currentStep.fallbackNotice.en : currentStep.fallbackNotice.hi}
+                {translatedText(language, currentStep.fallbackNotice)}
               </small>
             )}
           </div>
@@ -138,7 +135,7 @@ export function JudgeTourCoachmark({ tour, language }: JudgeTourCoachmarkProps) 
               className="judge-tour-link-btn"
               onClick={skipTour}
             >
-              {language === 'en' ? 'Skip' : 'छोड़ें'}
+              {copy(language, 'Skip', 'छोड़ें')}
             </button>
             <button
               type="button"
@@ -146,7 +143,7 @@ export function JudgeTourCoachmark({ tour, language }: JudgeTourCoachmarkProps) 
               onClick={performStepAction}
               disabled={isFormShowcasePlaying}
             >
-              <span>{language === 'en' ? currentStep.actionLabel.en : currentStep.actionLabel.hi}</span>
+              <span>{translatedText(language, currentStep.actionLabel)}</span>
               {isFormShowcasePlaying ? <LoaderCircle className="judge-tour-btn__spinner" size={16} /> : isLastStep ? <Check size={16} /> : <ArrowRight size={16} />}
             </button>
           </div>

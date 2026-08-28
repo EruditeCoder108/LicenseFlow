@@ -3,9 +3,8 @@ import { ArrowLeft, ArrowRight, CheckCircle2, CircleAlert, Clock3, CreditCard, F
 import { isPaymentConfirmed, paymentNeedsReconciliation } from './payment'
 import { loadJourneyProgress, reconcileSyntheticPayment, saveJourneyProgress } from './progress'
 import { navigatePortal } from './router'
+import { localeFor, translate as local, type Language } from './i18n'
 
-type Language = 'en' | 'hi'
-const local = (language: Language, en: string, hi: string) => language === 'en' ? en : hi
 const captchas = ['MP42K', 'LL7RX', 'RTO26'] as const
 const paymentStatusLabel = (language: Language, status: ReturnType<typeof loadJourneyProgress>['payment']['status']) => {
   const labels = {
@@ -18,7 +17,7 @@ const paymentStatusLabel = (language: Language, status: ReturnType<typeof loadJo
     'timed-out': ['Gateway timed out', 'गेटवे का समय समाप्त'],
     unknown: ['Status needs checking', 'स्थिति की जाँच आवश्यक'],
   } as const
-  return labels[status][language === 'en' ? 0 : 1]
+  return local(language, labels[status][0], labels[status][1])
 }
 
 function FlowLink({ href, className, children }: { href: string; className?: string; children: ReactNode }) {
@@ -184,7 +183,7 @@ export function PaymentStatusPage({ language, applicationId }: { language: Langu
               <div><dt>{local(language, 'Attempt', 'प्रयास')}</dt><dd>{payment.attemptId}</dd></div>
               <div><dt>{local(language, 'Method', 'माध्यम')}</dt><dd>{payment.method ?? '—'}</dd></div>
               <div><dt>{local(language, 'Reference', 'संदर्भ')}</dt><dd>{payment.reference ?? local(language, 'Not assigned', 'निर्धारित नहीं')}</dd></div>
-              <div><dt>{local(language, 'Updated', 'अपडेट')}</dt><dd>{payment.updatedAt ? new Date(payment.updatedAt).toLocaleString(language === 'en' ? 'en-IN' : 'hi-IN') : '—'}</dd></div>
+              <div><dt>{local(language, 'Updated', 'अपडेट')}</dt><dd>{payment.updatedAt ? new Date(payment.updatedAt).toLocaleString(localeFor(language)) : '—'}</dd></div>
             </dl>
           )}
         </div>
@@ -216,7 +215,7 @@ export function PaymentStatusPage({ language, applicationId }: { language: Langu
                 <div>
                   <strong>{local(language, item.titleEn, item.titleHi)}</strong>
                   <p>{local(language, item.detailEn, item.detailHi)}</p>
-                  <small>{new Date(item.at).toLocaleString(language === 'en' ? 'en-IN' : 'hi-IN')} · {item.code}</small>
+                  <small>{new Date(item.at).toLocaleString(localeFor(language))} · {item.code}</small>
                 </div>
               </li>
             ))}
@@ -278,9 +277,9 @@ export function PaymentReceiptPage({ language, applicationId }: { language: Lang
         <dl>
           <div><dt>{local(language, 'Application number', 'आवेदन संख्या')}</dt><dd>{applicationId}</dd></div>
           <div><dt>{local(language, 'Payment reference', 'भुगतान संदर्भ')}</dt><dd>{progress.payment.reference}</dd></div>
-          <div><dt>{local(language, 'Payment date', 'भुगतान तिथि')}</dt><dd>{progress.payment.confirmedAt ? new Date(progress.payment.confirmedAt).toLocaleString(language === 'en' ? 'en-IN' : 'hi-IN') : '—'}</dd></div>
+          <div><dt>{local(language, 'Payment date', 'भुगतान तिथि')}</dt><dd>{progress.payment.confirmedAt ? new Date(progress.payment.confirmedAt).toLocaleString(localeFor(language)) : '—'}</dd></div>
           <div><dt>{local(language, 'Status', 'स्थिति')}</dt><dd>{local(language, 'Payment successful', 'भुगतान सफल रहा')}</dd></div>
-          <div><dt>{local(language, 'Amount', 'राशि')}</dt><dd>{new Intl.NumberFormat(language === 'en' ? 'en-IN' : 'hi-IN', { style: 'currency', currency: 'INR' }).format(progress.payment.amountPaise / 100)}</dd></div>
+          <div><dt>{local(language, 'Amount', 'राशि')}</dt><dd>{new Intl.NumberFormat(localeFor(language), { style: 'currency', currency: 'INR' }).format(progress.payment.amountPaise / 100)}</dd></div>
           <div><dt>{local(language, 'Payment mode', 'भुगतान माध्यम')}</dt><dd>{progress.payment.method ? progress.payment.method.toUpperCase() : local(language, 'Demo gateway', 'डेमो गेटवे')}</dd></div>
         </dl>
         <p className="receipt-sheet__note">{local(language, 'Demo receipt: No real money was charged. This is not an official government receipt.', 'डेमो रसीद: कोई वास्तविक शुल्क नहीं लिया गया। यह आधिकारिक सरकारी रसीद नहीं है।')}</p>

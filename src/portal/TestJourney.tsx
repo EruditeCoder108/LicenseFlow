@@ -20,14 +20,13 @@ import { loadReliabilityStatus, refreshReliabilityReceipt, subscribeReliabilityS
 import { navigatePortal } from './router'
 import { loadYouTubeIframeApi, type YouTubePlayer, type YouTubePlayerStateEvent } from './youtubeIframeApi'
 import { FocusedAssessmentShell, QuestionStatusMap, useFocusedFullscreen } from './FocusedAssessmentShell'
+import { localeFor, translate as local, type Language } from './i18n'
 
-type Language = 'en' | 'hi'
 type StageChange = (label: string) => void
 
-const local = (language: Language, en: string, hi: string) => language === 'hi' ? hi : en
-const questionPrompt = (question: Question, language: Language) => language === 'hi' ? question.promptHi ?? question.prompt : question.prompt
-const questionOptions = (question: Question, language: Language) => language === 'hi' ? question.optionsHi ?? question.options : question.options
-const questionExplanation = (question: Question, language: Language) => language === 'hi' ? question.explanationHi ?? question.explanation : question.explanation
+const questionPrompt = (question: Question, language: Language) => local(language, question.prompt, question.promptHi ?? question.prompt)
+const questionOptions = (question: Question, language: Language) => question.options.map((option, index) => local(language, option, question.optionsHi?.[index] ?? option))
+const questionExplanation = (question: Question, language: Language) => local(language, question.explanation, question.explanationHi ?? question.explanation)
 
 function FlowLink({ href, className, children, dataTour }: { href: string; className?: string; children: ReactNode; dataTour?: string }) {
   const open = (event: MouseEvent<HTMLAnchorElement>) => {
@@ -1002,12 +1001,12 @@ export function TestPage({ applicationId, onStageChange, language }: { applicati
 }
 
 function translatedInterruptionDetail(detail: string, language: Language): string {
-  if (language === 'en') return detail
-  if (detail.includes('Demo network interruption')) return 'प्रश्न 3 के बाद तैयार नेटवर्क बाधा; सहेजा उत्तर सुरक्षित रहा।'
-  if (detail.includes('page became hidden')) return 'परीक्षा पेज छिप गया; नवीनतम सहेजा उत्तर सुरक्षित है।'
-  if (detail.includes('network loss')) return 'ब्राउज़र ने वास्तविक नेटवर्क टूटने की सूचना दी।'
-  if (detail.includes('More than one face')) return 'कैमरे में एक से अधिक चेहरे लगातार दिखाई दिए।'
-  return 'लाइव कैमरा संकेत एक दिखाई दे रहे चेहरे की पुष्टि नहीं कर सका।'
+  let hindi = 'लाइव कैमरा संकेत एक दिखाई दे रहे चेहरे की पुष्टि नहीं कर सका।'
+  if (detail.includes('Demo network interruption')) hindi = 'प्रश्न 3 के बाद तैयार नेटवर्क बाधा; सहेजा उत्तर सुरक्षित रहा।'
+  else if (detail.includes('page became hidden')) hindi = 'परीक्षा पेज छिप गया; नवीनतम सहेजा उत्तर सुरक्षित है।'
+  else if (detail.includes('network loss')) hindi = 'ब्राउज़र ने वास्तविक नेटवर्क टूटने की सूचना दी।'
+  else if (detail.includes('More than one face')) hindi = 'कैमरे में एक से अधिक चेहरे लगातार दिखाई दिए।'
+  return local(language, detail, hindi)
 }
 
 export function InterruptionPage({ applicationId, onStageChange, language }: { applicationId: string; onStageChange: StageChange; language: Language }) {
@@ -1134,7 +1133,7 @@ export function InterruptionPage({ applicationId, onStageChange, language }: { a
 }
 
 function eventText(event: JourneyEvent, language: Language): { title: string; detail: string; source: string } {
-  if (language === 'en') return { title: event.title, detail: event.detail, source: event.synthetic ? 'Demo event' : 'Browser event' }
+  if (language !== 'hi') return { title: local(language, event.title, event.title), detail: local(language, event.detail, event.detail), source: event.synthetic ? local(language, 'Demo event', 'डेमो घटना') : local(language, 'Browser event', 'ब्राउज़र घटना') }
   const questionMatch = event.title.match(/^Question (\d+) saved$/)
   const title = questionMatch ? `प्रश्न ${questionMatch[1]} सहेजा` : ({
     'Device readiness passed': 'डिवाइस जाँच सफल',
@@ -1163,7 +1162,7 @@ function eventText(event: JourneyEvent, language: Language): { title: string; de
 }
 
 function eventTime(at: string, language: Language): string {
-  const formatted = new Date(at).toLocaleTimeString(language === 'hi' ? 'hi-IN' : 'en-IN', { hour: '2-digit', minute: '2-digit' })
+  const formatted = new Date(at).toLocaleTimeString(localeFor(language), { hour: '2-digit', minute: '2-digit' })
   return language === 'hi' ? formatted.replace(/\bam\b/i, 'पूर्वाह्न').replace(/\bpm\b/i, 'अपराह्न') : formatted
 }
 

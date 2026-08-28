@@ -1,4 +1,6 @@
-export type AssistantLanguage = 'en' | 'hi'
+import type { Language } from '../i18n'
+
+export type AssistantLanguage = Language
 export type AssistantRole = 'user' | 'assistant'
 
 export interface AssistantMessageInput {

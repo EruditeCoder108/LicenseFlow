@@ -6,6 +6,18 @@ Its practical goal is not merely to restyle a government form. It demonstrates h
 
 > **Prototype boundary:** LicenceFlow is not a government website. Every applicant, Aadhaar check, document, payment, test attempt and licence shown here is synthetic. It creates no official record and moves no real money.
 
+## Scope at a glance
+
+| Surface | Current status |
+|---|---|
+| Madhya Pradesh Learner's Licence | Complete interactive prototype from application to a visibly invalid demonstration LL |
+| Camera/microphone readiness | Real browser and on-device checks; the judge shortcut is explicitly simulated |
+| Identity, government records, fee approval and issuance | Synthetic only; no department, UIDAI, bank or treasury connection |
+| Other transport and permanent-DL services | Discoverable directory/reference pages, not working transactions |
+| Durable reliability layer | Minimal non-personal milestone ledger; browser state is still the prototype's full recovery source |
+
+The implementation boundary and state-extension seams are documented in [docs/implementation-scope.md](docs/implementation-scope.md).
+
 ## Try it
 
 - Public prototype: [licenceflow-mp-demo.eruditespartan108.chatgpt.site](https://licenceflow-mp-demo.eruditespartan108.chatgpt.site/)
@@ -25,7 +37,8 @@ Its practical goal is not merely to restyle a government form. It demonstrates h
 - YouTube learning gate with sequential-watch enforcement and a judge-only time shortcut;
 - focused 15-question test interface with timer, narration and interruption recovery;
 - result, answer explanations, journey receipt and visibly invalid demonstration licence;
-- English/Hindi interface, keyboard behavior and responsive mobile layouts.
+- reviewed English/Hindi reference interfaces plus an accessible 23-language registry; the other 21 scheduled Indian languages remain visibly disabled until machine drafts receive native-language review;
+- keyboard behavior, spoken questions and responsive mobile layouts.
 
 ### Fair assessment engineering
 
@@ -71,8 +84,8 @@ The full browser checkpoint is deliberately not called authoritative. A producti
 
 As of 28 August 2026:
 
-- **126 tests across 32 test files pass**;
-- **15 applicable Playwright release checks pass** across desktop and Pixel 5 profiles, with three intentionally inapplicable matrix cases skipped;
+- **129 tests across 33 test files pass**;
+- **17 applicable Playwright release checks pass** across desktop and Pixel 5 profiles, with three intentionally inapplicable matrix cases skipped;
 - TypeScript and the production Sites bundle compile cleanly;
 - the built artifact includes the Worker, D1 migration and hosting manifest;
 - focused desktop/mobile tests cover the complete judge journey, payment failure, interruption reload/resume, reset, Raahi replay/escape behavior and horizontal-overflow protection.
@@ -118,6 +131,7 @@ python scripts/optimize-home-images.py
 | `drizzle/` | Persistent D1 migration |
 | `tests/e2e/` | Desktop/mobile release journey checks |
 | `docs/latest-code-roadmap.md` | Current decisions, cut lines and future architecture |
+| `docs/implementation-scope.md` | Canonical map of working, simulated and directory-only surfaces |
 
 ## Raahi and OpenAI boundary
 
@@ -132,5 +146,6 @@ No secret belongs in Vite variables, frontend code, browser storage or the repos
 - Safe Exam Browser, anti-spoofing and real Aadhaar/payment integrations are future architecture, not hidden prototype claims.
 - Question answers remain in the frontend bundle until a genuine authoritative exam service exists.
 - Synthetic shortcuts and documents are visibly labelled.
+- Machine-assisted language drafts require native-speaker and policy review before any official deployment; English and Hindi remain the reviewed reference versions.
 
 The detailed claim boundary is in [docs/production-security-boundary.md](docs/production-security-boundary.md), and the current plan is in [docs/latest-code-roadmap.md](docs/latest-code-roadmap.md).

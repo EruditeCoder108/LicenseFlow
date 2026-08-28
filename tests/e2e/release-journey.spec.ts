@@ -19,9 +19,9 @@ async function reachTestEntry(page: Page) {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/', { waitUntil: 'domcontentloaded' })
   await page.evaluate(() => localStorage.clear())
-  await page.reload()
+  await page.reload({ waitUntil: 'domcontentloaded' })
 })
 
 test('homepage is transparent and the state dialog contains and restores focus', async ({ page }) => {
@@ -41,6 +41,27 @@ test('homepage is transparent and the state dialog contains and restores focus',
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
   await expect(trigger).toBeFocused()
+})
+
+test('scheduled-language selector is searchable, honest and viewport-safe', async ({ page }) => {
+  const trigger = page.getByRole('button', { name: 'Choose language' })
+  await trigger.click()
+  const dialog = page.getByRole('dialog', { name: 'Choose your language' })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByRole('option')).toHaveCount(23)
+  await expect(dialog.getByRole('option', { name: /Bodo.*Translation pending/ })).toBeDisabled()
+  await expect(dialog.getByRole('option', { name: /Kashmiri.*Translation pending/ })).toBeDisabled()
+  await expect(dialog.getByRole('option', { name: /Santali.*Translation pending/ })).toBeDisabled()
+
+  const search = dialog.getByPlaceholder('Search 23 languages…')
+  await search.fill('Bengali')
+  await expect(dialog.getByRole('option')).toHaveCount(1)
+  await expect(dialog.getByRole('option', { name: /Bengali.*Translation pending/ })).toBeDisabled()
+  await search.fill('Hindi')
+  await dialog.getByRole('option', { name: /Hindi.*Reviewed/ }).click()
+  await expect(page.locator('html')).toHaveAttribute('lang', 'hi-IN')
+  await expect(page.getByRole('heading', { level: 1 }).first()).not.toHaveText('Road transport services in one place')
+  await expect.poll(() => page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)).toBeLessThanOrEqual(0)
 })
 
 test('homepage selects responsive local assets without a Google Fonts request', async ({ page }) => {

@@ -1,4 +1,5 @@
-export type Language = 'en' | 'hi'
+import type { Language } from '../i18n'
+export type { Language }
 
 export type RaahiPose =
   | 'welcome'
