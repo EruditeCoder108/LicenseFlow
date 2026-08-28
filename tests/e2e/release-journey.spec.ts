@@ -43,6 +43,25 @@ test('homepage is transparent and the state dialog contains and restores focus',
   await expect(trigger).toBeFocused()
 })
 
+test('homepage selects responsive local assets without a Google Fonts request', async ({ page }) => {
+  await expect(page.locator('.national-hero img')).toBeVisible()
+  await expect.poll(() => page.locator('.portal-mark__logo').first().evaluate((image: HTMLImageElement) => image.currentSrc)).toContain('licenceflow-logo-160.webp')
+  await expect.poll(() => page.locator('.national-hero img').evaluate((image: HTMLImageElement) => image.currentSrc)).toContain('parivahan-transport-hero-1200.webp')
+
+  const firstServiceImage = page.locator('.home-service-card img').first()
+  await firstServiceImage.scrollIntoViewIfNeeded()
+  await expect.poll(() => firstServiceImage.evaluate((image: HTMLImageElement) => image.currentSrc)).toContain('-360.webp')
+
+  const firstEcosystemImage = page.locator('.ecosystem-card img').first()
+  await firstEcosystemImage.scrollIntoViewIfNeeded()
+  await expect.poll(() => firstEcosystemImage.evaluate((image: HTMLImageElement) => image.currentSrc)).toContain('-560.webp')
+
+  const externalFontRequests = await page.evaluate(() => performance.getEntriesByType('resource')
+    .map((entry) => entry.name)
+    .filter((url) => url.includes('fonts.googleapis.com') || url.includes('fonts.gstatic.com')))
+  expect(externalFontRequests).toEqual([])
+})
+
 test('prepared judge journey reaches a passing result and can reset cleanly', async ({ page, isMobile }) => {
   test.setTimeout(isMobile ? 90_000 : 60_000)
   await reachTestEntry(page)
@@ -104,9 +123,9 @@ test('Raahi mascot guide: full walkthrough shows and operates the complete journ
   await page.goto('/')
 
   // Verify hero onboarding prompt is visible on first visit
-  await expect(page.getByRole('heading', { name: 'Meet Raahi — Your guide through LicenceFlow' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Meet Raahi — Full Guided Walkthrough' })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Take the detailed tour' }).click()
+  await page.getByRole('button', { name: 'Take the full guided walkthrough' }).click()
   await expect(page.locator('.judge-tour-card__dialogue')).toContainText('guide you through the complete demo')
 
   // The guide is non-modal: no backdrop click dismissal, blur, or scroll lock.
@@ -165,7 +184,7 @@ test('Raahi mascot guide: dismiss, replay, and escape handling', async ({ page }
 
   // Dismiss prompt
   await page.getByRole('button', { name: 'Explore myself' }).click()
-  await expect(page.getByRole('heading', { name: 'Meet Raahi — Your guide through LicenceFlow' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Meet Raahi — Full Guided Walkthrough' })).toHaveCount(0)
 
   // Launch via floating replay dock
   await page.getByRole('button', { name: /Start the full Judge Walkthrough with Raahi/ }).click()
@@ -184,24 +203,6 @@ test('Raahi mascot guide: dismiss, replay, and escape handling', async ({ page }
   await expect(page.locator('.judge-tour-card__title')).toHaveText('Choose a service area')
 })
 
-test('Raahi cinematic mode completes the full journey automatically', async ({ page, isMobile }) => {
-  test.skip(isMobile, 'The timed capture rehearsal runs once on desktop Chrome.')
-  test.setTimeout(60_000)
-  await page.goto('/')
-
-  const startedAt = Date.now()
-  await page.getByRole('button', { name: 'Play automatic tour' }).click()
-  await expect(page.locator('.judge-tour-root')).toHaveClass(/judge-tour-root--cinematic/)
-  await expect(page.getByText('Raahi is completing the journey for you')).toBeVisible()
-  await expect(page).toHaveURL(/\/result$/, { timeout: 50_000 })
-  await expect(page.getByText('Recovered safely')).toBeVisible()
-  await expect(page.locator('.judge-tour-card')).toHaveCount(0, { timeout: 8_000 })
-
-  const elapsed = Date.now() - startedAt
-  expect(elapsed).toBeGreaterThanOrEqual(25_000)
-  expect(elapsed).toBeLessThanOrEqual(55_000)
-})
-
 test('mobile services and Raahi stay inside the viewport', async ({ page, isMobile }) => {
   test.skip(!isMobile, 'Mobile overflow regression runs on the phone profile.')
   await page.goto('/mp/services')
@@ -211,7 +212,7 @@ test('mobile services and Raahi stay inside the viewport', async ({ page, isMobi
   )).toBeLessThanOrEqual(0)
 
   await page.goto('/')
-  await page.getByRole('button', { name: 'Take the detailed tour' }).click()
+  await page.getByRole('button', { name: 'Take the full guided walkthrough' }).click()
   const card = page.locator('.judge-tour-card')
   await expect(card).toBeVisible()
 
@@ -238,4 +239,28 @@ test('mobile services and Raahi stay inside the viewport', async ({ page, isMobi
   expect((box?.x ?? 0) + (box?.width ?? 0)).toBeLessThanOrEqual(viewport?.width ?? 0)
   expect(avatar?.x ?? -1).toBeGreaterThanOrEqual(0)
   expect((avatar?.x ?? 0) + (avatar?.width ?? 0)).toBeLessThanOrEqual(viewport?.width ?? 0)
+})
+
+test('Raahi built-in guide answers from the current page without calling an AI endpoint', async ({ page }) => {
+  let apiChatRequests = 0
+  page.on('request', (request) => {
+    if (new URL(request.url()).pathname === '/api/chat') apiChatRequests += 1
+  })
+
+  await page.goto('/mp/services')
+  await page.evaluate(() => window.scrollTo(0, 420))
+  const pageScrollBeforeChat = await page.evaluate(() => window.scrollY)
+  await page.getByRole('button', { name: 'Ask Raahi' }).click()
+
+  const guide = page.getByRole('dialog', { name: 'Ask Raahi' })
+  await expect(guide).toBeVisible()
+  await expect(guide).toContainText('OpenAI API is not connected')
+  await guide.getByRole('button', { name: 'What should I do next?' }).click()
+  await expect(guide).toContainText('Choose “Apply for Learner’s Licence”')
+  expect(apiChatRequests).toBe(0)
+  expect(await page.evaluate(() => window.scrollY)).toBe(pageScrollBeforeChat)
+
+  await expect.poll(() => page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  )).toBeLessThanOrEqual(0)
 })

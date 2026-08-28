@@ -1,4 +1,4 @@
-import { ArrowRight, Play, Sparkles, X } from 'lucide-react'
+import { ArrowRight, Sparkles, X } from 'lucide-react'
 import type { Language } from './types'
 import { useJudgeTour } from './useJudgeTour'
 import { RAAHI_ASSETS } from './tourSteps'
@@ -26,6 +26,8 @@ export function JudgeTourFloatingPill({ tour, language }: JudgeTourPromptProps) 
         <span className="judge-tour-pill__avatar" aria-hidden="true">
           <img
             src={RAAHI_ASSETS.confident.src}
+            srcSet={`${RAAHI_ASSETS.confident.smallSrc} 240w, ${RAAHI_ASSETS.confident.src} 400w`}
+            sizes="48px"
             alt=""
             width={48}
             height={48}
@@ -44,7 +46,7 @@ export function JudgeTourFloatingPill({ tour, language }: JudgeTourPromptProps) 
 }
 
 export function JudgeTourHeroCard({ tour, language }: JudgeTourPromptProps) {
-  const { shouldShowHeroPrompt, startTour, startCinematicTour, dismissPrompt } = tour
+  const { shouldShowHeroPrompt, startTour, dismissPrompt } = tour
 
   if (!shouldShowHeroPrompt) return null
 
@@ -56,6 +58,8 @@ export function JudgeTourHeroCard({ tour, language }: JudgeTourPromptProps) {
       <div className="judge-onboarding-hero-card__character" aria-hidden="true">
         <img
           src={RAAHI_ASSETS.welcome.src}
+          srcSet={`${RAAHI_ASSETS.welcome.smallSrc} 240w, /assets/raahi/raahi-welcome-320.webp 320w, ${RAAHI_ASSETS.welcome.src} 400w`}
+          sizes="110px"
           alt=""
           width={110}
           height={147}
@@ -71,29 +75,21 @@ export function JudgeTourHeroCard({ tour, language }: JudgeTourPromptProps) {
         </div>
         <h2 id="judge-onboarding-title">
           {language === 'en'
-            ? 'Meet Raahi — Your guide through LicenceFlow'
-            : 'राही से मिलें — LicenceFlow में आपका मार्गदर्शक'}
+            ? 'Meet Raahi — Full Guided Walkthrough'
+            : 'राही से मिलें — पूर्ण निर्देशित वॉकथ्रू'}
         </h2>
         <p>
           {language === 'en'
-            ? 'Watch Raahi complete the entire journey automatically in about 45 seconds, or take the detailed walkthrough at your own pace.'
-            : 'राही को लगभग 45 सेकंड में पूरी यात्रा अपने-आप पूरी करते देखें, या विस्तृत वॉकथ्रू अपनी गति से लें।'}
+            ? 'See every application screen, demo interaction, readiness check, payment handoff, tutorial, test and result in about 2–3 minutes.'
+            : 'लगभग 2–3 मिनट में हर आवेदन स्क्रीन, डेमो क्रिया, डिवाइस जाँच, भुगतान, ट्यूटोरियल, टेस्ट और परिणाम देखें।'}
         </p>
         <div className="judge-onboarding-hero-card__actions">
           <button
             type="button"
             className="button button--primary judge-onboarding-cta"
-            onClick={startCinematicTour}
-          >
-            <Play size={16} fill="currentColor" aria-hidden="true" />
-            <span>{language === 'en' ? 'Play automatic tour' : 'स्वचालित टूर चलाएँ'}</span>
-          </button>
-          <button
-            type="button"
-            className="button button--secondary judge-onboarding-detailed"
             onClick={startTour}
           >
-            <span>{language === 'en' ? 'Take the detailed tour' : 'विस्तृत टूर लें'}</span>
+            <span>{language === 'en' ? 'Take the full guided walkthrough' : 'पूर्ण निर्देशित वॉकथ्रू लें'}</span>
             <ArrowRight size={17} aria-hidden="true" />
           </button>
           <button

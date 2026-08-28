@@ -8,7 +8,9 @@ afterEach(() => {
 describe('MP LL application validation', () => {
   it('requires a category and a licence number only for an existing-licence route', () => {
     const empty = createEmptyDraft('TEST')
-    expect(validateApplicationStep(empty, 'category')).toHaveProperty('applicantCategory')
+    expect(validateApplicationStep(empty, 'category')).toEqual({
+      applicantCategory: 'Choose the option that describes the applicant.',
+    })
     const existing = { ...empty, applicantCategory: 'holds-learner-licence' as const }
     expect(validateApplicationStep(existing, 'category')).toHaveProperty('existingLicenceNumber')
     expect(validateApplicationStep({ ...empty, applicantCategory: 'no-licence' }, 'category')).toEqual({})

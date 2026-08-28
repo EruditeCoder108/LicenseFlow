@@ -10,6 +10,7 @@ import {
   type PaymentOutcome,
   type PaymentState,
 } from './payment'
+import { queueJourneyReliabilityCheckpoint } from './reliability'
 
 export type ReadinessMode = 'real-browser-checks' | 'guided-signals'
 
@@ -119,6 +120,7 @@ function migrateTutorial(tutorial?: { status: 'not-started' | 'completed'; compl
 export function saveJourneyProgress(progress: LLJourneyProgress): boolean {
   try {
     localStorage.setItem(`${STORAGE_PREFIX}${progress.applicationId}`, JSON.stringify(progress))
+    queueJourneyReliabilityCheckpoint(progress)
     return true
   } catch {
     return false

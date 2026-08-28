@@ -326,6 +326,8 @@ export function FocusedAssessmentShell({
           <div className="focused-assessment-shell__brand">
             <img
               src="/assets/licenceflow-logo.webp"
+              srcSet="/assets/licenceflow-logo-160.webp 160w, /assets/licenceflow-logo.webp 803w"
+              sizes="44px"
               alt="LicenceFlow Logo"
               className="focused-assessment-shell__logo"
               width={32}

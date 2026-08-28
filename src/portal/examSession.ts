@@ -2,6 +2,7 @@ import { buildQuestionPaper, isValidQuestionPaper, resolveQuestionPaper } from '
 import { LL_TEST_CONFIG } from '../content/testConfig'
 import { initialJourneyState, journeyReducer, type JourneyEvent, type JourneyState } from '../domain/journey'
 import type { LLJourneyProgress } from './progress'
+import { queueExamReliabilityCheckpoint } from './reliability'
 
 const STORAGE_PREFIX = 'mp-ll-exam-session-v1:'
 
@@ -70,6 +71,7 @@ export function loadExamSession(applicationId: string, progress: LLJourneyProgre
 export function saveExamSession(applicationId: string, state: JourneyState): boolean {
   try {
     localStorage.setItem(`${STORAGE_PREFIX}${applicationId}`, JSON.stringify(state))
+    queueExamReliabilityCheckpoint(applicationId, state)
     return true
   } catch {
     return false

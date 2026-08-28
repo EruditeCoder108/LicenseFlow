@@ -1,12 +1,12 @@
 import type { JudgeTourAction, JudgeTourPhase, JudgeTourScrollMode, JudgeTourStep, RaahiPose } from './types'
 
-export const RAAHI_ASSETS: Record<RaahiPose, { src: string; alt: string; altHi: string; width: number; height: number }> = {
-  welcome: { src: '/assets/raahi/raahi-welcome.webp', alt: 'Raahi welcoming the evaluator', altHi: 'राही मूल्यांकनकर्ता का स्वागत करते हुए', width: 400, height: 533 },
-  pointing: { src: '/assets/raahi/raahi-pointing.webp', alt: 'Raahi pointing towards the highlighted control', altHi: 'राही मुख्य नियंत्रण की ओर इशारा करते हुए', width: 400, height: 533 },
-  thinking: { src: '/assets/raahi/raahi-thinking.webp', alt: 'Raahi observing the device checks', altHi: 'राही डिवाइस जाँच का अवलोकन करते हुए', width: 400, height: 533 },
-  working: { src: '/assets/raahi/raahi-working.webp', alt: 'Raahi guiding the digital journey', altHi: 'राही डिजिटल प्रक्रिया समझाते हुए', width: 400, height: 366 },
-  celebrate: { src: '/assets/raahi/raahi-celebrate.webp', alt: 'Raahi celebrating the completed journey', altHi: 'राही पूरी प्रक्रिया की खुशी मनाते हुए', width: 400, height: 389 },
-  confident: { src: '/assets/raahi/raahi-confident.webp', alt: 'Raahi giving a thumbs up', altHi: 'राही थम्स-अप दिखाते हुए', width: 400, height: 533 },
+export const RAAHI_ASSETS: Record<RaahiPose, { src: string; smallSrc: string; alt: string; altHi: string; width: number; height: number }> = {
+  welcome: { src: '/assets/raahi/raahi-welcome.webp', smallSrc: '/assets/raahi/raahi-welcome-240.webp', alt: 'Raahi welcoming the evaluator', altHi: 'राही मूल्यांकनकर्ता का स्वागत करते हुए', width: 400, height: 533 },
+  pointing: { src: '/assets/raahi/raahi-pointing.webp', smallSrc: '/assets/raahi/raahi-pointing-240.webp', alt: 'Raahi pointing towards the highlighted control', altHi: 'राही मुख्य नियंत्रण की ओर इशारा करते हुए', width: 400, height: 533 },
+  thinking: { src: '/assets/raahi/raahi-thinking.webp', smallSrc: '/assets/raahi/raahi-thinking-240.webp', alt: 'Raahi observing the device checks', altHi: 'राही डिवाइस जाँच का अवलोकन करते हुए', width: 400, height: 533 },
+  working: { src: '/assets/raahi/raahi-working.webp', smallSrc: '/assets/raahi/raahi-working-240.webp', alt: 'Raahi guiding the digital journey', altHi: 'राही डिजिटल प्रक्रिया समझाते हुए', width: 400, height: 366 },
+  celebrate: { src: '/assets/raahi/raahi-celebrate.webp', smallSrc: '/assets/raahi/raahi-celebrate-240.webp', alt: 'Raahi celebrating the completed journey', altHi: 'राही पूरी प्रक्रिया की खुशी मनाते हुए', width: 400, height: 389 },
+  confident: { src: '/assets/raahi/raahi-confident.webp', smallSrc: '/assets/raahi/raahi-confident-240.webp', alt: 'Raahi giving a thumbs up', altHi: 'राही थम्स-अप दिखाते हुए', width: 400, height: 533 },
 }
 
 export const JUDGE_TOUR_PHASES: { id: JudgeTourPhase; en: string; hi: string }[] = [

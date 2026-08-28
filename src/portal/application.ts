@@ -184,7 +184,7 @@ export function validateApplicationStep(draft: LLApplicationDraft, step: Applica
   const errors: FieldErrors = {}
   if (step === 'category') {
     if (!draft.applicantCategory) errors.applicantCategory = 'Choose the option that describes the applicant.'
-    if (draft.applicantCategory !== 'no-licence' && !required(draft.existingLicenceNumber)) errors.existingLicenceNumber = 'Enter a synthetic existing licence number for this route.'
+    if (draft.applicantCategory && draft.applicantCategory !== 'no-licence' && !required(draft.existingLicenceNumber)) errors.existingLicenceNumber = 'Enter a synthetic existing licence number for this route.'
   }
   if (step === 'identity') {
     if (!draft.identityRoute) errors.identityRoute = 'Choose a synthetic identity route.'

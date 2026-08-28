@@ -1,0 +1,279 @@
+.raahi-chat {
+  --raahi-chat-left: max(24px, env(safe-area-inset-left));
+  position: fixed;
+  left: var(--raahi-chat-left);
+  bottom: max(24px, env(safe-area-inset-bottom));
+  z-index: 980;
+  color: #071a34;
+  font-family: inherit;
+}
+
+.raahi-chat *, .raahi-chat *::before, .raahi-chat *::after { box-sizing: border-box; }
+
+.raahi-chat__sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.raahi-chat__launcher {
+  position: relative;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 13px 7px 45px;
+  border: 1px solid rgba(148, 163, 184, .58);
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .76);
+  -webkit-backdrop-filter: blur(14px) saturate(135%);
+  backdrop-filter: blur(14px) saturate(135%);
+  color: #0c4a6e;
+  box-shadow: 0 8px 24px rgba(7, 26, 52, .14);
+  font: inherit;
+  font-size: .86rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+}
+
+.raahi-chat__launcher:hover { border-color: rgba(3, 105, 161, .56); background: rgba(255, 255, 255, .92); box-shadow: 0 10px 28px rgba(7, 26, 52, .18); }
+.raahi-chat__launcher:active { background: rgba(239, 248, 255, .94); }
+.raahi-chat__launcher:focus-visible, .raahi-chat button:focus-visible, .raahi-chat textarea:focus-visible { outline: 3px solid #f59e0b; outline-offset: 3px; }
+
+.raahi-chat__launcher-icon {
+  width: 50px;
+  height: 50px;
+  position: absolute;
+  left: -7px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 2px solid rgba(255, 255, 255, .96);
+  border-radius: 50%;
+  background: linear-gradient(145deg, #e0f2fe, #f8fafc);
+  box-shadow: 0 5px 14px rgba(7, 26, 52, .18), 0 0 0 1px rgba(3, 105, 161, .18);
+}
+
+.raahi-chat__launcher-icon img { width: 52px; height: 48px; object-fit: contain; object-position: center; transform: translateY(3px) scale(1.08); }
+
+.raahi-chat__panel {
+  position: absolute;
+  left: 0;
+  bottom: 66px;
+  width: min(400px, calc(100vw - 48px));
+  height: min(590px, calc(100dvh - 96px));
+  max-height: calc(100dvh - 96px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #cbd5e1;
+  border-radius: 22px;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(7, 26, 52, .28);
+  animation: raahi-panel-in 180ms ease-out both;
+}
+
+@keyframes raahi-panel-in {
+  from { opacity: 0; transform: translateY(10px) scale(.985); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.raahi-chat__header {
+  flex: 0 0 auto;
+  min-height: 76px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 12px 12px 16px;
+  border-bottom: 1px solid #dbe5ef;
+  background: linear-gradient(110deg, #eff8ff 0%, #fff 72%);
+}
+
+.raahi-chat__identity { min-width: 0; display: flex; align-items: center; gap: 11px; }
+.raahi-chat__identity > div { min-width: 0; }
+.raahi-chat__identity h2 { margin: 1px 0 0; color: #071a34; font-size: 1.14rem; line-height: 1.15; }
+.raahi-chat__kicker { display: flex; align-items: center; gap: 4px; color: #0369a1; font-size: .73rem; font-weight: 700; letter-spacing: .035em; text-transform: uppercase; }
+
+.raahi-chat__avatar {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: end center;
+  flex: 0 0 auto;
+  overflow: hidden;
+  border: 1px solid #bae6fd;
+  border-radius: 14px;
+  background: #e0f2fe;
+}
+
+.raahi-chat__avatar img { width: 36px; height: 48px; object-fit: cover; object-position: top center; }
+.raahi-chat__header-actions { display: flex; gap: 4px; flex: 0 0 auto; }
+
+.raahi-chat__icon-button {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  color: #334155;
+  cursor: pointer;
+}
+
+.raahi-chat__icon-button:hover { background: #e2e8f0; color: #071a34; }
+
+.raahi-chat__notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  flex: 0 0 auto;
+  padding: 9px 16px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #eff6ff;
+  color: #1e3a5f;
+  font-size: .79rem;
+  line-height: 1.35;
+}
+
+.raahi-chat__notice svg { flex: 0 0 auto; margin-top: 1px; color: #0369a1; }
+
+.raahi-chat__messages {
+  min-height: 0;
+  flex: 1 1 auto;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 16px;
+  background: #f8fafc;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 transparent;
+}
+
+.raahi-chat__messages::-webkit-scrollbar { width: 8px; }
+.raahi-chat__messages::-webkit-scrollbar-thumb { border: 2px solid #f8fafc; border-radius: 999px; background: #94a3b8; }
+
+.raahi-chat__message { max-width: 88%; margin: 0 0 12px; }
+.raahi-chat__message p { margin: 0; padding: 10px 12px; border-radius: 5px 15px 15px 15px; background: #fff; border: 1px solid #dbe5ef; color: #1e293b; line-height: 1.43; white-space: pre-wrap; overflow-wrap: anywhere; }
+.raahi-chat__message--user { margin-left: auto; }
+.raahi-chat__message--user p { border-color: #075985; border-radius: 15px 5px 15px 15px; background: #075985; color: #fff; }
+.raahi-chat__message-name { display: block; margin: 0 0 4px 3px; color: #0369a1; font-size: .72rem; font-weight: 700; }
+.raahi-chat__typing { display: flex; align-items: center; gap: 7px; color: #475569; font-size: .86rem; }
+.raahi-chat__spinner { animation: raahi-spin .8s linear infinite; }
+@keyframes raahi-spin { to { transform: rotate(360deg); } }
+
+.raahi-chat__error { margin: 4px 0 12px; padding: 10px 12px; border: 1px solid #fecaca; border-radius: 12px; background: #fff1f2; color: #9f1239; font-size: .84rem; line-height: 1.4; }
+
+.raahi-chat__suggestions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 7px;
+  margin-top: 4px;
+  padding: 0;
+}
+
+.raahi-chat__suggestions button {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 9px 11px;
+  border: 1px solid #dbe5ef;
+  border-radius: 11px;
+  background: #fff;
+  color: #075985;
+  font: inherit;
+  font-size: .79rem;
+  font-weight: 650;
+  line-height: 1.3;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.raahi-chat__suggestions button:hover { border-color: #7dd3fc; background: #f0f9ff; }
+
+.raahi-chat__composer {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 46px;
+  align-items: end;
+  gap: 8px;
+  padding: 12px 12px 8px;
+  border-top: 1px solid #e2e8f0;
+  background: #fff;
+}
+
+.raahi-chat__composer textarea {
+  width: 100%;
+  min-width: 0;
+  min-height: 48px;
+  max-height: 112px;
+  resize: vertical;
+  padding: 11px 12px;
+  border: 1px solid #94a3b8;
+  border-radius: 13px;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+  line-height: 1.35;
+}
+
+.raahi-chat__composer textarea::placeholder { color: #64748b; opacity: 1; }
+.raahi-chat__composer button { width: 46px; height: 46px; display: grid; place-items: center; padding: 0; border: 0; border-radius: 13px; background: #075985; color: #fff; cursor: pointer; }
+.raahi-chat__composer button:hover:not(:disabled) { background: #0c4a6e; }
+.raahi-chat__composer button:disabled { background: #cbd5e1; color: #64748b; cursor: not-allowed; }
+.raahi-chat__disclaimer { margin: 0; padding: 0 14px 10px; flex: 0 0 auto; background: #fff; color: #64748b; font-size: .72rem; line-height: 1.3; text-align: center; }
+
+@media (max-width: 600px) {
+  .raahi-chat {
+    --raahi-chat-left: max(12px, env(safe-area-inset-left));
+    bottom: max(12px, env(safe-area-inset-bottom));
+  }
+
+  .raahi-chat__launcher { width: 50px; height: 50px; min-height: 50px; padding: 0; border-color: transparent; background: transparent; box-shadow: none; }
+  .raahi-chat__launcher:hover { border-color: transparent; background: transparent; box-shadow: none; }
+  .raahi-chat__launcher-icon { left: 0; width: 50px; height: 50px; }
+  .raahi-chat__launcher-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+  .raahi-chat__panel {
+    position: fixed;
+    left: max(8px, env(safe-area-inset-left));
+    right: max(8px, env(safe-area-inset-right));
+    bottom: calc(max(12px, env(safe-area-inset-bottom)) + 66px);
+    width: auto;
+    max-width: none;
+    height: min(580px, calc(100dvh - 92px));
+    max-height: calc(100dvh - 92px);
+    border-radius: 18px;
+  }
+
+  .raahi-chat__messages { min-height: 0; padding: 13px; }
+  .raahi-chat__header { min-height: 70px; padding: 10px 8px 10px 12px; }
+  .raahi-chat__notice { padding: 7px 12px; }
+}
+
+@media (max-width: 360px) {
+  .raahi-chat__identity { gap: 8px; }
+  .raahi-chat__avatar { width: 42px; height: 42px; }
+  .raahi-chat__avatar img { width: 32px; height: 43px; }
+  .raahi-chat__identity h2 { font-size: 1rem; }
+  .raahi-chat__kicker { font-size: .65rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .raahi-chat__panel { animation: none; }
+  .raahi-chat__launcher { transition: none; }
+  .raahi-chat__spinner { animation-duration: 1.4s; }
+}

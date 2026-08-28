@@ -65,6 +65,7 @@ import { loadExamSession } from './portal/examSession'
 import { clearDemoSession, loadDemoSession, saveDemoSession, type DemoSession } from './portal/auth'
 import { deriveJourneyState, getRouteAccess } from './portal/journeyState'
 import { JudgeTourCoachmark, JudgeTourFloatingPill, JudgeTourHeroCard, useJudgeTour } from './portal/judgeTour'
+import { RaahiAssistant } from './portal/assistant'
 
 const ApplicationFlow = lazy(() => import('./portal/ApplicationFlow').then((module) => ({ default: module.ApplicationFlow })))
 const SubmittedPage = lazy(() => import('./portal/ApplicationFlow').then((module) => ({ default: module.SubmittedPage })))
@@ -193,6 +194,8 @@ function PortalMark({ language = 'en', national = false }: { language?: Language
     <div className="portal-mark">
       <img
         src="/assets/licenceflow-logo.webp"
+        srcSet="/assets/licenceflow-logo-160.webp 160w, /assets/licenceflow-logo.webp 803w"
+        sizes="44px"
         alt="LicenceFlow Logo"
         className="portal-mark__logo"
         width={44}
@@ -308,6 +311,7 @@ function NationalHomePage({ onUnavailable, onDrivingServices, onPrototypeDetails
       body: 'Learner licence, permanent DL, renewal and test booking.',
       bodyHi: 'लर्नर लाइसेंस, स्थायी डीएल, नवीनीकरण और परीक्षा स्लॉट।',
       image: '/assets/service-driving-licence.webp',
+      imageSmall: '/assets/service-driving-licence-360.webp',
       href: '/mp/services',
     },
     {
@@ -318,6 +322,7 @@ function NationalHomePage({ onUnavailable, onDrivingServices, onPrototypeDetails
       body: 'Registration, ownership, permits and vehicle records.',
       bodyHi: 'पंजीकरण, स्वामित्व, परमिट और वाहन रिकॉर्ड।',
       image: '/assets/service-vehicle-reg.webp',
+      imageSmall: '/assets/service-vehicle-reg-360.webp',
     },
     {
       id: 'permit',
@@ -327,6 +332,7 @@ function NationalHomePage({ onUnavailable, onDrivingServices, onPrototypeDetails
       body: 'National permits, fitness and transport operations.',
       bodyHi: 'राष्ट्रीय परमिट, फिटनेस और परिवहन संचालन।',
       image: '/assets/service-commercial.webp',
+      imageSmall: '/assets/service-commercial-360.webp',
     },
     {
       id: 'safety',
@@ -336,6 +342,7 @@ function NationalHomePage({ onUnavailable, onDrivingServices, onPrototypeDetails
       body: 'Rules, signs, safe-driving guidance and resources.',
       bodyHi: 'नियम, संकेत, सुरक्षित ड्राइविंग मार्गदर्शन और संसाधन।',
       image: '/assets/service-road-safety.webp',
+      imageSmall: '/assets/service-road-safety-360.webp',
     },
   ]
 
@@ -351,6 +358,7 @@ function NationalHomePage({ onUnavailable, onDrivingServices, onPrototypeDetails
       badgeBg: '#e0f2fe',
       badgeColor: '#0369a1',
       image: '/assets/ecosystem-mparivahan.webp',
+      imageSmall: '/assets/ecosystem-mparivahan-560.webp',
       desc: 'Keep your digital RC and Driving Licence on your phone. These digital documents are valid across India.',
       descHi: 'अपने फोन पर डिजिटल RC और Driving Licence रखें। ये डिजिटल दस्तावेज़ पूरे भारत में मान्य हैं।',
     },
@@ -365,6 +373,7 @@ function NationalHomePage({ onUnavailable, onDrivingServices, onPrototypeDetails
       badgeBg: '#fef3c7',
       badgeColor: '#b45309',
       image: '/assets/ecosystem-echallan.webp',
+      imageSmall: '/assets/ecosystem-echallan-560.webp',
       desc: 'Check traffic challans, pay fines online and track disputes.',
       descHi: 'ट्रैफिक चालान देखें, जुर्माना ऑनलाइन भरें और विवाद की स्थिति देखें।',
     },
@@ -379,6 +388,7 @@ function NationalHomePage({ onUnavailable, onDrivingServices, onPrototypeDetails
       badgeBg: '#dcfce7',
       badgeColor: '#15803d',
       image: '/assets/ecosystem-pucc.webp',
+      imageSmall: '/assets/ecosystem-pucc-560.webp',
       desc: 'Pollution Under Control Certificate check, test history and authorized testing stations.',
       descHi: 'प्रदूषण जांच प्रमाण पत्र की वैधता, टेस्ट इतिहास और अधिकृत केंद्र खोजें।',
     },
@@ -393,6 +403,7 @@ function NationalHomePage({ onUnavailable, onDrivingServices, onPrototypeDetails
       badgeBg: '#f3e8ff',
       badgeColor: '#7e22ce',
       image: '/assets/ecosystem-green-sewa.webp',
+      imageSmall: '/assets/ecosystem-green-sewa-560.webp',
       desc: 'EV registration incentives, green tax exemption status and CNG/LPG retrofitting approvals.',
       descHi: 'ईवी पंजीकरण सब्सिडी, हरित कर छूट और सीएनजी रेट्रोफिटिंग अनुमोदन।',
     },
@@ -525,7 +536,15 @@ function NationalHomePage({ onUnavailable, onDrivingServices, onPrototypeDetails
   return (
     <div className="national-home">
       <section className="national-hero" aria-labelledby="home-title" data-tour="home-overview">
-        <img src="/assets/parivahan-transport-hero.webp" alt="Indian road transport connecting citizens, buses and commercial vehicles" fetchPriority="high" />
+        <img
+          src="/assets/parivahan-transport-hero.webp"
+          srcSet="/assets/parivahan-transport-hero-960.webp 960w, /assets/parivahan-transport-hero-1200.webp 1200w, /assets/parivahan-transport-hero.webp 1672w"
+          sizes="(max-width: 1240px) calc(100vw - 32px), 1200px"
+          width={1672}
+          height={941}
+          alt="Indian road transport connecting citizens, buses and commercial vehicles"
+          fetchPriority="high"
+        />
         <div className="national-hero__shade" aria-hidden="true" />
         <div className="national-hero__content">
           <p className="eyebrow">{copy(language, 'LicenceFlow public-service prototype', 'LicenceFlow सार्वजनिक-सेवा प्रोटोटाइप')}</p>
@@ -606,7 +625,14 @@ function NationalHomePage({ onUnavailable, onDrivingServices, onPrototypeDetails
             const content = (
               <>
                 <div className="home-service-card__showcase" aria-hidden="true">
-                  <img src={service.image} alt="" loading="lazy" />
+                  <img
+                    src={service.image}
+                    srcSet={`${service.imageSmall} 360w, ${service.image} 1448w`}
+                    sizes="(max-width: 760px) 82px, 180px"
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                  />
                 </div>
                 <div className="home-service-card__body">
                   <div className="home-service-card__header">
@@ -654,7 +680,14 @@ function NationalHomePage({ onUnavailable, onDrivingServices, onPrototypeDetails
                 onClick={() => onUnavailable('information')}
               >
                 <div className="ecosystem-card__backdrop" aria-hidden="true">
-                  <img src={app.image} alt="" loading="lazy" />
+                  <img
+                    src={app.image}
+                    srcSet={`${app.imageSmall} 560w, ${app.image} 1448w`}
+                    sizes="(max-width: 760px) 34vw, 250px"
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                  />
                 </div>
                 <div className="ecosystem-card__content">
                   <div className="ecosystem-card__header-row">
@@ -1990,6 +2023,7 @@ function PortalApp() {
         <Suspense fallback={<RouteLoading language={language} />}>{page}</Suspense>
       </main>
       <PortalFooter language={language} national={national} onPrototypeDetails={() => setPrototypeDetailsOpen(true)} />
+      <RaahiAssistant pathname={pathname} language={language} applicationStage={demoApplication?.lastStage} hidden={tour.isActive} />
       <JudgeTourFloatingPill tour={tour} language={language} />
       <JudgeTourCoachmark tour={tour} language={language} />
       {helpOpen && <HelpDialog route={route} language={language} onClose={() => setHelpOpen(false)} />}

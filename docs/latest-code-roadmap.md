@@ -1,8 +1,8 @@
 # LicenceFlow — latest code and future roadmap
 
-**Last updated:** 25 August 2026
-**Status:** Hackathon functional finish line implemented; mascot/onboarding artwork remains a separate later task
-**Immediate rule:** Stop broad feature work. Preserve the verified functional slice below, then do only UI polish, final QA and submission. Preserve unrelated working-tree files. The existing YouTube tutorial remains the interim learning video.
+**Last updated:** 28 August 2026
+**Status:** Hackathon functional finish line plus a bounded durable-recovery slice implemented
+**Immediate rule:** Prefer verifiable citizen-reliability work over decorative feature count. Preserve the verified journey, finish deployed D1 validation, then spend remaining time on measured performance, UI polish and the submission video. The existing YouTube tutorial remains the interim learning video.
 
 This roadmap consolidates the latest repository state and the recent product decisions about exam integrity, retesting, question quality, Safe Exam Browser, AI-assisted cheating and production hardening. Older planning documents remain useful historical context, but future work in these areas should follow this file.
 
@@ -29,8 +29,8 @@ For the hackathon, backend, identity, payment and government integrations may re
 As of this update, the local working tree has been verified with:
 
 - TypeScript type-check passing;
-- 90 deterministic tests across 23 test files passing;
-- six Playwright release checks passing across desktop and mobile Chrome profiles, with the two desktop-only recovery cases explicitly skipped on mobile to avoid redundant matrix work;
+- 126 deterministic tests across 32 test files passing;
+- 15 applicable Playwright release checks passing across desktop and mobile Chrome profiles, with three intentionally inapplicable matrix cases skipped;
 - production Vite build passing;
 - zero known npm dependency vulnerabilities after the in-range Vite security update;
 - `git diff --check` passing apart from harmless Windows line-ending warnings.
@@ -50,21 +50,25 @@ The current local build includes:
 - one small deterministic monitoring-decision module reused by the existing camera pipeline;
 - interruption, result, receipt and visibly invalid demonstration-licence screens;
 - synthetic applicant photographs, signatures and documents in the application and generated demonstration records.
+- an optional built-in Raahi guide and reviewed deterministic help responses that do not require an API key;
+- a Sites Worker reliability API with same-origin and bounded-input validation;
+- append-only D1 checkpoint migrations and an idempotent synthetic-payment confirmation record;
+- a visible result-page recovery receipt that distinguishes server confirmation from browser-cache fallback.
 
 ### Important current limitations
 
 - Correct answers and questions still exist in the frontend bundle because there is no authoritative exam server.
-- Browser `localStorage` is recoverable prototype state, not trusted production evidence.
+- Browser `localStorage` remains the immediate recoverable working copy, not trusted production evidence. The new D1 slice stores only minimal synthetic milestones and does not make client answers authoritative.
 - Browser monitoring can observe camera loss, face count, framing, page hiding, connection state and similar events. It cannot prevent a second phone, another monitor, screen recording, remote assistance or modification of client-side state.
 - The current tutorial uses an external YouTube source. It remains the approved hackathon tutorial unless the owner later supplies a replacement.
-- The current public deployment includes the locally hosted MediaPipe assets and the judge journey available at the time of deployment.
+- The current public deployment must be smoke-tested after the new D1-enabled version is explicitly published; passing local tests do not count as proof that the live binding was provisioned.
 
 ## 3. Work that is not being started now
 
 The following ideas are approved directions, but they are **future work**, not immediate broad changes:
 
-- building a production backend or replacing the hackathon's mocked services;
-- moving authoritative state out of `localStorage`;
+- building a complete production or government backend, real identity, treasury, or licensing integrations;
+- moving authoritative questions, answers and scoring out of the browser;
 - creating a new SafeLock application;
 - integrating Safe Exam Browser;
 - building anti-spoofing, gaze tracking, emotion detection or automatic cheating classification;
@@ -130,7 +134,7 @@ The normal timer remains visible and consistent for everyone. Questions must the
 
 The following are **not required before UI polish**:
 
-- Section 7.3's authoritative server, short-lived tokens, nonces and server evidence ledger;
+- Section 7.3's complete authoritative examination server, short-lived question tokens, nonces and server-side scoring;
 - replacing `localStorage` for the mocked hackathon flow;
 - Safe Exam Browser or a custom SafeLock application;
 - anti-spoofing, gaze tracking, face recognition or a new vision pipeline;
@@ -139,6 +143,19 @@ The following are **not required before UI polish**:
 - invisible AI prompt-injection text.
 
 Section 7.3 remains an honest production architecture note, not an implementation task. Section 8.3 is worth implementing only in its lightweight form as metadata produced naturally by the seeded paper generator. It is not a reason to delay the finish line.
+
+### 4.3.1 Implemented durable-recovery slice
+
+A deliberately small part of the former production architecture is now real:
+
+- journey milestones are mirrored to an append-only Sites D1 ledger when available;
+- duplicate checkpoint IDs are safe to retry;
+- synthetic payment confirmation uses the existing payment idempotency key and returns the original record on repetition;
+- the result page reports server checkpoint confirmation or an honest browser-cache fallback;
+- only broad stage/status metadata is persisted—never applicant data, documents, camera data, question content or selected answers;
+- the browser remains immediately recoverable if the network or D1 layer fails.
+
+See `docs/reliability-layer.md` for the precise data and API boundary. This is meaningful reliability engineering, but it is **not** described as an authoritative government examination backend.
 
 ### 4.4 Thirty-second judge guide
 
@@ -339,7 +356,7 @@ The record must say what was observed, for how long and what action followed. It
 
 ### 7.3 Production upgrade
 
-A real deployment would keep the event ledger, timer, attempt entitlement and score on an authoritative server. Short-lived question tokens, nonces, append-only evidence and one active attempt per candidate can be added there. Client signatures alone must never be presented as making `localStorage` trustworthy.
+The hackathon build now demonstrates append-only minimal checkpoints and idempotent mock payment confirmation in D1. A real deployment would additionally keep question delivery, timer, answers, attempt entitlement, scoring and evidence review on an authenticated authoritative server. Short-lived question tokens, nonces and one active attempt per candidate can be added there. Client signatures alone must never be presented as making `localStorage` trustworthy.
 
 ## 8. Future Phase D — AI-aware assessment markers
 

@@ -16,6 +16,7 @@ import { ageOnDate, createDemonstrationLicencePdf, createJourneyReceiptPdf, demo
 import { createPassingJudgeExamSession, loadExamSession, resetExamSession, saveExamSession } from './examSession'
 import { isPaymentConfirmed } from './payment'
 import { completeTutorial, loadJourneyProgress, saveJourneyProgress, startTutorial, updateTutorialWatch } from './progress'
+import { loadReliabilityStatus, refreshReliabilityReceipt, subscribeReliabilityStatus } from './reliability'
 import { navigatePortal } from './router'
 import { loadYouTubeIframeApi, type YouTubePlayer, type YouTubePlayerStateEvent } from './youtubeIframeApi'
 import { FocusedAssessmentShell, QuestionStatusMap, useFocusedFullscreen } from './FocusedAssessmentShell'
@@ -1171,10 +1172,17 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
   const [state, setState] = useState(() => loadExamSession(applicationId, progress))
   const [confirmClear, setConfirmClear] = useState(false)
   const [documentStatus, setDocumentStatus] = useState<'idle' | 'licence' | 'receipt' | 'licence-ready' | 'receipt-ready' | 'error'>('idle')
+  const [reliabilityStatus, setReliabilityStatus] = useState(() => loadReliabilityStatus(applicationId))
 
   useEffect(() => {
     stopAllMediaTracks()
   }, [])
+
+  useEffect(() => {
+    const unsubscribe = subscribeReliabilityStatus(applicationId, setReliabilityStatus)
+    void refreshReliabilityReceipt(applicationId).then(setReliabilityStatus)
+    return unsubscribe
+  }, [applicationId])
 
   if (state.stage !== 'result') return <Guard applicationId={applicationId} language={language} title={local(language, 'Result not available yet', 'परिणाम अभी उपलब्ध नहीं')} body={local(language, 'Complete the saved synthetic test before opening its outcome.', 'परिणाम खोलने से पहले सहेजी सिंथेटिक परीक्षा पूरी करें।')} route={routeForSession(applicationId, state)} action={local(language, 'Continue saved session', 'सहेजा सत्र जारी रखें')} />
   const passed = state.exam.knowledgeResult === 'passed'
@@ -1290,6 +1298,16 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
           <div className="result-meta-chip">
             <small>{local(language, 'Monitoring Status', 'निगरानी स्थिति')}</small>
             <strong>{state.exam.integrityStatus === 'observation-recorded' ? local(language, 'Observation recorded', 'अवलोकन दर्ज') : local(language, 'No flags recorded', 'कोई समस्या नहीं')}</strong>
+          </div>
+          <div className="result-meta-chip">
+            <small>{local(language, 'Recovery Receipt', 'रिकवरी रसीद')}</small>
+            <strong>
+              {reliabilityStatus.state === 'server-confirmed'
+                ? local(language, `${reliabilityStatus.checkpointCount} server checkpoints`, `${reliabilityStatus.checkpointCount} सर्वर चेकपॉइंट`)
+                : reliabilityStatus.state === 'pending'
+                  ? local(language, 'Confirming safely…', 'सुरक्षित पुष्टि जारी…')
+                  : local(language, 'Browser cache fallback', 'ब्राउज़र कैश बैकअप')}
+            </strong>
           </div>
         </div>
       </section>

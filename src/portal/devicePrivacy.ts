@@ -21,6 +21,8 @@ const KEY_PREFIXES = [
   'mp-ll-application-draft-v2:',
   'mp-ll-journey-progress-v1:',
   'mp-ll-exam-session-v1:',
+  'mp-ll-reliability-session-v1:',
+  'mp-ll-reliability-status-v1:',
 ]
 
 export function clearLicenceFlowDeviceData(): void {
