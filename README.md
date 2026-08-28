@@ -2,6 +2,8 @@
 
 LicenceFlow is an independent **Build What Moves India** hackathon prototype for the Madhya Pradesh Learner's Licence journey.
 
+[Live prototype](https://licenceflow-mp-demo.eruditespartan108.chatgpt.site/) · [Implementation scope](docs/implementation-scope.md) · [Current roadmap](docs/latest-code-roadmap.md) · [Reliability layer](docs/reliability-layer.md)
+
 Its practical goal is not merely to restyle a government form. It demonstrates how an online public service can discover device problems before payment, preserve progress through interruptions, prevent a duplicate mock payment, issue fair retests, and explain the next action without blaming the citizen for a technical failure.
 
 > **Prototype boundary:** LicenceFlow is not a government website. Every applicant, Aadhaar check, document, payment, test attempt and licence shown here is synthetic. It creates no official record and moves no real money.
@@ -62,20 +64,21 @@ The durable layer intentionally excludes applicant details, documents, camera fr
 
 ## Architecture
 
-```text
-React citizen journey
-  ├─ typed application / payment / tutorial state
-  ├─ seeded question-paper compiler
-  ├─ deterministic examination + monitoring reducers
-  ├─ immediate browser checkpoint (full prototype recovery)
-  └─ debounced minimal checkpoint
-          ↓
-Sites Worker validation boundary
-  ├─ same-origin and JSON/body-size checks
-  ├─ append-only checkpoint idempotency
-  └─ synthetic payment idempotency
-          ↓
-Cloudflare D1 (`DB` binding)
+```mermaid
+flowchart TD
+    Citizen["Citizen journey<br/>React + TypeScript"]
+    State["Browser recovery copy<br/>Application · payment · tutorial · exam"]
+    Assessment["Fair assessment engine<br/>Seeded paper · fixed difficulty · retest families"]
+    Vision["On-device readiness<br/>MediaPipe · no camera upload"]
+    Worker["Sites Worker boundary<br/>Validation · size limits · same-origin writes"]
+    D1["Cloudflare D1<br/>Non-personal append-only milestones"]
+
+    Citizen --> State
+    Citizen --> Assessment
+    Citizen --> Vision
+    State -. "Minimal debounced checkpoint" .-> Worker
+    Worker --> D1
+    D1 -. "Recovery receipt" .-> Citizen
 ```
 
 The full browser checkpoint is deliberately not called authoritative. A production licensing system would additionally move authenticated question delivery, timing, answers, scoring, entitlement and evidence review to government-controlled services.
@@ -132,6 +135,21 @@ python scripts/optimize-home-images.py
 | `tests/e2e/` | Desktop/mobile release journey checks |
 | `docs/latest-code-roadmap.md` | Current decisions, cut lines and future architecture |
 | `docs/implementation-scope.md` | Canonical map of working, simulated and directory-only surfaces |
+
+## Built with ChatGPT and Codex
+
+LicenceFlow was created through a **human-led collaboration with ChatGPT and Codex**. The project's direction came from a real failed Learner's Licence experience: the applicant completed the form and payment, but a technical problem prevented the test from starting. The human creator defined the problem, chose the product principles, challenged weak ideas, tested the journeys on real devices and made the final design and scope decisions. AI accelerated the work; it did not replace that judgement.
+
+| Part of the work | How ChatGPT and Codex helped |
+|---|---|
+| Research and product reasoning | Compared public-service journeys, organised official references and existing approaches, surfaced feasibility and fairness risks, and helped turn observations into the roadmap and explicit prototype/production boundaries. Claims were kept only when they could be supported or clearly labelled as proposed work. |
+| Citizen experience | Helped rewrite bureaucratic language, examine failure states, plan English/Hindi guidance, structure Raahi's judge walkthrough and reason through accessibility, mobile layouts and recovery behavior. |
+| Visual design and images | ChatGPT-assisted image generation was used to explore the Raahi mascot and synthetic demonstration artwork. Selected assets were then reviewed, cropped, compressed and integrated as responsive WebP/PNG resources rather than inserted blindly. |
+| Engineering with Codex | Codex inspected and edited the React/TypeScript codebase, implemented reducers and UI states, traced browser bugs, integrated local MediaPipe assets, added the Sites Worker/D1 boundary, and kept mock services visibly separate from real integrations. |
+| Verification | Codex helped write and run unit, integration and Playwright tests, reproduce refresh/interruption cases, inspect mobile overflow and accessibility behavior, run production builds and Lighthouse checks, and update technical documentation when the implementation changed. |
+| Creative and editorial work | ChatGPT helped iterate demo scripts, explanations, question ideas and README structure. The creator selected, rewrote or rejected outputs to keep the final product consistent with the lived problem and hackathon goal. |
+
+This repository intentionally keeps that collaboration inspectable: source code, tests, implementation boundaries, research notes and roadmaps sit together. AI-generated output was treated as a draft to verify—not as evidence, legal guidance, an accessibility audit or a substitute for government-domain expertise. A real deployment would still require native-language review, security testing, policy review, authoritative integrations and field testing with citizens.
 
 ## Raahi and OpenAI boundary
 

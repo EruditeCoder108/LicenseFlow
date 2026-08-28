@@ -8,6 +8,7 @@ dist/
 coverage/
 test-results/
 playwright-report/
+*.report.html
 .tmp/
 *.mp4
 *.mov
