@@ -86,6 +86,8 @@ npm run verify:exam-build
 
 Local development uses `.tmp/licenceflow.sqlite`, ignored by Git. SQL migrations are applied locally by the development adapter, not on production requests. Production tables must be migrated by Sites during deployment. The old reliability handler remains a separate non-authoritative milestone mirror; none of its client-supplied fields can grade a protected attempt.
 
+The Worker build disables Vite's public-directory copying: MediaPipe models, WebAssembly and artwork are served from `dist/client`, never duplicated as Worker modules. The build verification checks this separation, intact static camera files and a 1 MiB Worker-code budget. This guards against the hosting size-limit failure found during the first publication attempt.
+
 The migration tooling has a targeted override of `@esbuild-kit/core-utils`'s transitive esbuild to 0.25.12, removing GHSA-67mh-4wv8-2f99 from its older dependency chain. Migration generation and the build are verified with that override; no forced downgrade of Drizzle is used.
 
 Automated checks include owner isolation, blocked score/time/bypass inputs, early review rejection, concurrent duplicate and conflicting answers, rollback on SQL failure, reload leases, stale question tokens, cumulative pause budgets, full expiry, retest balance, completion grading, session cleanup, lost responses after reload, stale response ordering and unavailable storage. They use migrated SQLite and the actual API, not a pretend always-successful grading function.

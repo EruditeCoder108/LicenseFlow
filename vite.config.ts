@@ -9,6 +9,9 @@ const sitesWorkerEntry: Plugin = {
   async writeBundle() {
     await build({
       configFile: false,
+      // Public artwork and MediaPipe files belong to the static client only.
+      // Copying them into the Worker exceeds the hosting code-size limit.
+      publicDir: false,
       ssr: { target: 'webworker', noExternal: true },
       build: {
         ssr: 'server/index.js', outDir: 'dist/server', target: 'es2022',

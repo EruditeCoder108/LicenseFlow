@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { readFileSync, readdirSync, existsSync } from 'node:fs'
+import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fullQuestions } from '../server/exam/questionBank.ts'
 import { openLocalDatabase } from '../server/dev/database.ts'
@@ -18,6 +18,13 @@ const workerCode = readFileSync('dist/server/index.js', 'utf8')
 assert(workerCode.includes(fullQuestions[0].id), 'Worker is missing the private question bank')
 assert(!workerCode.includes('node:sqlite'), 'Local database adapter entered the production Worker')
 assert.equal(typeof worker.fetch, 'function')
+const workerFiles = readdirSync('dist/server', { withFileTypes: true })
+assert(workerFiles.every((entry) => entry.isFile() && entry.name.endsWith('.js')), 'Public assets must not be copied into the Worker package')
+assert(workerFiles.reduce((bytes, entry) => bytes + statSync(`dist/server/${entry.name}`).size, 0) < 1024 * 1024, 'Worker code exceeded the 1 MiB release budget')
+for (const asset of ['face_landmarker.task', 'vision-wasm/vision_wasm_internal.wasm', 'vision-wasm/vision_wasm_nosimd_internal.wasm']) {
+  const path = `assets/mediapipe/${asset}`
+  assert.equal(statSync(`dist/client/${path}`).size, statSync(`public/${path}`).size, `Static camera asset is missing or incomplete: ${asset}`)
+}
 for (const file of readdirSync('drizzle').filter((file) => file.endsWith('.sql'))) {
   assert(existsSync(`dist/.openai/drizzle/${file}`), `Deployment is missing migration: ${file}`)
 }
