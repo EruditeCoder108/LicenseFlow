@@ -62,6 +62,7 @@ import { createEmptyDraft, createPreparedDraft, loadApplicationDraft, saveApplic
 import { isPaymentConfirmed, paymentNeedsReconciliation } from './portal/payment'
 import { loadJourneyProgress } from './portal/progress'
 import { loadExamSession } from './portal/examSession'
+import { ProtectedExamStatus } from './portal/ProtectedExamStatus'
 import { clearDemoSession, loadDemoSession, saveDemoSession, type DemoSession } from './portal/auth'
 import { deriveJourneyState, getRouteAccess } from './portal/journeyState'
 import { JudgeTourCoachmark, JudgeTourFloatingPill, JudgeTourHeroCard, useJudgeTour } from './portal/judgeTour'
@@ -80,6 +81,7 @@ const PaymentReturnPage = lazy(() => import('./portal/PaymentJourney').then((mod
 const TutorialPage = lazy(() => import('./portal/TestJourney').then((module) => ({ default: module.TutorialPage })))
 const TestEntryPage = lazy(() => import('./portal/TestJourney').then((module) => ({ default: module.TestEntryPage })))
 const TestPage = lazy(() => import('./portal/TestJourney').then((module) => ({ default: module.TestPage })))
+const ProtectedExamPage = lazy(() => import('./portal/ProtectedExamPage').then((module) => ({ default: module.ProtectedExamPage })))
 const InterruptionPage = lazy(() => import('./portal/TestJourney').then((module) => ({ default: module.InterruptionPage })))
 const ResultPage = lazy(() => import('./portal/TestJourney').then((module) => ({ default: module.ResultPage })))
 const ResultReviewPage = lazy(() => import('./portal/TestJourney').then((module) => ({ default: module.ResultReviewPage })))
@@ -1505,6 +1507,7 @@ function ApplicationPage({ application, language }: { application: DemoApplicati
         <span className="saved-indicator"><CheckCircle2 size={17} /> {copy(language, 'Last saved', 'अंतिम बार सहेजा')} {new Date(application.savedAt).toLocaleTimeString(localeFor(language), { hour: '2-digit', minute: '2-digit' })}</span>
       </section>
 
+      <ProtectedExamStatus applicationId={application.id} language={language} />
       {journey.mode === 'prepared-demo' && (
         <section className="reference-banner" style={{ margin: '0 0 20px' }}>
           <CheckCircle2 size={16} />
@@ -2067,6 +2070,7 @@ function PortalApp() {
   else if (route.name === 'receipt') page = <PaymentReceiptPage language={language} applicationId={route.applicationId} />
   else if (route.name === 'tutorial') page = <TutorialPage applicationId={route.applicationId} onStageChange={updateApplicationStage} language={language} />
   else if (route.name === 'test-entry') page = <TestEntryPage applicationId={route.applicationId} onStageChange={updateApplicationStage} language={language} />
+  else if (route.name === 'protected-test' || (route.name === 'test' && loadJourneyProgress(route.applicationId).readiness.mode !== 'guided-signals')) page = <ProtectedExamPage key={route.applicationId} applicationId={route.applicationId} language={language} />
   else if (route.name === 'test') page = <TestPage applicationId={route.applicationId} onStageChange={updateApplicationStage} language={language} />
   else if (route.name === 'test-interruption') page = <InterruptionPage applicationId={route.applicationId} onStageChange={updateApplicationStage} language={language} />
   else if (route.name === 'result') page = <ResultPage applicationId={route.applicationId} onStageChange={updateApplicationStage} language={language} />
@@ -2081,11 +2085,11 @@ function PortalApp() {
         : service ? <ServicePage service={service} language={language} /> : <NotFoundPage language={language} />
   } else page = <NotFoundPage language={language} />
 
-  if (route.name === 'gateway' || route.name === 'rehearsal' || route.name === 'test' || route.name === 'test-interruption') {
+  if (route.name === 'gateway' || route.name === 'rehearsal' || route.name === 'test' || route.name === 'test-interruption' || route.name === 'protected-test') {
     return (
       <div className="portal-app portal-app--focused-route">
         <Suspense fallback={<RouteLoading language={language} />}>{page}</Suspense>
-        <JudgeTourCoachmark tour={tour} language={language} />
+        {route.name !== 'protected-test' && <JudgeTourCoachmark tour={tour} language={language} />}
       </div>
     )
   }

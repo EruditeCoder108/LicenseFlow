@@ -58,7 +58,16 @@ export function loadExamSession(applicationId: string, progress: LLJourneyProgre
     const attemptNumber = parsed.exam.attemptNumber || 1
     if (!isValidQuestionPaper(parsed.exam.paperQuestionIds ?? [])) {
       const replacement = createExamSession(applicationId, progress, attemptNumber, parsed.exam.previousPaperQuestionIds ?? [])
-      const migrated = { ...parsed, exam: { ...parsed.exam, ...replacement.exam } }
+      // Retiring the old public bank must not attach an old score/answer list to
+      // unrelated new fixtures, or leave stage=result with a not-started exam.
+      // Keep the old transcript recoverable; only the local sample test restarts.
+      const archiveKey = `${STORAGE_PREFIX}${applicationId}:archived`
+      if (!localStorage.getItem(archiveKey)) localStorage.setItem(archiveKey, raw)
+      const migrated: JourneyState = {
+        ...replacement,
+        events: [...replacement.events, seedEvent(applicationId, 'JOURNEY_STARTED', 'Judge sample paper refreshed',
+          'The previous local sample test was archived because its question set changed. Application, payment and tutorial progress are unchanged.', new Date().toISOString(), true)],
+      }
       saveExamSession(applicationId, migrated)
       return migrated
     }

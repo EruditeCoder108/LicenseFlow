@@ -2,6 +2,8 @@
 
 LicenceFlow is a browser prototype using fictional judge credentials, synthetic OTP/payment values and versioned browser storage. It does not connect to Aadhaar, Sarathi, a bank or a government identity system.
 
+The 2 September source adds a separate **server-controlled prototype assessment**. Its paper, timer, answer writes and score are authoritative within an anonymous D1-backed session. This does not make applicant identity, fees, admission, browser monitoring or official issuance real. Its complete data, timing and session limits are documented in [protected-exam-core.md](protected-exam-core.md). Local implementation is not proof of public deployment.
+
 ## What must move to trusted services
 
 - Identity, OTP verification, sessions, authorization and rate limiting must run on audited government services.

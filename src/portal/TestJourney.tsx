@@ -477,6 +477,10 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
     }
     media.stop()
     stopAllMediaTracks()
+    if (!guided) {
+      navigatePortal(`/mp/application/${applicationId}/protected-test`)
+      return
+    }
     const base = session.stage === 'result' ? resetExamSession(applicationId, progress) : session
     const next = journeyReducer(base, { type: 'START_EXAM' })
     saveExamSession(applicationId, next)
@@ -500,7 +504,7 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
         <div>
           <p className="eyebrow">{local(language, 'Demo test', 'डेमो टेस्ट')}</p>
           <h1 tabIndex={-1}>{local(language, 'Final system check before your 15-question demo test', '15-प्रश्न डेमो परीक्षा से पहले अंतिम सिस्टम जाँच')}</h1>
-          <p>{local(language, 'Review your system signals and start the focused 15-question knowledge test. Each answer is saved locally as you proceed.', 'अपने सिस्टम संकेतों की समीक्षा करें और 15 प्रश्नों का फ़ोकस्ड टेस्ट शुरू करें। जैसे-जैसे आप आगे बढ़ेंगे, प्रत्येक उत्तर सुरक्षित रहेगा।')}</p>
+          <p>{guided ? local(language, 'This judge walkthrough uses a separate set of public sample questions and saves its simulated result locally.', 'यह जज वॉकथ्रू सार्वजनिक नमूना प्रश्नों का अलग सेट उपयोग करता है और सिम्युलेटेड परिणाम ब्राउज़र में सहेजता है।') : local(language, 'Review your system signals, then open the server-saved assessment. The server controls answers, timing and scoring.', 'अपने सिस्टम संकेत जाँचें, फिर सर्वर पर सहेजी परीक्षा खोलें। उत्तर, समय और अंक सर्वर नियंत्रित करता है।')}</p>
         </div>
       </section>
       <section className="test-instruction-grid">
@@ -533,6 +537,7 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
           </div>
         </article>
       </section>
+      {session.events.some((event) => event.title === 'Judge sample paper refreshed') && <div className="reference-banner"><Info size={18} /><p>{local(language, 'The judge sample questions have changed. Your earlier local test was archived; your application, payment and learning progress are unchanged. Start the refreshed sample test below.', 'जज के नमूना प्रश्न बदल गए हैं। पिछली स्थानीय परीक्षा संग्रहित है; आपका आवेदन, भुगतान और अध्ययन प्रगति नहीं बदली। नीचे नया नमूना टेस्ट शुरू करें।')}</p></div>}
       <div className="test-entry-camera-card">
         <div className="test-entry-camera-preview">
           <MiniCamera guided={guided} stream={media.stream} language={language} />
@@ -601,6 +606,12 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
         </FlowLink>
       </div>
       <JudgePassShortcut language={language} onActivate={previewPassingResult} />
+      <aside className="reference-banner">
+        <ShieldCheck size={20} aria-hidden="true" />
+        <div><strong>{local(language, 'Try the server-controlled assessment', 'सर्वर-नियंत्रित परीक्षा आज़माएँ')}</strong><p>{local(language, 'A separate test with server grading, durable answer saving and one active tab. Judge shortcuts cannot change its result. Application and payment are still simulated.', 'सर्वर अंक, सुरक्षित उत्तर और एक सक्रिय टैब वाली अलग परीक्षा। जज शॉर्टकट इसके परिणाम नहीं बदल सकते। आवेदन और भुगतान अभी सिम्युलेटेड हैं।')}</p>
+          <FlowLink className="button button--secondary" href={`/mp/application/${applicationId}/protected-test`}>{local(language, 'Open server-saved test', 'सर्वर पर सहेजी परीक्षा खोलें')}<ArrowRight size={17} /></FlowLink>
+        </div>
+      </aside>
     </>
   )
 }

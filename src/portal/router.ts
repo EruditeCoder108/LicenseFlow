@@ -18,6 +18,7 @@ export type PortalRoute =
   | { name: 'tutorial'; applicationId: string }
   | { name: 'test-entry'; applicationId: string }
   | { name: 'test'; applicationId: string }
+  | { name: 'protected-test'; applicationId: string }
   | { name: 'test-interruption'; applicationId: string }
   | { name: 'result'; applicationId: string }
   | { name: 'result-review'; applicationId: string }
@@ -79,6 +80,9 @@ export function parsePortalRoute(pathname: string): PortalRoute {
   }
   if (parts[1] === 'application' && parts[2] && parts[3] === 'test' && parts.length === 4) {
     return { name: 'test', applicationId: decodeURIComponent(parts[2]) }
+  }
+  if (parts[1] === 'application' && parts[2] && parts[3] === 'protected-test' && parts.length === 4) {
+    return { name: 'protected-test', applicationId: decodeURIComponent(parts[2]) }
   }
   if (parts[1] === 'application' && parts[2] && parts[3] === 'test-interruption' && parts.length === 4) {
     return { name: 'test-interruption', applicationId: decodeURIComponent(parts[2]) }

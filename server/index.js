@@ -1,4 +1,5 @@
 import { handleReliabilityRequest } from './reliability.js'
+import { handleExamRequest } from './exam/api'
 
 const DEFAULT_MODEL = 'gpt-5.4-mini'
 const MAX_BODY_BYTES = 16_000
@@ -28,7 +29,7 @@ LicenceFlow journey and product decisions:
 5. Demo question: one rehearsal question confirms that the device can display a question, record a choice and save it. It does not count as an attempt.
 6. Payment: the fee and consent are shown before a clearly labelled simulated gateway. Payment can be not started, processing, successful, failed or uncertain. Duplicate-payment protection and a status/receipt path are demonstrated; no real money moves.
 7. Learning: tutorial progress is saved and normal citizens must complete the video. The judge shortcut only removes waiting time in the hackathon demonstration.
-8. Test: a seeded 15-question paper is drawn from a reviewed bank with a stable difficulty blueprint so retests change questions without becoming unfairly easier or harder. The pass mark shown by the prototype is 9 of 15. Answers are checkpointed before moving on. Questions can be read aloud.
+8. Test: there are two separate modes. The judge walkthrough uses public sample fixtures and a local simulated result. The server-saved assessment uses a 50-question bank with a 6 easy / 7 medium / 2 applied blueprint; it selects the paper and shuffles options on the server, commits answers before the next question, and grades on the server. No judge shortcut can change that result. A confirmed pause shares a two-minute budget per attempt; a network loss cannot stop a server timer until the pause request arrives. Identity and payment remain mock services in both modes. The prototype pass mark is 9 of 15. Questions can be read aloud.
 9. Monitoring and recovery: on-device MediaPipe supplies camera context; the prototype does not record or upload video or identify a face. Brief noise gets guidance. A sustained technical interruption pauses safely. A technical anomaly is not automatically called cheating. Knowledge, technical failure and integrity are treated separately.
 10. Result: the result shows score, pass threshold, attempt metadata, technical events and monitoring notes. Answer review opens separately with the selected answer, correct answer and explanation. The generated Learner's Licence is a fictional demonstration document. Reset demo clears the prototype's locally stored progress.
 
@@ -229,6 +230,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url)
     if (url.pathname === '/api/chat') return handleChatRequest(request, env)
+    if (url.pathname.startsWith('/api/exam/')) return handleExamRequest(request, env)
     if (url.pathname.startsWith('/api/reliability/')) return handleReliabilityRequest(request, env)
 
     if (request.method !== 'GET' && request.method !== 'HEAD') {

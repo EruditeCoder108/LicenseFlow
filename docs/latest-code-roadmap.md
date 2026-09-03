@@ -1,8 +1,16 @@
 # LicenceFlow — latest code and future roadmap
 
-**Last updated:** 28 August 2026
-**Status:** Hackathon functional finish line plus a bounded durable-recovery slice implemented
-**Immediate rule:** Prefer verifiable citizen-reliability work over decorative feature count. Preserve the verified journey, finish deployed D1 validation, then spend remaining time on measured performance, UI polish and the submission video. The existing YouTube tutorial remains the interim learning video.
+**Last updated:** 2 September 2026
+**Status:** Round 2: first server-controlled assessment slice implemented; public release approved on 3 September; browser check remains owner-run
+**Immediate rule:** Focus only on cheat resistance, one feature at a time. Preserve the established judge journey. No phone model, whisper analysis, watermark trap or OS lockdown is being added in this slice. The YouTube tutorial remains unchanged.
+
+## Round 2 update — authoritative assessment first
+
+The previous plan to move questions, timers, answers and scoring to a server has now been implemented for a separate anonymous prototype assessment. It uses a server-only runtime bank, cryptographic paper/option selection, D1 transactions, idempotent answer retries, bounded pauses, a tab lease and server-locked post-test review. Judge sample questions and passing shortcuts remain a separate local simulation and cannot change protected results.
+
+This replaces the Round 1 statements below that there is no exam server. It does **not** complete production applicant identity, official payment/entitlement, confidential question content, device attestation, server-verified camera evidence or secure native testing. The 50-question content is still present in repository history and earlier demo builds.
+
+Read [protected-exam-core.md](protected-exam-core.md) for exact behavior, data retention, timing limits, automated proof and the owner's manual check list. The owner approved public release on 3 September and chose to perform browser checks personally; do not claim those checks have passed without their confirmation. The dated Round 1 baseline and finish-line decisions below remain historical context, not the new work queue.
 
 This roadmap consolidates the latest repository state and the recent product decisions about exam integrity, retesting, question quality, Safe Exam Browser, AI-assisted cheating and production hardening. Older planning documents remain useful historical context, but future work in these areas should follow this file.
 
@@ -24,7 +32,7 @@ The intended system should be:
 
 For the hackathon, backend, identity, payment and government integrations may remain mocked. The interface must clearly state that it is a prototype using synthetic data and that it creates no government record or valid licence.
 
-## 2. Current verified local baseline
+## 2. Round 1 verified baseline (28 August 2026)
 
 As of this update, the local working tree has been verified with:
 
@@ -57,7 +65,7 @@ The current local build includes:
 
 ### Important current limitations
 
-- Correct answers and questions still exist in the frontend bundle because there is no authoritative exam server.
+- Round 1 shipped correct answers and questions in the frontend bundle. The new protected mode moves runtime delivery and marking to the server; judge fixtures remain public and earlier bank content is not retroactively secret.
 - Browser `localStorage` remains the immediate recoverable working copy, not trusted production evidence. The new D1 slice stores only minimal synthetic milestones and does not make client answers authoritative.
 - Browser monitoring can observe camera loss, face count, framing, page hiding, connection state and similar events. It cannot prevent a second phone, another monitor, screen recording, remote assistance or modification of client-side state.
 - The current tutorial uses an external YouTube source. It remains the approved hackathon tutorial unless the owner later supplies a replacement.
@@ -68,7 +76,7 @@ The current local build includes:
 The following ideas are approved directions, but they are **future work**, not immediate broad changes:
 
 - building a complete production or government backend, real identity, treasury, or licensing integrations;
-- moving authoritative questions, answers and scoring out of the browser;
+- production citizen authentication, exam entitlement and official evidence review around the newly implemented anonymous server exam core;
 - creating a new SafeLock application;
 - integrating Safe Exam Browser;
 - building anti-spoofing, gaze tracking, emotion detection or automatic cheating classification;

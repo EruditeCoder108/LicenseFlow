@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fullQuestions } from './questions'
+import { fullQuestions } from '../../server/exam/questionBank'
 import { LL_TEST_CONFIG } from './testConfig'
 
 describe('prototype LL question configuration', () => {

@@ -9,11 +9,18 @@
     "preview": "vite preview",
     "test": "vitest run --exclude tests/e2e/**",
     "test:e2e": "npm run build && node scripts/run-e2e.mjs",
-    "typecheck": "tsc -b --pretty false"
+    "typecheck": "tsc -b --pretty false",
+    "db:generate": "drizzle-kit generate",
+    "test:exam": "vitest run server/exam src/portal/protectedExamClient.test.ts",
+    "verify:exam-build": "node scripts/verify-exam-build.mjs"
+  },
+  "overrides": {
+    "@esbuild-kit/core-utils": { "esbuild": "0.25.12" }
   },
   "dependencies": {
     "@fontsource/atkinson-hyperlegible": "^5.2.8",
     "@mediapipe/tasks-vision": "^1.0.1",
+    "drizzle-orm": "^0.45.2",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
@@ -21,9 +28,11 @@
   "devDependencies": {
     "@openai/sites-vite-plugin": "^0.2.0",
     "@playwright/test": "^1.62.1",
+    "@types/node": "^26.4.1",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^6.1.0",
+    "drizzle-kit": "^0.31.10",
     "typescript": "~5.7.2",
     "vite": "^8.0.0",
     "vitest": "^4.1.11"

@@ -2,7 +2,7 @@
 
 LicenceFlow is an independent **Build What Moves India** hackathon prototype for the Madhya Pradesh Learner's Licence journey.
 
-[Live prototype](https://licenceflow-mp-demo.eruditespartan108.chatgpt.site/) · [Implementation scope](docs/implementation-scope.md) · [Current roadmap](docs/latest-code-roadmap.md) · [Reliability layer](docs/reliability-layer.md)
+[Live prototype](https://licenceflow-mp-demo.eruditespartan108.chatgpt.site/) · [Implementation scope](docs/implementation-scope.md) · [Current roadmap](docs/latest-code-roadmap.md) · [Server-controlled exam](docs/protected-exam-core.md)
 
 Its practical goal is not merely to restyle a government form. It demonstrates how an online public service can discover device problems before payment, preserve progress through interruptions, prevent a duplicate mock payment, issue fair retests, and explain the next action without blaming the citizen for a technical failure.
 
@@ -16,7 +16,8 @@ Its practical goal is not merely to restyle a government form. It demonstrates h
 | Camera/microphone readiness | Real browser and on-device checks; the judge shortcut is explicitly simulated |
 | Identity, government records, fee approval and issuance | Synthetic only; no department, UIDAI, bank or treasury connection |
 | Other transport and permanent-DL services | Discoverable directory/reference pages, not working transactions |
-| Durable reliability layer | Minimal non-personal milestone ledger; browser state is still the prototype's full recovery source |
+| Judge walkthrough and reliability ledger | Local simulated journey plus minimal server-mirrored milestones; not authoritative grading |
+| Server-saved assessment | Separate D1-backed paper, timing, immutable answers, score and review; anonymous prototype session, not verified citizen identity |
 
 The implementation boundary and state-extension seams are documented in [docs/implementation-scope.md](docs/implementation-scope.md).
 
@@ -26,6 +27,7 @@ The implementation boundary and state-extension seams are documented in [docs/im
 - Optional walkthrough: choose **Full Judge Walkthrough** on the homepage.
 - Manual route: Driving licence services → Start new application.
 - Judge-only shortcuts are visibly labelled and never presented as citizen rules.
+- Choose **Open server-saved test** on test entry for the protected assessment, added on 2 September. The owner approved public release on 3 September and will perform the browser checks personally.
 
 ## What is implemented
 
@@ -44,11 +46,12 @@ The implementation boundary and state-extension seams are documented in [docs/im
 
 ### Fair assessment engineering
 
-- 50 reviewed text questions with competency, difficulty and variant-family metadata;
-- deterministic 15-question papers using a stable 6 easy / 7 medium / 2 applied blueprint;
+- server-only runtime bank of 50 English text questions with competency, difficulty and variant-family metadata;
+- cryptographically selected 15-question papers and shuffled options using a stable 6 easy / 7 medium / 2 applied blueprint;
 - different retests that avoid the previous paper's question families without changing intended difficulty;
 - non-personal paper fingerprint and attempt metadata;
-- scoring through one tested reducer, including the judge passing-preview path.
+- frozen paper and rules in D1; server-owned deadlines, immutable answers and server grading;
+- a separate small set of public judge samples with deterministic local scoring; the passing-preview shortcut cannot alter protected results.
 
 ### Failure-safe engineering
 
@@ -58,34 +61,46 @@ The implementation boundary and state-extension seams are documented in [docs/im
 - MediaPipe model and WASM assets are self-hosted and camera inference stays on-device;
 - a Sites Worker can mirror **minimal, non-personal milestones** to an append-only D1 ledger;
 - repeated mock-payment confirmation uses the same idempotency key and returns the original receipt;
-- if D1 or the network is unavailable, the UI honestly reports a browser-cache fallback.
+- the older milestone mirror reports a browser-cache fallback if unavailable;
+- the protected assessment **does not fall back to client scoring**: it offers reconnection, exact answer retries and a server-confirmed result;
+- one active attempt and a renewable tab lease per anonymous session; refresh cannot reset a question's timer;
+- a two-minute cumulative confirmed-pause allowance and a 30-minute attempt lifetime, clearly disclosed before starting.
 
-The durable layer intentionally excludes applicant details, documents, camera frames, biometrics, question content and selected answers. See [docs/reliability-layer.md](docs/reliability-layer.md).
+The legacy milestone layer excludes questions and selected answers. The **separate protected exam tables** store the paper, answers, scoring and server events, but no applicant identity details, documents, camera frames or audio. Session access expires after seven days; cleanup is opportunistic, not a guaranteed deletion scheduler. See [exam data and recovery boundaries](docs/protected-exam-core.md).
 
 ## Architecture
 
 ```mermaid
 flowchart TD
     Citizen["Citizen journey<br/>React + TypeScript"]
-    State["Browser recovery copy<br/>Application · payment · tutorial · exam"]
-    Assessment["Fair assessment engine<br/>Seeded paper · fixed difficulty · retest families"]
+    State["Local demo recovery<br/>Application · payment · tutorial · judge test"]
+    Assessment["Protected assessment API<br/>Private runtime bank · timing · grading"]
     Vision["On-device readiness<br/>MediaPipe · no camera upload"]
     Worker["Sites Worker boundary<br/>Validation · size limits · same-origin writes"]
-    D1["Cloudflare D1<br/>Non-personal append-only milestones"]
+    D1["Cloudflare D1<br/>Exam answers + frozen papers<br/>Separate legacy milestone tables"]
 
     Citizen --> State
     Citizen --> Assessment
+    Assessment --> Worker
     Citizen --> Vision
     State -. "Minimal debounced checkpoint" .-> Worker
     Worker --> D1
     D1 -. "Recovery receipt" .-> Citizen
 ```
 
-The full browser checkpoint is deliberately not called authoritative. A production licensing system would additionally move authenticated question delivery, timing, answers, scoring, entitlement and evidence review to government-controlled services.
+Browser checkpoints remain non-authoritative. Protected exam answers and grades now come from D1 through the Worker, but production citizen authentication, government entitlement, payment authorization and independent evidence review remain unimplemented. The repository and earlier releases contain the original questions; excluding them from the new runtime browser bundle is not a claim that this open-source question content is secret.
 
 ## Verified state
 
-As of 28 August 2026:
+Server-core update, 2 September 2026:
+
+- **155 tests across 35 files pass**; TypeScript and the production build pass;
+- automated API and client-adapter tests use migrated SQLite and real handlers, including races, expired leases, tampered requests and lost responses;
+- the production Worker is bundled separately and static output is checked for protected-bank leakage;
+- **human browser checks remain owner-run**; public release was approved on 3 September, independently of those checks;
+- [verification commands and manual checklist](docs/protected-exam-core.md#human-browser-check--owner-requested).
+
+Historical release baseline, 28 August 2026 (not a claim about browser QA of the new server mode):
 
 - **129 tests across 33 test files pass**;
 - **17 applicable Playwright release checks pass** across desktop and Pixel 5 profiles, with three intentionally inapplicable matrix cases skipped;
@@ -96,6 +111,8 @@ As of 28 August 2026:
 The latest measured public Lighthouse baseline was 100 accessibility, 100 SEO and 100 agentic browsing. The main performance waste was oversized homepage artwork and an external render-blocking font request. The current source adds responsive WebP candidates and uses the already bundled Atkinson Hyperlegible font; a new score must be measured after deployment rather than guessed locally.
 
 ## Run locally
+
+Use Node 24+; local dev/preview use a migrated SQLite database in the ignored `.tmp/` directory. The deployed Site uses D1.
 
 ```bash
 npm install
@@ -109,6 +126,8 @@ npm run typecheck
 npm test
 npm run test:e2e
 npm run build
+npm run test:exam
+npm run verify:exam-build
 ```
 
 Responsive homepage assets can be regenerated with Pillow:
@@ -125,8 +144,10 @@ python scripts/optimize-home-images.py
 | `src/portal/ApplicationFlow.tsx` | Seven-part application and upload journey |
 | `src/portal/ReadinessJourney.tsx` | Device checks and system rehearsal |
 | `src/portal/PaymentJourney.tsx` | Synthetic gateway and recovery states |
-| `src/portal/TestJourney.tsx` | Learning, focused test, interruption, result and review |
-| `src/content/` | Reviewed questions, blueprint and deterministic paper generation |
+| `src/portal/TestJourney.tsx` | Learning and the separate local judge test/result journey |
+| `src/portal/ProtectedExamPage.tsx` | Server-saved assessment, reconnection, result and review |
+| `server/exam/` | Protected bank, server state transitions, atomic SQL and APIs |
+| `src/content/` | Public rehearsal/judge fixtures and deterministic demo paper generation |
 | `src/domain/` | Pure journey and monitoring decision reducers |
 | `src/hooks/useDeviceReadiness.ts` | Media lifecycle and on-device MediaPipe observations |
 | `src/portal/reliability.ts` | Privacy-bounded browser-to-server checkpoint synchronizer |
@@ -162,7 +183,8 @@ No secret belongs in Vite variables, frontend code, browser storage or the repos
 - The browser cannot stop a second phone, another monitor, screen recording or client-state modification.
 - MediaPipe supplies context; it does not identify a person or issue a cheating verdict.
 - Safe Exam Browser, anti-spoofing and real Aadhaar/payment integrations are future architecture, not hidden prototype claims.
-- Question answers remain in the frontend bundle until a genuine authoritative exam service exists.
+- The protected bank is excluded from the runtime frontend bundle; only public judge fixtures are client-graded. Source history and earlier demo releases still expose the original educational question material.
+- Anonymous session ownership and a tab lease are not verified citizen identity or device attestation. Camera observations remain client-reported.
 - Synthetic shortcuts and documents are visibly labelled.
 - Machine-assisted language drafts require native-speaker and policy review before any official deployment; English and Hindi remain the reviewed reference versions.
 

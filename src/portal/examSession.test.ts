@@ -1,9 +1,29 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createJourneyProgress, completeReadiness, completeRehearsal, startSyntheticPayment, finishSyntheticPayment, completeTutorial, startTutorial, updateTutorialWatch } from './progress'
 import { journeyReducer } from '../domain/journey'
-import { createExamSession, createPassingJudgeExamSession } from './examSession'
+import { createExamSession, createPassingJudgeExamSession, loadExamSession } from './examSession'
 
 describe('portal exam session', () => {
+  afterEach(() => vi.unstubAllGlobals())
+  it('archives a retired judge paper without attaching its score to new questions', () => {
+    const progress = createJourneyProgress('MP-LL-LEGACY-1000')
+    const previous = createExamSession(progress.applicationId, progress)
+    previous.stage = 'result'
+    previous.exam.status = 'completed'
+    previous.exam.paperQuestionIds = ['retired-private-bank-id']
+    previous.exam.correctAnswers = 15
+    previous.exam.knowledgeResult = 'passed'
+    const key = `mp-ll-exam-session-v1:${progress.applicationId}`
+    const entries = new Map([[key, JSON.stringify(previous)], ['mp-ll-application-draft-v1', 'unchanged-draft']])
+    vi.stubGlobal('localStorage', { getItem: (name: string) => entries.get(name) ?? null, setItem: (name: string, value: string) => entries.set(name, value) })
+    const next = loadExamSession(progress.applicationId, progress)
+    expect(next.stage).toBe('exam-intro')
+    expect(next.exam.status).toBe('not-started')
+    expect(next.exam.correctAnswers).toBe(0)
+    expect(JSON.parse(entries.get(`${key}:archived`)!)).toEqual(previous)
+    expect(entries.get('mp-ll-application-draft-v1')).toBe('unchanged-draft')
+    expect(next.events.some((event) => event.title === 'Judge sample paper refreshed')).toBe(true)
+  })
   it('starts only after the completed pre-test journey and carries its evidence', () => {
     let progress = createJourneyProgress('MP-LL-DEMO-1')
     progress = completeReadiness(progress, 'guided-signals')

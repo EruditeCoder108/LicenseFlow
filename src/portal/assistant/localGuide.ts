@@ -115,7 +115,7 @@ const topics: GuideTopic[] = [
   },
   {
     phrases: ['test', 'questions', 'pass mark', 'retest', 'difficulty', 'read aloud', 'speaker', 'timer', 'review answer', 'परीक्षा', 'सवाल', 'पास', 'दोबारा टेस्ट', 'कठिनाई', 'सुन', 'टाइमर', 'उत्तर समीक्षा'],
-    answer: (context) => say(context, 'Each attempt uses 15 seeded questions from a reviewed bank while keeping the easy/medium/harder balance stable; the prototype pass mark is 9 of 15. Answers are saved before moving on, questions can be read aloud, and correctness appears only after submission.', 'हर प्रयास में समीक्षा किए गए बैंक से 15 नए सवाल आते हैं, लेकिन आसान/मध्यम/कठिन संतुलन समान रहता है; प्रोटोटाइप में पास अंक 15 में 9 है। आगे बढ़ने से पहले उत्तर सहेजता है, सवाल सुनाए जा सकते हैं, और सही/गलत केवल जमा करने के बाद दिखता है।'),
+    answer: (context) => say(context, 'The server-saved assessment selects 15 questions with the same easy/medium/applied balance and a pass mark of 9. The server saves answers, controls timing and grades the result. The judge walkthrough uses a separate set of public samples and a simulated result. In both modes you can hear questions aloud and review correctness after finishing.', 'सर्वर पर सहेजी परीक्षा में 15 प्रश्नों का आसान/मध्यम/व्यावहारिक संतुलन समान रहता है और पास अंक 9 है। उत्तर, समय और अंक सर्वर नियंत्रित करता है। जज वॉकथ्रू अलग सार्वजनिक नमूनों और सिम्युलेटेड परिणाम का उपयोग करता है। दोनों में प्रश्न सुन सकते हैं और समाप्त होने के बाद उत्तर देख सकते हैं।'),
   },
   {
     phrases: ['interruption', 'network drops', 'connection lost', 'technical failure', 'paused', 'resume test', 'monitoring note', 'cheating', 'रुकावट', 'इंटरनेट बंद', 'तकनीकी खराबी', 'रुका', 'फिर शुरू', 'निगरानी', 'नकल'],

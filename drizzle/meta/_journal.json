@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1788355186917,
+      "tag": "20260902131946_protected_exam_core",
+      "breakpoints": true
+    }
+  ]
+}

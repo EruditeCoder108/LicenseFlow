@@ -24,7 +24,8 @@ LicenceFlow is an independent **Build What Moves India** hackathon prototype for
 - a pre-payment system rehearsal question;
 - an explicit mock gateway with success, failure, pending and uncertain outcomes;
 - learning progress and sequential-watch behavior using temporary YouTube material;
-- deterministic balanced question papers, retests, scoring and answer explanations;
+- separate server-saved assessment: balanced private-runtime paper selection, authoritative timing/answers/grading and post-completion review;
+- deterministic public sample papers and local result shortcuts for the judge walkthrough only;
 - safe interruption pause, refresh recovery and same-attempt resume;
 - result dashboard, journey receipt and visibly invalid demonstration Learner's Licence;
 - Raahi's built-in, non-API journey guidance;
@@ -42,7 +43,7 @@ The following never become real in this repository:
 - official test entitlement or legal attempt consumption;
 - official Learner's Licence issuance.
 
-The optional D1 layer stores only minimal non-personal prototype milestones and synthetic payment idempotency. It does not make browser-held answers or applicant data authoritative.
+The legacy D1 reliability layer stores minimal prototype milestones and synthetic payment idempotency. A separate protected-exam subsystem now stores its own frozen papers, selected answers, timers and grades under anonymous session ownership. It never trusts the legacy mirror's client-supplied score. Neither subsystem provides real applicant identity or official examination entitlement. See [protected-exam-core.md](protected-exam-core.md) for current local implementation and publication status.
 
 ## Directory-only surfaces
 
@@ -59,7 +60,7 @@ English and Hindi are the reviewed reference versions. The other 21 scheduled la
 ## Deliberately deferred
 
 - production Aadhaar, payment, Sarathi or RTO integration;
-- server-authoritative question delivery, timing, answers and scoring;
+- authenticated citizen admission and official exam/payment entitlement (the anonymous server-controlled assessment core is implemented);
 - Safe Exam Browser or a custom OS lockdown client;
 - face recognition, liveness scoring or experimental anti-spoofing;
 - a permanent Driving Licence application flow;

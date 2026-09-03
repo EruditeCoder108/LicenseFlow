@@ -1,0 +1,38 @@
+/* Extend the existing focused assessment surface, without changing the tour. */
+.protected-exam-panel {
+  width: min(100%, 960px);
+  min-width: 0;
+  margin: auto;
+  padding: clamp(20px, 4vw, 40px);
+  background: #fff;
+  color: var(--ink, #071a34);
+  border-radius: 18px;
+  overflow-wrap: anywhere;
+}
+.protected-exam-panel h1 { margin: 12px 0; font-size: clamp(24px, 3vw, 34px); line-height: 1.25; }
+.protected-exam-panel p { line-height: 1.6; }
+.protected-exam-panel .eyebrow { display: flex; gap: 8px; align-items: center; }
+.protected-exam-panel .lf-actions { flex-wrap: wrap; }
+.protected-exam-panel .button { min-height: 44px; white-space: normal; }
+.protected-exam-notice, .protected-exam-error { margin: 18px 0; padding: 16px; border-radius: 10px; background: #eff6ff; border: 1px solid #c5d9ef; }
+.protected-exam-error { background: #fff4e5; border-color: #e6bd79; color: #713e04; }
+.protected-exam-score { font-size: clamp(30px, 5vw, 46px); font-weight: 700; margin: 16px 0; }
+.protected-exam-score span { display: block; font-size: 16px; font-weight: 400; }
+.protected-exam-metadata { display: flex; flex-wrap: wrap; gap: 10px; }
+.protected-exam-metadata span { background: #eef4fb; border-radius: 8px; padding: 8px 12px; }
+.protected-exam-footnote { font-size: 14px; color: #43566e; margin-top: 24px; }
+.protected-exam-audit { margin-top: 24px; }
+.protected-exam-audit summary { padding: 12px 0; cursor: pointer; }
+.protected-exam-audit ol { padding-left: 22px; max-height: 260px; overflow-y: auto; }
+.protected-exam-audit li { padding: 8px 0; }
+.protected-exam-audit time { display: block; color: #43566e; font-size: 13px; }
+.protected-exam-review { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.protected-exam-review div { background: #f0f5fb; padding: 16px; border-radius: 10px; }
+.protected-exam-review dt { font-weight: 700; margin-bottom: 8px; }
+.protected-exam-review dd { margin: 0; }
+.focused-question-heading h1 { font-size: clamp(22px, 2.2vw, 32px); line-height: 1.35; margin: 14px 0; }
+@media (max-width: 600px) {
+  .protected-exam-review { grid-template-columns: 1fr; }
+  .protected-exam-panel .lf-actions { align-items: stretch; flex-direction: column; }
+  .protected-exam-panel .button { width: 100%; }
+}
