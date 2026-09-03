@@ -1,4 +1,4 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { openLocalDatabase } from '../dev/database'
 import { handleExamRequest } from './api'
 import { EXAM_RULES, PROTECTED_QUOTAS, createPaper } from './paper'
@@ -41,7 +41,7 @@ function state(attempt: ProtectedExamSnapshot) {
   return JSON.parse(row.state_json as string) as ExamState
 }
 beforeEach(() => { database = openLocalDatabase(); now = Date.UTC(2026, 8, 2, 12) })
-afterEach(() => database.close())
+afterEach(() => { vi.restoreAllMocks(); database.close() })
 
 describe('server-owned exam boundary', () => {
   it('sets an opaque HttpOnly secure session without putting credentials in JSON', async () => {
@@ -97,6 +97,47 @@ describe('server-owned exam boundary', () => {
 })
 
 describe('atomic answers and recovery', () => {
+  it('uses two database round trips per ordinary answer, next question and heartbeat without dropping the audit', async () => {
+    const user = client(), attempt = await user.start()
+    // Count database calls, not local elapsed time: one read plus one transaction.
+    const prototype = Object.getPrototypeOf(database.db.prepare('SELECT 1'))
+    const first = vi.spyOn(prototype, 'first')
+    const all = vi.spyOn(prototype, 'all')
+    const run = vi.spyOn(prototype, 'run')
+    const batch = vi.spyOn(database.db, 'batch')
+    const expectBudget = () => {
+      expect(first).toHaveBeenCalledTimes(1)
+      expect(batch).toHaveBeenCalledTimes(1)
+      expect(all).not.toHaveBeenCalled()
+      expect(run).not.toHaveBeenCalled()
+      vi.clearAllMocks()
+    }
+    const saved = await user.action(attempt, 'answers', { questionToken: attempt.question!.token, optionIndex: 0 })
+    expect(saved.response.status).toBe(200)
+    expect(saved.data.attempt.events).toEqual([])
+    expectBudget()
+    const next = await user.action(saved.data.attempt, 'question')
+    expect(next.response.status).toBe(200)
+    expectBudget()
+    expect((await user.action(next.data.attempt, 'heartbeat')).response.status).toBe(200)
+    expectBudget()
+    expect(database.sqlite.prepare("SELECT COUNT(*) AS n FROM exam_events WHERE kind = 'ANSWER_LOCKED'").get()!.n).toBe(1)
+    now += EXAM_RULES.attemptTtlMs + 1
+    const completed = await user.send(`/attempts/${attempt.attemptId}/result`)
+    expect(completed.response.status).toBe(200)
+    expect(completed.data.attempt.events.some((event) => event.kind === 'ANSWER_LOCKED')).toBe(true)
+  })
+
+  it('rejects expired and missing sessions on the combined access lookup', async () => {
+    const user = client(), attempt = await user.start()
+    const outsider = client()
+    expect((await outsider.action(attempt, 'claim')).response.status).toBe(401)
+    now += EXAM_RULES.sessionTtlMs + 1
+    expect((await user.action(attempt, 'answers', { questionToken: attempt.question!.token, optionIndex: 0 })).response.status).toBe(401)
+    expect((await user.send(`/attempts/${attempt.attemptId}/result`)).response.status).toBe(401)
+    expect(state(attempt).answers).toHaveLength(0)
+  })
+
   it('commits a duplicated answer once and waits before opening an unseen next question', async () => {
     const user = client(), attempt = await user.start()
     const request = { requestId: crypto.randomUUID(), questionToken: attempt.question!.token, optionIndex: 0 }

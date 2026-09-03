@@ -27,7 +27,7 @@ The implementation boundary and state-extension seams are documented in [docs/im
 - Optional walkthrough: choose **Full Judge Walkthrough** on the homepage.
 - Manual route: Driving licence services → Start new application.
 - Judge-only shortcuts are visibly labelled and never presented as citizen rules.
-- Choose **Open server-saved test** on test entry for the protected assessment, added on 2 September. The owner approved public release on 3 September and will perform the browser checks personally.
+- On test entry choose **Full test**, then **Open full test**, for the protected assessment. **Judge walkthrough** keeps Raahi’s camera-free sample journey. The full test also offers a labelled simulated-result preview that cannot award a server pass. The owner performs browser checks personally.
 
 ## What is implemented
 

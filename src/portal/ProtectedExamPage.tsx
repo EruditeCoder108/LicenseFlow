@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, CheckCircle2, LockKeyhole, RefreshCcw, ShieldCheck, Volume2, VolumeX } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle2, FastForward, LockKeyhole, RefreshCcw, ShieldCheck, Volume2, VolumeX } from 'lucide-react'
 import { FocusedAssessmentShell, QuestionStatusMap, useFocusedFullscreen } from './FocusedAssessmentShell'
 import { ProtectedExamClient, ExamServiceError, acceptExamSnapshot, displayedSeconds } from './protectedExamClient'
 import type { ProtectedExamReview, ProtectedExamSnapshot } from './protectedExamTypes'
 import { loadJourneyProgress } from './progress'
+import { createPassingJudgeExamSession } from './examSession'
 import { navigatePortal } from './router'
 import { translate as copy, type Language } from './i18n'
 import { stopAllMediaTracks, useDeviceReadiness } from '../hooks/useDeviceReadiness'
@@ -20,6 +21,8 @@ export function ProtectedExamPage({ applicationId, language }: { applicationId: 
   const [reviewIndex, setReviewIndex] = useState(0)
   const [selected, setSelected] = useState<number | null>(null)
   const [busy, setBusy] = useState(false)
+  const [answerStage, setAnswerStage] = useState<'saving' | 'opening' | null>(null)
+  const [slowAnswer, setSlowAnswer] = useState(false)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<ExamServiceError | null>(null)
   const [hidden, setHidden] = useState(document.hidden)
@@ -89,6 +92,13 @@ export function ProtectedExamPage({ applicationId, language }: { applicationId: 
   }, [])
 
   useEffect(() => {
+    setSlowAnswer(false)
+    if (!answerStage) return
+    const timeout = window.setTimeout(() => setSlowAnswer(true), 2000)
+    return () => window.clearTimeout(timeout)
+  }, [answerStage])
+
+  useEffect(() => {
     let heartbeatRunning = false
     const heartbeat = window.setInterval(() => {
       const current = latest.current
@@ -96,7 +106,7 @@ export function ProtectedExamPage({ applicationId, language }: { applicationId: 
       heartbeatRunning = true
       // A background lease renewal must not disable an answer button or swallow
       // a click. CAS + revision ordering also protect overlapping responses.
-      void client.action(current, 'heartbeat').then((next) => { if (mounted.current) accept(next) }).catch((cause: unknown) => {
+      void client.action(current, 'heartbeat').then((next) => { if (mounted.current && !busyRef.current) accept(next) }).catch((cause: unknown) => {
         if (!mounted.current || busyRef.current || latest.current?.attemptId !== current.attemptId || latest.current.revision > current.revision) return
         const problem = cause instanceof ExamServiceError ? cause : new ExamServiceError('connection_lost', 'Reconnect to check your saved test.')
         setError(problem); errorRef.current = problem
@@ -147,18 +157,33 @@ export function ProtectedExamPage({ applicationId, language }: { applicationId: 
     })
   }
   const answer = () => {
-    if (!attempt || selected === null) return
+    if (!attempt || selected === null || busyRef.current) return
     window.speechSynthesis?.cancel()
+    setSpeaking(false)
+    setAnswerStage('saving')
     void perform(async () => {
-      const saved = await client.answer(attempt, selected)
-      // Commit first, then request the next question. A failed response never
-      // silently consumes the next question or invents a local checkpoint.
-      if (saved.phase !== 'waiting' || document.hidden) return saved
-      try { return await client.open(saved) } catch (cause) {
-        if (mounted.current) accept(saved)
+      let confirmed: ProtectedExamSnapshot | null = null
+      try {
+        return await client.answerAndContinue(attempt, selected, (saved) => {
+          confirmed = saved
+          if (mounted.current) setAnswerStage('opening')
+        }, () => mounted.current && !document.hidden)
+      } catch (cause) {
+        if (mounted.current && confirmed) accept(confirmed)
         throw cause
       }
-    })
+    }).finally(() => { if (mounted.current) setAnswerStage(null) })
+  }
+  const previewResult = async () => {
+    if (busyRef.current || loading || error) return
+    if (latest.current?.ownsLease && latest.current.phase !== 'completed') {
+      const paused = await perform(async () => (await client.prepareResultPreview(latest.current))!)
+      if (!paused) return
+    }
+    createPassingJudgeExamSession(applicationId, loadJourneyProgress(applicationId))
+    media.stop(); stopAllMediaTracks()
+    await exitFullscreen()
+    navigatePortal(`/mp/application/${applicationId}/result`)
   }
   const exit = async () => {
     if (busyRef.current) return
@@ -192,26 +217,35 @@ export function ProtectedExamPage({ applicationId, language }: { applicationId: 
   return (
     <FocusedAssessmentShell mode={active ? 'exam' : 'interruption'} title={copy(language, 'Learner’s Licence assessment', 'लर्नर लाइसेंस परीक्षा')}
       stageBadge={copy(language, 'Server-saved · prototype', 'सर्वर पर सहेजा · प्रोटोटाइप')}
-      timerSeconds={active ? seconds : undefined} online={!error && media.snapshot.online}
+      timerSeconds={active && answerStage !== 'opening' ? seconds : undefined} online={!error && media.snapshot.online}
       cameraActive={cameraReady && attempt?.phase !== 'completed'} cameraGuided={guided}
       cameraLabel={guided ? copy(language, 'Camera simulated', 'कैमरा सिमुलेशन') : media.snapshot.camera === 'ready' ? copy(language, 'Camera on', 'कैमरा चालू') : copy(language, 'Camera off', 'कैमरा बंद')}
       onExit={() => void exit()} language={language}
       statusMap={attempt && <QuestionStatusMap total={attempt.totalQuestions} mode={review ? 'review' : 'exam'} currentIndex={attempt.currentIndex}
         answers={attempt.answers} language={language} correctAnswers={review ? Object.fromEntries(review.review.map((q) => [q.index, q.correct])) : undefined}
         activeIndex={review ? reviewIndex : null} onSelectQuestion={review ? setReviewIndex : undefined} />}
-      bottomBar={active ? <div className="focused-bottom-actions">
+      bottomBar={<div className="protected-exam-bottom">
+        {active && <div className="focused-bottom-actions">
         <button type="button" className="button button--primary" disabled={selected === null || busy || seconds === 0 || !cameraReady} onClick={answer}>
-          {busy ? copy(language, 'Confirming with server…', 'सर्वर से पुष्टि हो रही है…') : copy(language, attempt!.currentIndex === 14 ? 'Lock answer and finish' : 'Lock answer and continue', attempt!.currentIndex === 14 ? 'उत्तर लॉक करें और समाप्त करें' : 'उत्तर लॉक करें और आगे बढ़ें')} <ArrowRight size={17} />
+          {answerStage === 'saving' ? copy(language, 'Saving answer…', 'उत्तर सहेजा जा रहा है…') : answerStage === 'opening' ? copy(language, 'Opening next question…', 'अगला प्रश्न खुल रहा है…') : busy ? copy(language, 'Please wait…', 'कृपया प्रतीक्षा करें…') : copy(language, attempt!.currentIndex === 14 ? 'Lock answer and finish' : 'Lock answer and continue', attempt!.currentIndex === 14 ? 'उत्तर लॉक करें और समाप्त करें' : 'उत्तर लॉक करें और आगे बढ़ें')} <ArrowRight size={17} />
         </button>
-        <span className="focused-security-note"><LockKeyhole size={15} />{copy(language, 'Correctness is shown after the test, not during it.', 'सही उत्तर परीक्षा के बाद दिखाए जाएँगे।')}</span>
-      </div> : undefined}>
+        <span className="focused-security-note protected-exam-save-status" role="status" aria-live="polite">
+          {answerStage === 'opening' ? <CheckCircle2 size={15} /> : <LockKeyhole size={15} />}
+          {answerStage === 'opening' ? copy(language, 'Answer saved. Loading the next question.', 'उत्तर सहेजा गया। अगला प्रश्न लोड हो रहा है।') : answerStage === 'saving' ? slowAnswer ? copy(language, 'Still waiting for confirmation. Please don’t submit again.', 'पुष्टि का इंतज़ार है। कृपया दोबारा जमा न करें।') : copy(language, 'Saving your choice securely.', 'आपका उत्तर सुरक्षित सहेजा जा रहा है।') : copy(language, 'Correct answers are shown after the test.', 'सही उत्तर परीक्षा के बाद दिखाए जाएँगे।')}
+        </span>
+      </div>}
+      {attempt?.phase !== 'completed' && <div className="protected-exam-preview">
+        <button type="button" disabled={busy || loading || Boolean(error)} onClick={() => void previewResult()}><FastForward size={16} />{copy(language, 'Skip to result preview · judges', 'परिणाम पूर्वावलोकन देखें · जज')}</button>
+        <small>{copy(language, 'Simulated result and demo licence only. This does not pass your server test.', 'केवल सिम्युलेटेड परिणाम और डेमो लाइसेंस। इससे सर्वर परीक्षा पास नहीं होती।')}</small>
+      </div>}
+      </div>}>
       {active && question ? (
         <div className="focused-workspace-container focused-workspace-container--split">
-          <section className="focused-question-card">
+          <section className="focused-question-card protected-exam-question" key={question.token} aria-busy={Boolean(answerStage)}>
             <div className="focused-question-heading">
               <div className="focused-question-meta"><span className="focused-question-pill">{copy(language, `Question ${question.index + 1} of 15`, `प्रश्न ${question.index + 1} / 15`)}</span><span className="focused-question-saved-pill"><LockKeyhole size={13} />{copy(language, `${attempt!.currentIndex} saved on server`, `${attempt!.currentIndex} उत्तर सर्वर पर सहेजे`)}</span></div>
               <h1 ref={heading} tabIndex={-1}>{prompt}</h1>
-              {'speechSynthesis' in window && <button type="button" className="question-speech-button" onClick={speak} aria-pressed={speaking}>
+              {'speechSynthesis' in window && <button type="button" className="question-speech-button" onClick={speak} disabled={busy} aria-pressed={speaking}>
                 {speaking ? <VolumeX size={17} /> : <Volume2 size={17} />}{speaking ? copy(language, 'Stop reading', 'पढ़ना रोकें') : copy(language, 'Read question aloud', 'प्रश्न सुनें')}
               </button>}
             </div>

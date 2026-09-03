@@ -74,6 +74,17 @@ export class ProtectedExamClient {
     if (!this.pending) this.savePending({ attemptId: attempt.attemptId, requestId: crypto.randomUUID(), questionToken: attempt.question.token, optionIndex })
     return this.sendPending(attempt)
   }
+  async answerAndContinue(attempt: ProtectedExamSnapshot, optionIndex: number, onSaved: (saved: ProtectedExamSnapshot) => void, canOpen: () => boolean) {
+    const saved = await this.answer(attempt, optionIndex)
+    onSaved(saved)
+    // Never start an unseen question while the previous save is unconfirmed.
+    return saved.phase === 'waiting' && canOpen() ? this.open(saved) : saved
+  }
+  async prepareResultPreview(attempt: ProtectedExamSnapshot | null) {
+    // Preview uses local fixtures, never a pass endpoint or synthetic submissions.
+    // Release this tab's lease and confirm its pause before leaving a timed test.
+    return attempt?.ownsLease && attempt.phase !== 'completed' ? this.pause(attempt, 'exit') : attempt
+  }
   private async sendPending(attempt: ProtectedExamSnapshot) {
     const pending = this.pending!
     const result = await this.action(attempt, 'answers', { requestId: pending.requestId, questionToken: pending.questionToken, optionIndex: pending.optionIndex })

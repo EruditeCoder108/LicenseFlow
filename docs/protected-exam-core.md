@@ -4,7 +4,7 @@ Implemented on 2 September 2026; the owner approved public release on 3 Septembe
 
 ## What changed
 
-The protected assessment has its own Worker endpoints, D1 tables and UI. The browser cannot supply an authoritative score, a correct-answer flag, a question order, or a deadline. The normal live-camera test entry opens it; judges can also choose **Open server-saved test** from the existing test-entry screen. The existing camera-free walkthrough and passing-preview shortcut remain separate simulations.
+The protected assessment has its own Worker endpoints, D1 tables and UI. The browser cannot supply an authoritative score, a correct-answer flag, a question order, or a deadline. The normal live-camera test entry opens it; camera-free demo users can choose **Full test**, then **Open full test**, on the same entry screen. **Judge walkthrough** remains the default for Raahi’s guided journey and uses separate public sample questions and local scoring.
 
 | Decision | Implementation |
 |---|---|
@@ -48,6 +48,14 @@ An offline browser cannot pause a server timer until its pause request arrives. 
 The server grants at most two minutes of cumulative pause allowance during an attempt. Repeated pause, resume, reload and claim calls do not replenish it. When the allowance is used, the current question's remaining time counts down even while paused. The final 30-minute expiry closes remaining questions unanswered. This is an explicit prototype policy to validate with users, not a claimed government examination rule.
 
 Answers are immutable once committed. The public result has no legal effect. A later deployment cannot regrade a previously saved attempt using a changed bank because both its paper and rules are frozen.
+
+### Answer transitions and judge preview
+
+- The question stays visible, with choices disabled, while its answer is saving. After acknowledgement the status changes to **Answer saved. Loading the next question**; the previous timer is hidden. The next question has a short, reduced-motion-aware entrance. No artificial wait is added.
+- A slow save shows a reminder not to resubmit. Background heartbeat responses cannot replace the question while a foreground action is in progress. Failed next-question loading preserves the acknowledged checkpoint for recovery.
+- Session validation, owner-scoped attempt lookup and the existing command receipt are read together. An ordinary non-final answer, next-question open or heartbeat uses two database round trips: one read and one atomic write batch. Tests enforce that budget; it is not a claim about measured public-network latency. Contention retries, expiry and completed results may need additional calls.
+- Audit events are still written transactionally. Active snapshots omit history; the completed result retrieves it for review.
+- **Skip to result preview · judges** pauses and releases this tab’s server attempt before opening the existing local simulated result and demo-licence view. If a required pause fails, the shortcut does not silently proceed. No synthetic answer or pass is submitted to the server. The preview is labelled and links back to the full test; the existing pause allowance and attempt expiry still apply.
 
 ### What this does not yet solve
 
@@ -96,7 +104,7 @@ Automated checks include owner isolation, blocked score/time/bypass inputs, earl
 
 No browser automation or visual QA was run for this change; the owner asked to perform it personally.
 
-1. On the test-entry screen choose **Open server-saved test**. In the existing judge camera simulation, it should explicitly say no camera is opened while answers/grades use the server.
+1. On test entry choose **Full test**, then **Open full test**. In the existing judge camera simulation, it should explicitly say no camera is opened while answers/grades use the server.
 2. Accept the anonymous answer-storage notice and start. Select an answer and lock it: the next question should appear smoothly, without showing correctness.
 3. Pause, wait a few seconds, then reconnect. The same question should retain the remaining server time, not receive a fresh 30 seconds.
 4. Reload while a question is open. Reconnect to the same attempt. If the former tab lease has not expired, the message should tell you when to retry; it must not create a new paper.
@@ -104,6 +112,7 @@ No browser automation or visual QA was run for this change; the owner asked to p
 6. Finish the paper. Review should open only after the server result, with your choice, correct answer and explanation. Return to application status and reopen that server result.
 7. Check the old Raahi walkthrough: demo fills, simulated camera, recovery preview, passing-result preview and demonstration downloads should still work separately.
 8. Check phone width and Hindi controls. The protected English-question notice should be visible in Hindi, not a silent translation claim.
+9. Try **Skip to result preview · judges** during a question. The result must say its score is simulated. **Return to full test** should return to the original server checkpoint, not a server-graded pass. Confirm that the footer and answer options remain reachable on a small screen.
 
 Older local judge papers are archived under their original storage prefix when their question IDs are retired. The sample test then restarts with an explanatory notice; form, mock payment and tutorial progress remain unchanged. Old answers are never attached to new questions and misgraded.
 

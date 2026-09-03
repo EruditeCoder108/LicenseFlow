@@ -7708,6 +7708,24 @@ button.focused-status-cell {
 }
 
 /* Responsive Rules for Dashboard */
+.test-entry-modes {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;
+  min-width: 0; margin: 20px 0; padding: 0; border: 0;
+}
+.test-entry-modes legend { margin-bottom: 12px; font-weight: 700; }
+.test-entry-modes label {
+  display: flex; gap: 12px; align-items: flex-start; min-width: 0; padding: 18px;
+  border: 1px solid #cbd8e8; border-radius: 12px; background: #fff; cursor: pointer;
+  transition: background-color 160ms ease, border-color 160ms ease;
+}
+.test-entry-modes label.test-entry-mode--selected { border-color: #176ab3; background: #eff6ff; }
+.test-entry-modes label:focus-within { outline: 3px solid #176ab3; outline-offset: 3px; }
+.test-entry-modes input { flex: 0 0 auto; margin-top: 4px; accent-color: #176ab3; }
+.test-entry-modes strong, .test-entry-modes small { display: block; }
+.test-entry-modes small { margin-top: 6px; line-height: 1.5; color: #43566e; }
+@media (max-width: 600px) { .test-entry-modes { grid-template-columns: 1fr; } }
+@media (prefers-reduced-motion: reduce) { .test-entry-modes label { transition: none; } }
+
 @media (max-width: 860px) {
   .result-dashboard-grid {
     grid-template-columns: 1fr;

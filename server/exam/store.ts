@@ -26,6 +26,16 @@ export function createExamStore(db: ExamDatabase) {
     session(hash: string, now: number) {
       return db.prepare('SELECT token_hash FROM exam_sessions WHERE token_hash = ? AND expires_at > ?').bind(hash, now).first<{ token_hash: string }>()
     },
+    access(owner: string, now: number, attemptId: string, requestId: string | null) {
+      // Authorisation, owner-scoped attempt and duplicate receipt in one trip.
+      // A valid session still returns a row when the requested attempt is absent.
+      return db.prepare(`SELECT s.token_hash AS session_owner, a.*, c.signature AS command_signature
+        FROM exam_sessions s
+        LEFT JOIN exam_attempts a ON a.owner_hash = s.token_hash AND a.id = ?
+        LEFT JOIN exam_commands c ON c.attempt_id = a.id AND c.request_id = ?
+        WHERE s.token_hash = ? AND s.expires_at > ?`)
+        .bind(attemptId, requestId, owner, now).first<AttemptRow & { session_owner: string; command_signature: string | null }>()
+    },
     find(id: string, owner: string) {
       return db.prepare('SELECT * FROM exam_attempts WHERE id = ? AND owner_hash = ?').bind(id, owner).first<AttemptRow>()
     },

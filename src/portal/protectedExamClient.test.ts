@@ -31,6 +31,77 @@ beforeEach(() => {
 afterEach(() => database.close())
 
 describe('protected exam browser adapter against real SQL transitions', () => {
+  it('acknowledges the answer before requesting the next question', async () => {
+    const client = new ProtectedExamClient(APP, transport, storage)
+    const attempt = await client.open(await client.connect(await client.create()))
+    calls.length = 0
+    let acknowledged = false
+    const next = await client.answerAndContinue(attempt, 1, (saved) => {
+      expect(saved.phase).toBe('waiting')
+      expect(saved.deadlineAt).toBeNull()
+      expect(calls.map((call) => call.path.split('/').at(-1))).toEqual(['answers'])
+      acknowledged = true
+    }, () => acknowledged)
+    expect(next.currentIndex).toBe(1)
+    expect(next.phase).toBe('active')
+    expect(calls.map((call) => call.path.split('/').at(-1))).toEqual(['answers', 'question'])
+  })
+
+  it('never opens the next question after a lost save response or while hidden', async () => {
+    const client = new ProtectedExamClient(APP, transport, storage)
+    const attempt = await client.open(await client.connect(await client.create()))
+    calls.length = 0
+    loseNextAnswerResponse = true
+    let acknowledged = false
+    await expect(client.answerAndContinue(attempt, 0, () => { acknowledged = true }, () => true)).rejects.toMatchObject({ code: 'connection_lost' })
+    expect(acknowledged).toBe(false)
+    expect(calls.some((call) => call.path.endsWith('/question'))).toBe(false)
+    const saved = await client.answerAndContinue(attempt, 0, () => { acknowledged = true }, () => false)
+    expect(acknowledged).toBe(true)
+    expect(saved.phase).toBe('waiting')
+    expect(saved.deadlineAt).toBeNull()
+    expect(calls.some((call) => call.path.endsWith('/question'))).toBe(false)
+  })
+
+  it('keeps the acknowledged checkpoint recoverable when opening the next question fails', async () => {
+    let failOpen = false
+    const flaky: ExamTransport = (path, body) => failOpen && path.endsWith('/question')
+      ? Promise.reject(new ExamServiceError('connection_lost', 'Next question unavailable')) : transport(path, body)
+    const client = new ProtectedExamClient(APP, flaky, storage)
+    const attempt = await client.open(await client.connect(await client.create()))
+    failOpen = true
+    let savedIndex = -1
+    await expect(client.answerAndContinue(attempt, 1, (saved) => { savedIndex = saved.currentIndex }, () => true)).rejects.toMatchObject({ code: 'connection_lost' })
+    expect(savedIndex).toBe(1)
+    expect(client.hasPendingAnswer).toBe(false)
+    expect(await client.status()).toMatchObject({ currentIndex: 1, phase: 'waiting', deadlineAt: null })
+  })
+
+  it('prepares a judge preview by pausing, not by submitting answers or awarding a grade', async () => {
+    const client = new ProtectedExamClient(APP, transport, storage)
+    const attempt = await client.open(await client.connect(await client.create()))
+    calls.length = 0
+    const paused = await client.prepareResultPreview(attempt)
+    expect(paused).toMatchObject({ phase: 'paused', currentIndex: 0, result: null, ownsLease: false })
+    expect(calls.map((call) => call.path.split('/').at(-1))).toEqual(['pause'])
+    expect(database.sqlite.prepare('SELECT COUNT(*) AS n FROM exam_answers').get()!.n).toBe(0)
+    calls.length = 0
+    expect(await client.prepareResultPreview(null)).toBeNull()
+    expect(await client.prepareResultPreview(paused)).toBe(paused)
+    expect(calls).toHaveLength(0)
+  })
+
+  it('does not silently proceed to preview when the server cannot confirm a pause', async () => {
+    let failPause = false
+    const flaky: ExamTransport = (path, body) => failPause && path.endsWith('/pause')
+      ? Promise.reject(new ExamServiceError('connection_lost', 'Pause not confirmed')) : transport(path, body)
+    const client = new ProtectedExamClient(APP, flaky, storage)
+    const attempt = await client.open(await client.connect(await client.create()))
+    failPause = true
+    await expect(client.prepareResultPreview(attempt)).rejects.toMatchObject({ code: 'connection_lost' })
+    expect(await client.status()).toMatchObject({ phase: 'active', currentIndex: 0, result: null })
+  })
+
   it('keeps answers queued until the server response, then retries exactly once after a reload', async () => {
     const first = new ProtectedExamClient(APP, transport, storage)
     const attempt = await first.open(await first.connect(await first.create()))

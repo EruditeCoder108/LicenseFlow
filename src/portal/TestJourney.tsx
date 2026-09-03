@@ -416,7 +416,7 @@ function JudgePassShortcut({
       <span className="judge-result-shortcut__icon"><ClipboardCheck size={20} aria-hidden="true" /></span>
       <div>
         <strong>{local(language, 'Judge review controls', 'जज समीक्षा नियंत्रण')}</strong>
-        <p>{local(language, 'Generate a passing prototype attempt through the normal scoring flow and open the result, receipt and demo licence.', 'सामान्य स्कोरिंग प्रवाह से पासिंग प्रोटोटाइप प्रयास बनाएँ और परिणाम, रसीद तथा डेमो लाइसेंस खोलें।')}</p>
+        <p>{local(language, 'Preview a simulated passing result, receipt and demo licence. This shortcut does not complete or change a server-graded test.', 'सिम्युलेटेड पास परिणाम, रसीद और डेमो लाइसेंस देखें। यह शॉर्टकट सर्वर परीक्षा को पूरा या परिवर्तित नहीं करता।')}</p>
       </div>
       <div className="judge-result-shortcut__actions">
         {onRecovery && (
@@ -438,6 +438,7 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
   const [session, setSession] = useState(() => loadExamSession(applicationId, progress))
   const media = useDeviceReadiness()
   const guided = progress.readiness.mode === 'guided-signals'
+  const [examMode, setExamMode] = useState<'full' | 'judge'>(() => guided ? 'judge' : 'full')
 
   useEffect(() => {
     if (guided) {
@@ -466,7 +467,7 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
   }, [media.stop])
 
   if (progress.tutorial.status !== 'completed') return <Guard applicationId={applicationId} language={language} title={local(language, 'Complete the tutorial first', 'पहले सीखने का भाग पूरा करें')} body={local(language, 'The test starts only after the learning check is completed.', 'सीखने की जाँच पूरी होने के बाद ही परीक्षा शुरू होती है।')} route={`/mp/application/${applicationId}/tutorial`} action={local(language, 'Open road-safety tutorial', 'सड़क सुरक्षा सीख खोलें')} />
-  const fresh = session.stage === 'exam-intro'
+  const fresh = examMode === 'full' || session.stage === 'exam-intro'
   const start = async () => {
     try {
       if (document.documentElement.requestFullscreen) {
@@ -477,7 +478,7 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
     }
     media.stop()
     stopAllMediaTracks()
-    if (!guided) {
+    if (examMode === 'full') {
       navigatePortal(`/mp/application/${applicationId}/protected-test`)
       return
     }
@@ -502,11 +503,22 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
       <Breadcrumbs applicationId={applicationId} current={local(language, 'Online test instructions', 'ऑनलाइन टेस्ट निर्देश')} language={language} />
       <section className="page-title" data-tour="test-entry-overview">
         <div>
-          <p className="eyebrow">{local(language, 'Demo test', 'डेमो टेस्ट')}</p>
-          <h1 tabIndex={-1}>{local(language, 'Final system check before your 15-question demo test', '15-प्रश्न डेमो परीक्षा से पहले अंतिम सिस्टम जाँच')}</h1>
-          <p>{guided ? local(language, 'This judge walkthrough uses a separate set of public sample questions and saves its simulated result locally.', 'यह जज वॉकथ्रू सार्वजनिक नमूना प्रश्नों का अलग सेट उपयोग करता है और सिम्युलेटेड परिणाम ब्राउज़र में सहेजता है।') : local(language, 'Review your system signals, then open the server-saved assessment. The server controls answers, timing and scoring.', 'अपने सिस्टम संकेत जाँचें, फिर सर्वर पर सहेजी परीक्षा खोलें। उत्तर, समय और अंक सर्वर नियंत्रित करता है।')}</p>
+          <p className="eyebrow">{local(language, 'Learner’s Licence test · prototype', 'लर्नर लाइसेंस परीक्षा · प्रोटोटाइप')}</p>
+          <h1 tabIndex={-1}>{local(language, 'Before you start your test', 'परीक्षा शुरू करने से पहले')}</h1>
+          <p>{local(language, 'Check your setup, then choose how to try the assessment. No official licence or government record is created.', 'अपनी तैयारी जाँचें, फिर परीक्षा आज़माने का तरीका चुनें। कोई आधिकारिक लाइसेंस या सरकारी रिकॉर्ड नहीं बनता।')}</p>
         </div>
       </section>
+      {guided ? <fieldset className="test-entry-modes">
+        <legend>{local(language, 'How would you like to try it?', 'आप कैसे आज़माना चाहेंगे?')}</legend>
+        <label className={examMode === 'judge' ? 'test-entry-mode--selected' : ''}>
+          <input type="radio" name="exam-mode" value="judge" checked={examMode === 'judge'} onChange={() => setExamMode('judge')} />
+          <span><strong>{local(language, 'Judge walkthrough', 'जज वॉकथ्रू')}</strong><small>{local(language, 'Public sample questions, local progress and quick result previews. Raahi stays with you.', 'सार्वजनिक नमूना प्रश्न, ब्राउज़र में प्रगति और तुरंत परिणाम पूर्वावलोकन। राही आपके साथ रहता है।')}</small></span>
+        </label>
+        <label className={examMode === 'full' ? 'test-entry-mode--selected' : ''}>
+          <input type="radio" name="exam-mode" value="full" checked={examMode === 'full'} onChange={() => setExamMode('full')} />
+          <span><strong>{local(language, 'Full test', 'पूरी परीक्षा')}</strong><small>{local(language, 'The server chooses the paper, saves answers and calculates the score. Camera remains simulated for this demo.', 'सर्वर प्रश्नपत्र चुनता है, उत्तर सहेजता है और अंक गणना करता है। इस डेमो में कैमरा सिम्युलेटेड रहता है।')}</small></span>
+        </label>
+      </fieldset> : <div className="reference-banner"><ShieldCheck size={20} /><p>{local(language, 'Full test: answers, timing and scoring are controlled by the server. Your camera check runs on this device.', 'पूरी परीक्षा: उत्तर, समय और अंक सर्वर नियंत्रित करता है। कैमरा जाँच इसी डिवाइस पर चलती है।')}</p></div>}
       <section className="test-instruction-grid">
         <article>
           <span><FileText size={21} /></span>
@@ -526,7 +538,7 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
           <span><Camera size={21} /></span>
           <div>
             <strong>{guided ? local(language, 'Demo camera simulation', 'डेमो कैमरा सिमुलेशन') : local(language, 'Camera monitoring', 'कैमरा निगरानी')}</strong>
-            <small>{local(language, 'Checks you are visible during the test', 'जाँचता है कि आप परीक्षा के दौरान सामने हैं')}</small>
+            <small>{guided ? local(language, 'No camera or microphone is opened', 'कैमरा या माइक्रोफोन नहीं खुलता') : local(language, 'Checks you are visible during the test', 'जाँचता है कि आप परीक्षा के दौरान सामने हैं')}</small>
           </div>
         </article>
         <article>
@@ -594,7 +606,7 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
       <div className="lf-actions">
         {fresh ? (
           <button className="button button--primary" disabled={!accepted || (!guided && !preTestReady)} onClick={start} data-tour="test-entry-start">
-            {local(language, `Enter focused mode and start ${LL_TEST_CONFIG.questionCount}-question test`, `फ़ोकस्ड मोड में प्रवेश करें और ${LL_TEST_CONFIG.questionCount}-प्रश्नों का टेस्ट शुरू करें`)} <ArrowRight size={18} />
+            {examMode === 'full' ? local(language, 'Open full test', 'पूरी परीक्षा खोलें') : local(language, 'Start judge walkthrough', 'जज वॉकथ्रू शुरू करें')} <ArrowRight size={18} />
           </button>
         ) : (
           <FlowLink className="button button--primary" href={routeForSession(applicationId, session)}>
@@ -606,12 +618,6 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
         </FlowLink>
       </div>
       <JudgePassShortcut language={language} onActivate={previewPassingResult} />
-      <aside className="reference-banner">
-        <ShieldCheck size={20} aria-hidden="true" />
-        <div><strong>{local(language, 'Try the server-controlled assessment', 'सर्वर-नियंत्रित परीक्षा आज़माएँ')}</strong><p>{local(language, 'A separate test with server grading, durable answer saving and one active tab. Judge shortcuts cannot change its result. Application and payment are still simulated.', 'सर्वर अंक, सुरक्षित उत्तर और एक सक्रिय टैब वाली अलग परीक्षा। जज शॉर्टकट इसके परिणाम नहीं बदल सकते। आवेदन और भुगतान अभी सिम्युलेटेड हैं।')}</p>
-          <FlowLink className="button button--secondary" href={`/mp/application/${applicationId}/protected-test`}>{local(language, 'Open server-saved test', 'सर्वर पर सहेजी परीक्षा खोलें')}<ArrowRight size={17} /></FlowLink>
-        </div>
-      </aside>
     </>
   )
 }
@@ -1196,6 +1202,7 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
 
   if (state.stage !== 'result') return <Guard applicationId={applicationId} language={language} title={local(language, 'Result not available yet', 'परिणाम अभी उपलब्ध नहीं')} body={local(language, 'Complete the saved synthetic test before opening its outcome.', 'परिणाम खोलने से पहले सहेजी सिंथेटिक परीक्षा पूरी करें।')} route={routeForSession(applicationId, state)} action={local(language, 'Continue saved session', 'सहेजा सत्र जारी रखें')} />
   const passed = state.exam.knowledgeResult === 'passed'
+  const judgePreview = state.events.some((event) => event.title === 'Judge review shortcut used')
   const paper = resolveQuestionPaper(state.exam.paperQuestionIds)
   const fingerprint = paperFingerprint(state.exam.paperQuestionIds)
   const eligible = isDemonstrationLicenceEligible({
@@ -1268,6 +1275,13 @@ export function ResultPage({ applicationId, onStageChange, language }: { applica
       />
 
       {/* Unified Outcome Hero */}
+      {judgePreview && <aside className="reference-banner" aria-label={local(language, 'Simulated judge result', 'सिम्युलेटेड जज परिणाम')}>
+        <Info size={20} />
+        <div><strong>{local(language, 'Judge result preview · simulated score', 'जज परिणाम पूर्वावलोकन · सिम्युलेटेड अंक')}</strong>
+          <p>{local(language, 'This sample result does not complete or change your server-saved test. You can return to that test separately.', 'यह नमूना परिणाम आपकी सर्वर परीक्षा को पूरा या बदलता नहीं है। आप उस परीक्षा पर अलग से लौट सकते हैं।')}</p>
+          <FlowLink href={`/mp/application/${applicationId}/protected-test`}>{local(language, 'Return to full test', 'पूरी परीक्षा पर लौटें')} <ArrowRight size={16} /></FlowLink>
+        </div>
+      </aside>}
       <section className={`result-dashboard-hero ${passed ? 'result-dashboard-hero--passed' : 'result-dashboard-hero--failed'}`} data-tour="result-overview">
         <div className="result-dashboard-hero__main">
           <div className="result-dashboard-hero__icon" aria-hidden="true">

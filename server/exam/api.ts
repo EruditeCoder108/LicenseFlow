@@ -1,6 +1,6 @@
 import { EXAM_RULES, sha256 } from './paper'
 import { clock, ExamError, newState, publicSnapshot, recordAnswer, requireLease, settleTime, type AttemptRow, type ExamState } from './state'
-import { createExamStore, type ExamDatabase, type ExamStore } from './store'
+import { createExamStore, type CommandReceipt, type ExamDatabase, type ExamStore } from './store'
 import type { ProtectedExamEvent, ProtectedPauseReason } from '../../src/portal/protectedExamTypes'
 
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i
@@ -50,7 +50,9 @@ function tokenFrom(request: Request, name: string): string | null {
   return /^[a-f0-9]{64}$/.test(value) ? value : null
 }
 async function snapshot(store: ExamStore, row: AttemptRow, clientId: string | null, now: number) {
-  return publicSnapshot(row, JSON.parse(row.state_json) as ExamState, clientId, now, await store.events(row.id))
+  // Keep the full audit in D1; only the completed result displays the history.
+  // Re-reading it after every answer/heartbeat adds an unnecessary round trip.
+  return publicSnapshot(row, JSON.parse(row.state_json) as ExamState, clientId, now, row.status === 'completed' ? await store.events(row.id) : [])
 }
 
 // Expiry is a server transition even on read/recovery; client timestamps are never used.
@@ -70,7 +72,7 @@ async function settled(store: ExamStore, row: AttemptRow, now: number): Promise<
   throw new ExamError('busy', 'The attempt is being updated. Reconnect to continue.', 409)
 }
 
-async function mutate(store: ExamStore, original: AttemptRow, action: string, body: Body, now: number) {
+async function mutate(store: ExamStore, original: AttemptRow, action: string, body: Body, now: number, initialReceipt: CommandReceipt | null) {
   const clientId = id(body.clientId, 'Exam tab')
   const requestId = action === 'heartbeat' ? null : id(body.requestId, 'Request identifier')
   // An answer may be retried by a replacement tab after reload. The semantic
@@ -79,7 +81,7 @@ async function mutate(store: ExamStore, original: AttemptRow, action: string, bo
   let row = original
   for (let tries = 0; tries < 6; tries++) {
     if (requestId) {
-      const old = await store.command(row.id, requestId)
+      const old = tries === 0 ? initialReceipt : await store.command(row.id, requestId)
       if (old) {
         if (old.signature !== signature) throw new ExamError('idempotency_conflict', 'This request identifier was already used for a different action.')
         const current = await store.find(row.id, row.owner_hash)
@@ -179,8 +181,10 @@ export async function handleExamRequest(request: Request, env: { DB?: ExamDataba
     const name = cookieName(url)
     const token = tokenFrom(request, name)
     const owner = token ? await sha256(token) : null
-    const validSession = owner && await store.session(owner, now)
     const body = request.method === 'POST' ? await readBody(request) : {}
+    const match = url.pathname.match(/^\/api\/exam\/attempts\/([a-f0-9-]+)\/(claim|question|answers|heartbeat|pause|resume|result)$/i)
+    const access = owner && match ? await store.access(owner, now, match[1]!, typeof body.requestId === 'string' ? body.requestId : null) : null
+    const validSession = match ? access : owner && await store.session(owner, now)
 
     if (url.pathname === '/api/exam/session' && request.method === 'POST') {
       fields(body, [])
@@ -231,11 +235,10 @@ export async function handleExamRequest(request: Request, env: { DB?: ExamDataba
       }
       return json({ attempt: await snapshot(store, row, null, now) }, 201)
     }
-    const match = url.pathname.match(/^\/api\/exam\/attempts\/([a-f0-9-]+)\/(claim|question|answers|heartbeat|pause|resume|result)$/i)
     if (!match) throw new ExamError('not_found', 'Exam route was not found.', 404)
-    const attemptId = id(match[1], 'Attempt')
-    let row = await store.find(attemptId, owner)
-    if (!row) throw new ExamError('not_found', 'Attempt was not found in this browser session.', 404)
+    id(match[1], 'Attempt')
+    let row: AttemptRow = access!
+    if (!row?.id) throw new ExamError('not_found', 'Attempt was not found in this browser session.', 404)
     if (match[2] === 'result' && request.method === 'GET') {
       row = await settled(store, row, now)
       const state = JSON.parse(row.state_json) as ExamState
@@ -248,7 +251,7 @@ export async function handleExamRequest(request: Request, env: { DB?: ExamDataba
     }
     if (request.method !== 'POST' || match[2] === 'result') return json({ code: 'method_not_allowed', error: 'Method not allowed.' }, 405)
     fields(body, match[2] === 'answers' ? ['clientId', 'requestId', 'questionToken', 'optionIndex'] : match[2] === 'pause' ? ['clientId', 'requestId', 'reason'] : match[2] === 'heartbeat' ? ['clientId'] : ['clientId', 'requestId'])
-    return await mutate(store, row, match[2]!, body, now)
+    return await mutate(store, row, match[2]!, body, now, access?.command_signature ? { signature: access.command_signature } : null)
   } catch (error) {
     if (error instanceof ExamError) return json({ code: error.code, error: error.message }, error.status, error.retryAfter ? { 'Retry-After': String(error.retryAfter) } : {})
     // SQL details and private question snapshots must not leak in error responses.
