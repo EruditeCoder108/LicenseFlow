@@ -26,6 +26,7 @@ export function ProtectedExamPage({ applicationId, language }: { applicationId: 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<ExamServiceError | null>(null)
   const [hidden, setHidden] = useState(document.hidden)
+  const [fullscreenLost, setFullscreenLost] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const [speaking, setSpeaking] = useState(false)
   const [accepted, setAccepted] = useState(false)
@@ -36,10 +37,13 @@ export function ProtectedExamPage({ applicationId, language }: { applicationId: 
   const errorRef = useRef(error)
   const mounted = useRef(true)
   const heading = useRef<HTMLHeadingElement>(null)
+  const fullscreenEntered = useRef(false)
   const media = useDeviceReadiness()
   const { enterFullscreen, exitFullscreen } = useFocusedFullscreen()
   const cameraReady = guided || (media.snapshot.camera === 'ready' && media.snapshot.microphone === 'ready'
-    && media.snapshot.model === 'ready' && media.snapshot.faceCount === 1 && media.snapshot.framing === 'good' && media.snapshot.lighting === 'good')
+    && media.snapshot.model === 'ready' && media.snapshot.objectModel === 'ready'
+    && media.snapshot.faceCount === 1 && media.snapshot.phoneDetected === false
+    && media.snapshot.framing === 'good' && media.snapshot.lighting === 'good')
 
   const accept = useCallback((incoming: ProtectedExamSnapshot) => {
     const next = acceptExamSnapshot(latest.current, incoming)
@@ -127,11 +131,31 @@ export function ProtectedExamPage({ applicationId, language }: { applicationId: 
   }, [client])
 
   useEffect(() => {
+    const fullscreenElement = () => document.fullscreenElement
+      || (document as unknown as { webkitFullscreenElement?: Element }).webkitFullscreenElement
+    const updateFullscreen = () => {
+      if (fullscreenElement()) {
+        fullscreenEntered.current = true
+        setFullscreenLost(false)
+      } else if (fullscreenEntered.current && latest.current?.phase === 'active') {
+        setFullscreenLost(true)
+      }
+    }
+    document.addEventListener('fullscreenchange', updateFullscreen)
+    document.addEventListener('webkitfullscreenchange', updateFullscreen)
+    return () => {
+      document.removeEventListener('fullscreenchange', updateFullscreen)
+      document.removeEventListener('webkitfullscreenchange', updateFullscreen)
+    }
+  }, [])
+
+  useEffect(() => {
     if (attempt?.phase !== 'active' || !attempt.ownsLease || busy || error) return
     const reason = hidden ? 'visibility' : !media.snapshot.online ? 'network'
-      : !guided && media.snapshot.blockingReason ? media.snapshot.blockingReason === 'multiple-faces' ? 'multiple-faces' : 'camera' : null
+      : fullscreenLost ? 'fullscreen-exit'
+        : !guided && media.snapshot.blockingReason ? media.snapshot.blockingReason : null
     if (reason) void perform(() => client.pause(attempt, reason, hidden))
-  }, [attempt, busy, error, hidden, guided, media.snapshot.online, media.snapshot.blockingReason, client, perform])
+  }, [attempt, busy, error, hidden, fullscreenLost, guided, media.snapshot.online, media.snapshot.blockingReason, client, perform])
 
   useEffect(() => {
     if (attempt?.phase !== 'completed') return
@@ -146,8 +170,14 @@ export function ProtectedExamPage({ applicationId, language }: { applicationId: 
 
   const reconnect = () => {
     if (!cameraReady && attempt?.phase !== 'completed') return
-    void enterFullscreen()
     void perform(async () => {
+      await enterFullscreen()
+      const activeFullscreen = document.fullscreenElement
+        || (document as unknown as { webkitFullscreenElement?: Element }).webkitFullscreenElement
+      if (fullscreenEntered.current && !activeFullscreen) {
+        throw new ExamServiceError('fullscreen_required', 'Return to fullscreen before resuming this assessment.')
+      }
+      setFullscreenLost(false)
       let next = await client.connect(latest.current ?? await client.create())
       if (next.phase === 'completed') return next
       if (document.hidden) return next
@@ -212,6 +242,7 @@ export function ProtectedExamPage({ applicationId, language }: { applicationId: 
     window.speechSynthesis.speak(text)
   }
   const result = attempt?.result
+  const integritySummary = attempt?.integritySummary
   const reviewItem = review?.review[reviewIndex]
 
   return (
@@ -261,8 +292,14 @@ export function ProtectedExamPage({ applicationId, language }: { applicationId: 
             <div className="focused-obs-card"><div className="focused-obs-card__header"><ShieldCheck size={18} /><strong>{copy(language, 'Saved before you move on', 'आगे बढ़ने से पहले सुरक्षित')}</strong></div>
               <p className="focused-obs-card__body">{copy(language, 'This tab displays questions. The server controls the timer, locks each answer, and calculates your result.', 'यह टैब प्रश्न दिखाता है। समय, उत्तर लॉक करना और परिणाम की गणना सर्वर करता है।')}</p>
               <p className="focused-obs-card__body">{guided ? copy(language, 'Camera signals are simulated for this demonstration. Scoring and answer saving still use the real server.', 'इस डेमो में कैमरा संकेत सिम्युलेटेड हैं। अंक और उत्तर वास्तविक सर्वर पर सहेजे जाते हैं।') : copy(language, 'Camera analysis stays on this device. Camera observations do not decide your score.', 'कैमरा विश्लेषण इसी डिवाइस पर होता है। कैमरा संकेत आपके अंक तय नहीं करते।')}</p>
-              {!cameraReady && <p role="status">{copy(language, 'Please centre your face in the camera before continuing.', 'आगे बढ़ने से पहले कैमरे के सामने बैठें।')}</p>}
+              {!guided && <p className="focused-obs-card__body">{media.snapshot.phoneDetected ? copy(language, 'A phone remains visible. Move it out of camera view to continue.', 'फ़ोन कैमरे में दिख रहा है। आगे बढ़ने के लिए उसे कैमरे से बाहर रखें।') : copy(language, 'The local object model is checking that no phone remains in view.', 'स्थानीय ऑब्जेक्ट मॉडल जाँच रहा है कि कैमरे में कोई फ़ोन न दिखे।')}</p>}
+              {!cameraReady && <p role="status">{copy(language, 'Please centre your face and move any phone out of view before continuing.', 'आगे बढ़ने से पहले कैमरे के सामने बैठें और फ़ोन को कैमरे से बाहर रखें।')}</p>}
             </div>
+            {guided && <div className="focused-obs-card">
+              <strong>{copy(language, 'Judge-only phone check', 'केवल जज के लिए फ़ोन जाँच')}</strong>
+              <p className="focused-obs-card__body">{copy(language, 'Simulate a phone remaining in frame. The server pauses safely and stores it separately from real integrity evidence.', 'कैमरे में फ़ोन बने रहने का सिमुलेशन करें। सर्वर परीक्षा सुरक्षित रोकता है और इसे असली अखंडता रिकॉर्ड से अलग रखता है।')}</p>
+              <button className="button button--secondary button--compact" disabled={busy} onClick={() => void perform(() => client.pause(attempt!, 'phone', false, 'judge-simulation'))}>{copy(language, 'Simulate phone in frame', 'कैमरे में फ़ोन का सिमुलेशन')}</button>
+            </div>}
             <div className="focused-obs-card"><strong>{copy(language, 'Need to step away?', 'थोड़ी देर रुकना है?')}</strong><p className="focused-obs-card__body">{copy(language, 'A confirmed pause preserves your time for up to two minutes across this attempt. After that, the current question’s timer continues.', 'पुष्ट विराम इस प्रयास में कुल दो मिनट तक समय बचाता है। उसके बाद वर्तमान प्रश्न का समय फिर चलने लगता है।')}</p>
               <button className="button button--secondary button--compact" disabled={busy} onClick={() => void perform(() => client.pause(attempt!, 'exit'))}>{copy(language, 'Pause test', 'टेस्ट रोकें')}</button>
             </div>
@@ -286,14 +323,31 @@ export function ProtectedExamPage({ applicationId, language }: { applicationId: 
               <p className="protected-exam-score">{result.score} / {attempt!.totalQuestions} <span>{copy(language, `correct · Pass mark: ${attempt!.passMark}`, `सही · पास अंक: ${attempt!.passMark}`)}</span></p>
               <p>{copy(language, 'This is a prototype assessment, not an official licence. Identity checks and payment remain simulated. Judge shortcut results are never used here.', 'यह प्रोटोटाइप परीक्षा है, आधिकारिक लाइसेंस नहीं। पहचान जाँच और भुगतान सिम्युलेटेड हैं। जज शॉर्टकट के परिणाम यहाँ उपयोग नहीं होते।')}</p>
               <div className="protected-exam-metadata"><span>{copy(language, `Attempt ${attempt!.attemptNumber}`, `प्रयास ${attempt!.attemptNumber}`)}</span><span>{attempt!.fingerprint}</span><span>{copy(language, 'Server-graded', 'सर्वर द्वारा अंकित')}</span></div>
+              {integritySummary && <section className="protected-integrity-summary" aria-labelledby="protected-integrity-title">
+                <div className="protected-integrity-summary__heading">
+                  <div><p className="eyebrow">{copy(language, 'Explainable monitoring record', 'स्पष्ट निगरानी रिकॉर्ड')}</p><h2 id="protected-integrity-title">{integritySummary.status === 'review-recommended' ? copy(language, 'Human review recommended', 'मानव समीक्षा की सलाह') : integritySummary.status === 'observations-recorded' ? copy(language, 'Attention events recorded', 'ध्यान देने योग्य घटनाएँ दर्ज') : copy(language, 'No integrity review required', 'अखंडता समीक्षा आवश्यक नहीं')}</h2></div>
+                  <ShieldCheck size={24} aria-hidden="true" />
+                </div>
+                <p>{copy(language, 'Counts are based on browser-reported conditions and server timestamps. They do not change the knowledge score or automatically accuse the applicant.', 'गिनती ब्राउज़र से मिली स्थितियों और सर्वर समय पर आधारित है। इससे ज्ञान अंक नहीं बदलते और आवेदक पर अपने-आप आरोप नहीं लगता।')}</p>
+                <dl>
+                  <div><dt>{copy(language, 'Technical interruptions', 'तकनीकी रुकावटें')}</dt><dd>{integritySummary.technicalInterruptions}</dd></div>
+                  <div><dt>{copy(language, 'Attention events', 'ध्यान घटनाएँ')}</dt><dd>{integritySummary.attentionEvents}</dd></div>
+                  <div><dt>{copy(language, 'Integrity observations', 'अखंडता संकेत')}</dt><dd>{integritySummary.integrityObservations}</dd></div>
+                  <div><dt>{copy(language, 'Applicant pauses', 'आवेदक विराम')}</dt><dd>{integritySummary.manualPauses}</dd></div>
+                  <div><dt>{copy(language, 'Judge simulations', 'जज सिमुलेशन')}</dt><dd>{integritySummary.simulatedEvents}</dd></div>
+                </dl>
+              </section>}
               <div className="lf-actions"><button className="button button--primary" disabled={busy} onClick={() => void perform(async () => { const data = await client.review(attempt!); setReview(data); setReviewIndex(0); return data.attempt })}>{copy(language, 'Review answers and explanations', 'उत्तर और व्याख्या देखें')}<ArrowRight size={17} /></button><button className="button button--secondary" disabled={busy || attempt!.attemptNumber >= 5} onClick={() => { setAccepted(false); void perform(() => client.create(attempt!.attemptId)) }}><RefreshCcw size={17} />{copy(language, 'Try a new balanced paper', 'नया संतुलित प्रश्नपत्र आज़माएँ')}</button></div>
               <details className="protected-exam-audit"><summary>{copy(language, 'Exam activity recorded by the server', 'सर्वर पर दर्ज परीक्षा गतिविधि')}</summary><ol>{attempt!.events.map((event) => <li key={event.id}><time>{new Date(event.at).toLocaleTimeString(language === 'hi' ? 'hi-IN' : 'en-IN')}</time><span>{event.detail}</span></li>)}</ol></details>
             </> : <>
               <p className="eyebrow"><ShieldCheck size={17} />{copy(language, 'Server-controlled assessment', 'सर्वर-नियंत्रित परीक्षा')}</p>
               <h1 ref={heading} tabIndex={-1}>{attempt?.phase === 'paused' ? copy(language, 'Your test is paused', 'आपकी परीक्षा रुकी है') : needsConnection ? copy(language, 'Reconnect to your saved test', 'अपनी सहेजी परीक्षा से फिर जुड़ें') : attempt?.phase === 'waiting' ? copy(language, 'Checkpoint saved. Ready for the next question?', 'प्रगति सहेजी गई। अगले प्रश्न के लिए तैयार हैं?') : copy(language, 'Ready for your 15-question test?', '15 प्रश्नों की परीक्षा के लिए तैयार हैं?')}</h1>
               <p>{attempt ? copy(language, `${attempt.currentIndex} of 15 answers are confirmed by the server. We will check your remaining time before continuing.`, `15 में से ${attempt.currentIndex} उत्तर सर्वर पर पुष्ट हैं। आगे बढ़ने से पहले बचा समय जाँचा जाएगा।`) : copy(language, 'The server chooses a balanced paper, gives 30 seconds per question, and saves each answer before moving on. The pass mark is 9 of 15.', 'सर्वर संतुलित प्रश्नपत्र चुनता है, हर प्रश्न के लिए 30 सेकंड देता है और आगे बढ़ने से पहले उत्तर सहेजता है। पास होने के लिए 15 में से 9 अंक चाहिए।')}</p>
+              {attempt?.phase === 'paused' && attempt.pauseReason === 'phone' && <p className="protected-exam-notice">{attempt.integritySummary.lastSource === 'judge-simulation'
+                ? copy(language, 'Judge simulation complete: the test paused, the remaining time was preserved, and no real integrity observation was added.', 'जज सिमुलेशन पूरा हुआ: परीक्षा रुकी, बचा समय सुरक्षित रहा और कोई असली अखंडता संकेत नहीं जोड़ा गया।')
+                : copy(language, 'A phone-like object remained visible. Move it away, then reconnect. This observation does not change your score.', 'फ़ोन जैसी वस्तु कैमरे में दिखती रही। उसे हटाकर फिर जुड़ें। इस संकेत से आपके अंक नहीं बदलते।')}</p>}
               <p>{copy(language, 'One active tab per session. Pauses share a two-minute allowance; the whole attempt expires after 30 minutes. A network loss can pause time only once the server receives the pause request.', 'एक सत्र में एक सक्रिय टैब। सभी विरामों के लिए कुल दो मिनट मिलते हैं; पूरा प्रयास 30 मिनट बाद समाप्त होता है। इंटरनेट कटने पर समय तभी रुकता है जब सर्वर को विराम अनुरोध मिल जाए।')}</p>
-              {guided ? <p className="protected-exam-notice">{copy(language, 'Camera simulation is selected for this judge demo. No camera or microphone is opened; answer saving and scoring are genuinely server-controlled.', 'इस जज डेमो में कैमरा सिमुलेशन चुना गया है। कैमरा या माइक्रोफोन नहीं खुलता; उत्तर और अंक वास्तविक सर्वर पर नियंत्रित होते हैं।')}</p> : <div className="protected-exam-notice"><p>{cameraReady ? copy(language, 'Camera check ready. Analysis stays on this device.', 'कैमरा जाँच तैयार है। विश्लेषण इसी डिवाइस पर होता है।') : copy(language, 'Check your camera before opening a timed question.', 'समयबद्ध प्रश्न खोलने से पहले अपना कैमरा जाँचें।')}</p>{!cameraReady && <button className="button button--secondary" onClick={() => void media.start()} disabled={media.snapshot.camera === 'requesting' || media.snapshot.model === 'loading'}>{copy(language, 'Check camera and microphone', 'कैमरा और माइक्रोफोन जाँचें')}</button>}{media.snapshot.error && <p role="status">{media.snapshot.error}</p>}</div>}
+              {guided ? <p className="protected-exam-notice">{copy(language, 'Camera simulation is selected for this judge demo. No camera or microphone is opened; answer saving and scoring are genuinely server-controlled.', 'इस जज डेमो में कैमरा सिमुलेशन चुना गया है। कैमरा या माइक्रोफोन नहीं खुलता; उत्तर और अंक वास्तविक सर्वर पर नियंत्रित होते हैं।')}</p> : <div className="protected-exam-notice"><p>{cameraReady ? copy(language, 'Camera, face and phone checks are ready. Analysis stays on this device.', 'कैमरा, चेहरा और फ़ोन जाँच तैयार हैं। विश्लेषण इसी डिवाइस पर होता है।') : copy(language, 'Check your camera before opening a timed question.', 'समयबद्ध प्रश्न खोलने से पहले अपना कैमरा जाँचें।')}</p>{!cameraReady && <button className="button button--secondary" onClick={() => void media.start()} disabled={media.snapshot.camera === 'requesting' || media.snapshot.model === 'loading' || media.snapshot.objectModel === 'loading'}>{copy(language, 'Check camera and microphone', 'कैमरा और माइक्रोफोन जाँचें')}</button>}{media.snapshot.error && <p role="status">{media.snapshot.error}</p>}</div>}
               {!attempt && <label className="consent-box"><input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} /><span>{copy(language, 'I understand this is a prototype. My answers and result are saved in an anonymous server session that expires after seven days; no identity documents, video or audio are uploaded.', 'मैं समझता/समझती हूँ कि यह प्रोटोटाइप है। मेरे उत्तर और परिणाम बिना नाम के सर्वर सत्र में सहेजे जाते हैं, जो सात दिन बाद समाप्त होता है। पहचान दस्तावेज़, वीडियो या ऑडियो अपलोड नहीं होते।')}</span></label>}
               {language === 'hi' && <p>इस प्रश्न बैंक के प्रश्न अभी अंग्रेज़ी में हैं। परीक्षा के नियंत्रण और सहायता हिन्दी में उपलब्ध हैं।</p>}
               <div className="lf-actions"><button className="button button--primary" disabled={busy || hidden || !cameraReady || (!attempt && !accepted)} onClick={reconnect}>{busy ? copy(language, 'Connecting…', 'जुड़ रहा है…') : attempt ? copy(language, 'Reconnect and continue', 'फिर जुड़ें और जारी रखें') : copy(language, 'Start server-saved test', 'सर्वर पर सहेजी परीक्षा शुरू करें')}<ArrowRight size={17} /></button></div>

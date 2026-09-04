@@ -1,12 +1,12 @@
 # LicenceFlow — latest code and future roadmap
 
-**Last updated:** 2 September 2026
-**Status:** Round 2: first server-controlled assessment slice implemented; public release approved on 3 September; browser check remains owner-run
-**Immediate rule:** Focus only on cheat resistance, one feature at a time. Preserve the established judge journey. No phone model, whisper analysis, watermark trap or OS lockdown is being added in this slice. The YouTube tutorial remains unchanged.
+**Last updated:** 4 September 2026
+**Status:** Round 2: server-controlled assessment and first on-device phone-observation milestone implemented; browser check remains owner-run
+**Immediate rule:** Focus only on cheat resistance, one feature at a time. Preserve the established judge journey. Whisper analysis, watermark traps and OS lockdown remain outside this slice. The YouTube tutorial remains unchanged.
 
 ## Round 2 update — authoritative assessment first
 
-The previous plan to move questions, timers, answers and scoring to a server has now been implemented for a separate anonymous prototype assessment. It uses a server-only runtime bank, cryptographic paper/option selection, D1 transactions, idempotent answer retries, bounded pauses, a tab lease and server-locked post-test review. Judge sample questions and passing shortcuts remain a separate local simulation and cannot change protected results.
+The previous plan to move questions, timers, answers and scoring to a server has now been implemented for a separate anonymous prototype assessment. It uses a server-only runtime bank, cryptographic paper/option selection, D1 transactions, idempotent answer retries, bounded pauses, a tab lease and server-locked post-test review. A self-hosted on-device object model now observes sustained phone presence using the same coach-then-pause policy; its labelled judge simulation is stored separately from real evidence. Judge sample questions and passing shortcuts remain a separate local simulation and cannot change protected results.
 
 This replaces the Round 1 statements below that there is no exam server. It does **not** complete production applicant identity, official payment/entitlement, confidential question content, device attestation, server-verified camera evidence or secure native testing. The 50-question content is still present in repository history and earlier demo builds.
 

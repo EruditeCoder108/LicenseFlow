@@ -1,16 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { FaceLandmarker, NormalizedLandmark } from '@mediapipe/tasks-vision'
+import type { FaceLandmarker, NormalizedLandmark, ObjectDetector } from '@mediapipe/tasks-vision'
 import { decideMonitoringAction } from '../domain/monitoringDecision'
 
 const WASM_ROOT = '/assets/mediapipe/vision-wasm'
 const FACE_MODEL = '/assets/mediapipe/face_landmarker.task'
+const OBJECT_MODEL = '/assets/mediapipe/efficientdet_lite0_uint8.tflite'
+const OBJECT_DETECTION_INTERVAL_MS = 1_200
 
 export type MediaStatus = 'idle' | 'requesting' | 'ready' | 'denied' | 'error'
 export type ModelStatus = 'idle' | 'loading' | 'ready' | 'error'
 export type FramingStatus = 'idle' | 'good' | 'adjust'
 export type LightingStatus = 'idle' | 'good' | 'dim' | 'bright'
-export type MediaBlockingReason = 'no-face' | 'multiple-faces' | 'camera-stopped' | null
-export type MediaCoachingReason = 'no-face' | 'multiple-faces' | 'framing' | 'lighting' | null
+export type MediaBlockingReason = 'no-face' | 'multiple-faces' | 'phone' | 'camera-stopped' | null
+export type MediaCoachingReason = 'no-face' | 'multiple-faces' | 'phone' | 'framing' | 'lighting' | null
 export type HeadTurnStep = 'center_waiting' | 'turn_requested' | 'turning' | 'passed'
 export type HeadTurnDirection = 'left' | 'right'
 
@@ -20,7 +22,10 @@ export interface DeviceReadinessSnapshot {
   camera: MediaStatus
   microphone: MediaStatus
   model: ModelStatus
+  objectModel: ModelStatus
   faceCount: number | null
+  phoneDetected: boolean | null
+  phoneConfidence: number | null
   framing: FramingStatus
   lighting: LightingStatus
   brightness: number | null
@@ -35,6 +40,7 @@ export interface DeviceReadinessSnapshot {
   coachingReason: MediaCoachingReason
   blockingReason: MediaBlockingReason
   analysisLatencyMs: number | null
+  objectAnalysisLatencyMs: number | null
   error?: string
 }
 
@@ -44,7 +50,10 @@ const initialSnapshot: DeviceReadinessSnapshot = {
   camera: 'idle',
   microphone: 'idle',
   model: 'idle',
+  objectModel: 'idle',
   faceCount: null,
+  phoneDetected: null,
+  phoneConfidence: null,
   framing: 'idle',
   lighting: 'idle',
   brightness: null,
@@ -59,6 +68,7 @@ const initialSnapshot: DeviceReadinessSnapshot = {
   coachingReason: null,
   blockingReason: null,
   analysisLatencyMs: null,
+  objectAnalysisLatencyMs: null,
 }
 
 function testLocalStorage(): boolean {
@@ -177,6 +187,7 @@ export function useDeviceReadiness() {
   const videoRef = useRef<HTMLVideoElement | null>(null)
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const landmarkerRef = useRef<FaceLandmarker | null>(null)
+  const objectDetectorRef = useRef<ObjectDetector | null>(null)
   const audioContextRef = useRef<AudioContext | null>(null)
   const analyserRef = useRef<AnalyserNode | null>(null)
   const audioBufferRef = useRef<Float32Array<ArrayBuffer> | null>(null)
@@ -184,6 +195,11 @@ export function useDeviceReadiness() {
   const multipleFaceSinceRef = useRef<number | null>(null)
   const framingIssueSinceRef = useRef<number | null>(null)
   const lightingIssueSinceRef = useRef<number | null>(null)
+  const phoneSinceRef = useRef<number | null>(null)
+  const lastObjectAnalysisRef = useRef(0)
+  const phoneDetectedRef = useRef<boolean | null>(null)
+  const phoneConfidenceRef = useRef<number | null>(null)
+  const objectAnalysisLatencyRef = useRef<number | null>(null)
   const headTurnStepRef = useRef<HeadTurnStep>('center_waiting')
   const headTurnDirectionRef = useRef<HeadTurnDirection>('left')
   const centeredFramesRef = useRef<number>(0)
@@ -222,10 +238,21 @@ export function useDeviceReadiness() {
       // ignore
     }
     landmarkerRef.current = null
+    try {
+      objectDetectorRef.current?.close()
+    } catch {
+      // ignore
+    }
+    objectDetectorRef.current = null
     noFaceSinceRef.current = null
     multipleFaceSinceRef.current = null
     framingIssueSinceRef.current = null
     lightingIssueSinceRef.current = null
+    phoneSinceRef.current = null
+    lastObjectAnalysisRef.current = 0
+    phoneDetectedRef.current = null
+    phoneConfidenceRef.current = null
+    objectAnalysisLatencyRef.current = null
     headTurnStepRef.current = 'center_waiting'
     headTurnDirectionRef.current = Math.random() < 0.5 ? 'left' : 'right'
     centeredFramesRef.current = 0
@@ -245,6 +272,7 @@ export function useDeviceReadiness() {
       camera: 'requesting',
       microphone: 'requesting',
       model: 'loading',
+      objectModel: 'loading',
       online: navigator.onLine,
       storage,
       secureContext: window.isSecureContext,
@@ -256,6 +284,7 @@ export function useDeviceReadiness() {
         camera: 'error',
         microphone: 'error',
         model: 'error',
+        objectModel: 'error',
         error: 'Camera checks require HTTPS or localhost and a supported browser.',
       }))
       return
@@ -339,7 +368,7 @@ export function useDeviceReadiness() {
         microphone: audioTrack ? 'ready' : 'error',
       }))
 
-      const { FaceLandmarker, FilesetResolver } = await import('@mediapipe/tasks-vision')
+      const { FaceLandmarker, FilesetResolver, ObjectDetector } = await import('@mediapipe/tasks-vision')
       const fileset = await FilesetResolver.forVisionTasks(WASM_ROOT)
       const landmarker = await FaceLandmarker.createFromOptions(fileset, {
         baseOptions: { modelAssetPath: FACE_MODEL, delegate: 'CPU' },
@@ -360,6 +389,34 @@ export function useDeviceReadiness() {
       }
       landmarkerRef.current = landmarker
       setSnapshot((current) => ({ ...current, model: 'ready' }))
+
+      try {
+        const objectDetector = await ObjectDetector.createFromOptions(fileset, {
+          baseOptions: { modelAssetPath: OBJECT_MODEL, delegate: 'CPU' },
+          runningMode: 'VIDEO',
+          displayNamesLocale: 'en',
+          maxResults: 3,
+          scoreThreshold: 0.55,
+          categoryAllowlist: ['cell phone'],
+        })
+        if (!isCurrentGeneration()) {
+          try {
+            objectDetector.close()
+          } catch {
+            // ignore late MediaPipe teardown errors
+          }
+          return
+        }
+        objectDetectorRef.current = objectDetector
+        setSnapshot((current) => ({ ...current, objectModel: 'ready' }))
+      } catch {
+        if (!isCurrentGeneration()) return
+        setSnapshot((current) => ({
+          ...current,
+          objectModel: 'error',
+          error: 'Phone detection could not start. Retry before beginning the test.',
+        }))
+      }
     } catch (error) {
       if (!isCurrentGeneration()) return
       const permissionDenied =
@@ -369,6 +426,7 @@ export function useDeviceReadiness() {
         camera: permissionDenied ? 'denied' : current.camera === 'ready' ? 'ready' : 'error',
         microphone: permissionDenied ? 'denied' : current.microphone === 'ready' ? 'ready' : 'error',
         model: current.camera === 'ready' ? 'error' : current.model,
+        objectModel: current.camera === 'ready' ? 'error' : current.objectModel,
         error: permissionDenied
           ? 'Camera or microphone permission was not allowed. Nothing was recorded.'
           : 'The private camera analysis could not start. You can retry or use the labelled guided scenario.',
@@ -388,7 +446,10 @@ export function useDeviceReadiness() {
       camera: 'ready',
       microphone: 'ready',
       model: 'ready',
+      objectModel: 'ready',
       faceCount: 1,
+      phoneDetected: false,
+      phoneConfidence: null,
       framing: 'good',
       lighting: 'good',
       brightness: 128,
@@ -426,13 +487,14 @@ export function useDeviceReadiness() {
   }, [])
 
   useEffect(() => {
-    if (snapshot.model !== 'ready' || snapshot.guided) return
+    if (snapshot.model !== 'ready' || snapshot.objectModel !== 'ready' || snapshot.guided) return
 
     const timer = window.setInterval(() => {
       const video = videoRef.current
       const landmarker = landmarkerRef.current
+      const objectDetector = objectDetectorRef.current
       const canvas = canvasRef.current
-      if (!video || !landmarker || !canvas || video.readyState < 2) return
+      if (!video || !landmarker || !objectDetector || !canvas || video.readyState < 2) return
 
       try {
         const analysisStartedAt = performance.now()
@@ -445,6 +507,25 @@ export function useDeviceReadiness() {
         const onlyFace = result.faceLandmarks[0]
         const metrics = faceCount === 1 && onlyFace ? getFaceMetrics(onlyFace) : null
         const now = performance.now()
+
+        if (now - lastObjectAnalysisRef.current >= OBJECT_DETECTION_INTERVAL_MS) {
+          const objectAnalysisStartedAt = performance.now()
+          const objectResult = objectDetector.detectForVideo(video, objectAnalysisStartedAt)
+          objectAnalysisLatencyRef.current = performance.now() - objectAnalysisStartedAt
+          lastObjectAnalysisRef.current = now
+          const phoneConfidence = objectResult.detections.reduce((highest, detection) => {
+            const phoneCategory = detection.categories.find((category) => category.categoryName === 'cell phone')
+            return Math.max(highest, phoneCategory?.score ?? 0)
+          }, 0)
+          phoneDetectedRef.current = phoneConfidence >= 0.55
+          phoneConfidenceRef.current = phoneConfidence > 0 ? phoneConfidence : null
+        }
+
+        if (phoneDetectedRef.current) {
+          phoneSinceRef.current ??= now
+        } else {
+          phoneSinceRef.current = null
+        }
 
         if (faceCount === 0) {
           noFaceSinceRef.current ??= now
@@ -520,11 +601,14 @@ export function useDeviceReadiness() {
           multipleFacesMs: multipleFaceSinceRef.current ? now - multipleFaceSinceRef.current : 0,
           framingIssueMs: framingIssueSinceRef.current ? now - framingIssueSinceRef.current : 0,
           lightingIssueMs: lightingIssueSinceRef.current ? now - lightingIssueSinceRef.current : 0,
+          phoneMs: phoneSinceRef.current ? now - phoneSinceRef.current : 0,
         })
 
         setSnapshot((current) => ({
           ...current,
           faceCount,
+          phoneDetected: phoneDetectedRef.current,
+          phoneConfidence: phoneConfidenceRef.current,
           framing: metrics ? (metrics.framing ? 'good' : 'adjust') : 'idle',
           lighting,
           brightness,
@@ -536,6 +620,7 @@ export function useDeviceReadiness() {
           coachingReason,
           blockingReason,
           analysisLatencyMs,
+          objectAnalysisLatencyMs: objectAnalysisLatencyRef.current,
         }))
       } catch {
         setSnapshot((current) => ({
@@ -547,7 +632,7 @@ export function useDeviceReadiness() {
     }, 350)
 
     return () => window.clearInterval(timer)
-  }, [snapshot.guided, snapshot.model])
+  }, [snapshot.guided, snapshot.model, snapshot.objectModel])
 
   useEffect(() => {
     isMountedRef.current = true
@@ -562,7 +647,9 @@ export function useDeviceReadiness() {
       snapshot.camera === 'ready' &&
       snapshot.microphone === 'ready' &&
       snapshot.model === 'ready' &&
+      snapshot.objectModel === 'ready' &&
       snapshot.faceCount === 1 &&
+      snapshot.phoneDetected === false &&
       snapshot.framing === 'good' &&
       snapshot.lighting === 'good' &&
       snapshot.headTurnComplete &&

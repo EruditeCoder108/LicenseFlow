@@ -735,11 +735,15 @@ export function TestPage({ applicationId, onStageChange, language }: { applicati
       ? 'network-real'
       : reason === 'multiple-faces'
       ? 'multiple-faces'
+      : reason === 'phone'
+      ? 'phone'
       : 'camera'
     const detail = !media.snapshot.online
       ? 'The browser reported a real network loss.'
       : reason === 'multiple-faces'
       ? 'More than one face remained visible in the camera field.'
+      : reason === 'phone'
+      ? 'A phone remained visible in the camera field beyond the allowed grace period.'
       : 'The live camera signal could not verify one visible face.'
     const next = journeyReducer(state, { type: 'PAUSE_EXAM', kind, detail, synthetic: false })
     saveExamSession(applicationId, next)
@@ -767,12 +771,16 @@ export function TestPage({ applicationId, onStageChange, language }: { applicati
     : media.snapshot.camera === 'ready' &&
       media.snapshot.microphone === 'ready' &&
       media.snapshot.model === 'ready' &&
+      media.snapshot.objectModel === 'ready' &&
       media.snapshot.faceCount === 1 &&
+      media.snapshot.phoneDetected === false &&
       media.snapshot.framing === 'good' &&
       media.snapshot.online
   const needsCameraStart = !guided && !media.snapshot.started
 
-  const coaching = media.snapshot.coachingReason === 'multiple-faces'
+  const coaching = media.snapshot.coachingReason === 'phone'
+    ? { title: local(language, 'Move the phone out of view', 'फ़ोन को कैमरे से बाहर रखें'), body: local(language, 'Keep phones away from the camera during the test.', 'परीक्षा के दौरान फ़ोन को कैमरे से दूर रखें।') }
+    : media.snapshot.coachingReason === 'multiple-faces'
     ? { title: local(language, 'Only one person should be visible', 'कैमरे में सिर्फ एक व्यक्ति होना चाहिए'), body: local(language, 'Ask others to step away from the camera.', 'दूसरों को कैमरे से दूर जाने को कहें।') }
     : media.snapshot.coachingReason === 'no-face'
       ? { title: local(language, 'Please stay in camera view', 'कृपया कैमरे के सामने रहें'), body: local(language, 'Position your face inside the camera guide.', 'अपना चेहरा कैमरे के बीच में रखें।') }
@@ -1023,6 +1031,7 @@ function translatedInterruptionDetail(detail: string, language: Language): strin
   else if (detail.includes('page became hidden')) hindi = 'परीक्षा पेज छिप गया; नवीनतम सहेजा उत्तर सुरक्षित है।'
   else if (detail.includes('network loss')) hindi = 'ब्राउज़र ने वास्तविक नेटवर्क टूटने की सूचना दी।'
   else if (detail.includes('More than one face')) hindi = 'कैमरे में एक से अधिक चेहरे लगातार दिखाई दिए।'
+  else if (detail.includes('A phone remained')) hindi = 'कैमरे में फ़ोन तय समय से अधिक देर तक दिखाई दिया।'
   return local(language, detail, hindi)
 }
 
@@ -1045,7 +1054,7 @@ export function InterruptionPage({ applicationId, onStageChange, language }: { a
     )
   }
 
-  const integrity = state.exam.interruptionKind === 'multiple-faces'
+  const integrity = state.exam.interruptionKind === 'multiple-faces' || state.exam.interruptionKind === 'phone'
   const resume = async () => {
     await enterFullscreen()
     const next = journeyReducer(state, { type: 'RESUME_EXAM' })
@@ -1098,7 +1107,9 @@ export function InterruptionPage({ applicationId, onStageChange, language }: { a
               </p>
               <h1 tabIndex={-1}>
                 {integrity
-                  ? local(language, 'Multiple faces detected · Session paused safely', 'एक से अधिक चेहरे दिखे · सत्र सुरक्षित रूप से रुका')
+                  ? state.exam.interruptionKind === 'phone'
+                    ? local(language, 'Phone detected · Session paused safely', 'फ़ोन दिखा · सत्र सुरक्षित रूप से रुका')
+                    : local(language, 'Multiple faces detected · Session paused safely', 'एक से अधिक चेहरे दिखे · सत्र सुरक्षित रूप से रुका')
                   : local(language, 'The test paused safely without losing progress', 'आपकी प्रगति सुरक्षित रखकर परीक्षा रोकी गई')}
               </h1>
             </div>

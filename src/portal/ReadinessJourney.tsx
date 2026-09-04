@@ -127,6 +127,7 @@ function readinessError(language: Language, error: string) {
     'Camera or microphone permission was not allowed. Nothing was recorded.': 'कैमरा या माइक्रोफ़ोन की अनुमति नहीं मिली। कुछ भी रिकॉर्ड नहीं किया गया।',
     'The private camera analysis could not start. You can retry or use the labelled guided scenario.': 'कैमरा जाँच शुरू नहीं हो सकी। दोबारा कोशिश करें या डेमो सिमुलेशन का इस्तेमाल करें।',
     'Face analysis stopped unexpectedly. Retry the device check.': 'चेहरा पहचान अचानक रुक गई। डिवाइस जाँच दोबारा करें।',
+    'Phone detection could not start. Retry before beginning the test.': 'फ़ोन की जाँच शुरू नहीं हो सकी। टेस्ट शुरू करने से पहले दोबारा कोशिश करें।',
   }
   return local(language, error, translations[error] ?? error)
 }
@@ -185,7 +186,7 @@ export function DeviceReadinessPage({ language, applicationId, onStageChange }: 
         <div>
           <p className="eyebrow">{local(language, 'Before payment · device check', 'भुगतान से पहले · डिवाइस जाँच')}</p>
           <h1 tabIndex={-1}>{local(language, 'Check your device before you pay', 'भुगतान से पहले अपने डिवाइस की जाँच करें')}</h1>
-          <p>{local(language, 'We check your camera, microphone, lighting, framing, storage and internet connection before you pay any fee.', 'हम शुल्क से पहले आपके कैमरे, माइक्रोफ़ोन, रोशनी, फ्रेमिंग, मेमोरी और इंटरनेट की जाँच करते हैं।')}</p>
+          <p>{local(language, 'We check your camera, microphone, lighting, framing, phone visibility, storage and internet connection before you pay any fee.', 'हम शुल्क से पहले आपके कैमरे, माइक्रोफ़ोन, रोशनी, फ्रेमिंग, फ़ोन की दृश्यता, मेमोरी और इंटरनेट की जाँच करते हैं।')}</p>
         </div>
       </section>
       {!snapshot.started ? (
@@ -198,7 +199,7 @@ export function DeviceReadinessPage({ language, applicationId, onStageChange }: 
                   <div>
                     <p className="eyebrow">{local(language, 'Privacy & Security Guarantee', 'गोपनीयता और सुरक्षा गारंटी')}</p>
                     <h2>{local(language, 'Private & on-device only analysis', 'निजी और केवल डिवाइस पर विश्लेषण')}</h2>
-                    <p>{local(language, 'All biometric and camera checks run entirely inside your browser using local AI vision models. No audio or video is ever recorded, stored, or uploaded to any server.', 'सभी बायोमेट्रिक और कैमरा जाँच आपके ब्राउज़र में स्थानीय AI विज़न मॉडल द्वारा की जाती हैं। कोई भी ऑडियो या वीडियो रिकॉर्ड या अपलोड नहीं किया जाता।')}</p>
+                    <p>{local(language, 'Face and object checks run entirely inside your browser using local AI vision models. No audio or video is ever recorded, stored, or uploaded to any server.', 'चेहरे और वस्तु की जाँच आपके ब्राउज़र में स्थानीय AI विज़न मॉडल द्वारा की जाती है। कोई भी ऑडियो या वीडियो रिकॉर्ड या अपलोड नहीं किया जाता।')}</p>
                   </div>
                 </div>
                 <div className="lf-permission-grid">
@@ -456,10 +457,22 @@ export function DeviceReadinessPage({ language, applicationId, onStageChange }: 
                   tone={statusFor(snapshot.faceCount === 1, snapshot.model === 'loading')}
                 />
                 <CheckRow
-                  icon={<Smartphone size={19} />}
+                  icon={<MonitorCheck size={19} />}
                   label={local(language, 'Position', 'स्थिति')}
                   detail={snapshot.guided ? local(language, 'Position looks good', 'स्थिति सही है') : snapshot.framing === 'good' ? local(language, 'Position looks good', 'स्थिति सही है') : local(language, 'Move face to the centre', 'चेहरा बीच में लाएँ')}
                   tone={statusFor(snapshot.framing === 'good')}
+                />
+                <CheckRow
+                  icon={<Smartphone size={19} />}
+                  label={local(language, 'Phone in camera', 'कैमरे में फ़ोन')}
+                  detail={snapshot.guided
+                    ? local(language, 'No phone detected', 'कोई फ़ोन नहीं मिला')
+                    : snapshot.objectModel === 'loading' || snapshot.phoneDetected === null
+                    ? local(language, 'Loading phone detector', 'फ़ोन की जाँच तैयार हो रही है')
+                    : snapshot.phoneDetected
+                    ? local(language, 'Phone detected — move it out of view', 'फ़ोन मिला — उसे कैमरे से बाहर रखें')
+                    : local(language, 'No phone detected', 'कोई फ़ोन नहीं मिला')}
+                  tone={statusFor(snapshot.phoneDetected === false, snapshot.objectModel === 'loading')}
                 />
                 <CheckRow
                   icon={<SunMedium size={19} />}

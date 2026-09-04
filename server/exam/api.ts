@@ -1,11 +1,12 @@
 import { EXAM_RULES, sha256 } from './paper'
 import { clock, ExamError, newState, publicSnapshot, recordAnswer, requireLease, settleTime, type AttemptRow, type ExamState } from './state'
 import { createExamStore, type CommandReceipt, type ExamDatabase, type ExamStore } from './store'
-import type { ProtectedExamEvent, ProtectedPauseReason } from '../../src/portal/protectedExamTypes'
+import type { ProtectedExamEvent, ProtectedObservationSource, ProtectedPauseReason } from '../../src/portal/protectedExamTypes'
+import { pauseEventDetail, recordIntegrityEvent } from '../../src/domain/integrityPolicy'
 
 const UUID = /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i
 const APPLICATION = /^MP-LL-[A-Z0-9-]{4,32}$/
-const REASONS = new Set<ProtectedPauseReason>(['network', 'visibility', 'camera', 'multiple-faces', 'exit'])
+const REASONS = new Set<ProtectedPauseReason>(['network', 'visibility', 'camera', 'camera-stopped', 'no-face', 'multiple-faces', 'phone', 'fullscreen-exit', 'exit'])
 type Body = Record<string, unknown>
 const json = (body: unknown, status = 200, headers: Record<string, string> = {}) => new Response(JSON.stringify(body), {
   status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff', ...headers },
@@ -77,7 +78,7 @@ async function mutate(store: ExamStore, original: AttemptRow, action: string, bo
   const requestId = action === 'heartbeat' ? null : id(body.requestId, 'Request identifier')
   // An answer may be retried by a replacement tab after reload. The semantic
   // command is unchanged; the new tab still needs a lease for any first write.
-  const signature = requestId ? await sha256(JSON.stringify([action, action === 'answers' ? null : clientId, body.questionToken ?? null, body.optionIndex ?? null, body.reason ?? null])) : ''
+  const signature = requestId ? await sha256(JSON.stringify([action, action === 'answers' ? null : clientId, body.questionToken ?? null, body.optionIndex ?? null, body.reason ?? null, body.source ?? null])) : ''
   let row = original
   for (let tries = 0; tries < 6; tries++) {
     if (requestId) {
@@ -125,14 +126,19 @@ async function mutate(store: ExamStore, original: AttemptRow, action: string, bo
         audit = event('ANSWER_LOCKED', at, `Question ${state.index} answer committed before navigation.`)
       } else if (action === 'pause') {
         const reason = body.reason as ProtectedPauseReason
+        const source = (body.source ?? 'live') as ProtectedObservationSource
         if (!REASONS.has(reason)) throw new ExamError('invalid_reason', 'Pause reason is invalid.', 400)
+        if (!['live', 'judge-simulation'].includes(source) || (source === 'judge-simulation' && reason !== 'phone')) {
+          throw new ExamError('invalid_source', 'Observation source is invalid.', 400)
+        }
         if (state.phase === 'active') {
           state.remainingMs = Math.max(0, state.deadlineAt! - at)
           state.deadlineAt = null
           state.phase = 'paused'
           state.pauseStartedAt = at
           state.pauseReason = reason
-          audit = event('PAUSED', at, `Client reported ${reason}. Server preserved remaining time; no cheating verdict.`)
+          state.integritySummary = recordIntegrityEvent(state.integritySummary, reason, source)
+          audit = event('PAUSED', at, pauseEventDetail(reason, source))
         }
         // Closing a tab leaves a recoverable attempt, not a lease that traps its owner.
         next.lease_client = null
@@ -250,7 +256,7 @@ export async function handleExamRequest(request: Request, env: { DB?: ExamDataba
       })) })
     }
     if (request.method !== 'POST' || match[2] === 'result') return json({ code: 'method_not_allowed', error: 'Method not allowed.' }, 405)
-    fields(body, match[2] === 'answers' ? ['clientId', 'requestId', 'questionToken', 'optionIndex'] : match[2] === 'pause' ? ['clientId', 'requestId', 'reason'] : match[2] === 'heartbeat' ? ['clientId'] : ['clientId', 'requestId'])
+    fields(body, match[2] === 'answers' ? ['clientId', 'requestId', 'questionToken', 'optionIndex'] : match[2] === 'pause' ? ['clientId', 'requestId', 'reason', 'source'] : match[2] === 'heartbeat' ? ['clientId'] : ['clientId', 'requestId'])
     return await mutate(store, row, match[2]!, body, now, access?.command_signature ? { signature: access.command_signature } : null)
   } catch (error) {
     if (error instanceof ExamError) return json({ code: error.code, error: error.message }, error.status, error.retryAfter ? { 'Retry-After': String(error.retryAfter) } : {})

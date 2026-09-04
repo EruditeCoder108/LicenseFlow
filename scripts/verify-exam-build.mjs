@@ -21,7 +21,7 @@ assert.equal(typeof worker.fetch, 'function')
 const workerFiles = readdirSync('dist/server', { withFileTypes: true })
 assert(workerFiles.every((entry) => entry.isFile() && entry.name.endsWith('.js')), 'Public assets must not be copied into the Worker package')
 assert(workerFiles.reduce((bytes, entry) => bytes + statSync(`dist/server/${entry.name}`).size, 0) < 1024 * 1024, 'Worker code exceeded the 1 MiB release budget')
-for (const asset of ['face_landmarker.task', 'vision-wasm/vision_wasm_internal.wasm', 'vision-wasm/vision_wasm_nosimd_internal.wasm']) {
+for (const asset of ['face_landmarker.task', 'efficientdet_lite0_uint8.tflite', 'vision-wasm/vision_wasm_internal.wasm', 'vision-wasm/vision_wasm_nosimd_internal.wasm']) {
   const path = `assets/mediapipe/${asset}`
   assert.equal(statSync(`dist/client/${path}`).size, statSync(`public/${path}`).size, `Static camera asset is missing or incomplete: ${asset}`)
 }

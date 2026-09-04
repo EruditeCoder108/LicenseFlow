@@ -1,4 +1,5 @@
 import type { ProtectedExamEvent, ProtectedExamSnapshot, ProtectedPauseReason, ProtectedPhase } from '../../src/portal/protectedExamTypes'
+import { EMPTY_INTEGRITY_SUMMARY, normalizeIntegritySummary } from '../../src/domain/integrityPolicy'
 import { createPaper, EXAM_RULES, sha256, type FrozenQuestion } from './paper'
 
 export interface StoredAnswer { index: number; selected: number; correct: boolean; timedOut: boolean; at: number }
@@ -14,6 +15,7 @@ export interface ExamState {
   pauseStartedAt: number | null
   pauseUsedMs: number
   pauseReason: ProtectedPauseReason | null
+  integritySummary: ReturnType<typeof normalizeIntegritySummary>
   startedAt: number | null
   completedAt: number | null
   completionReason: 'answered' | 'expired'
@@ -43,7 +45,7 @@ export async function newState(now: number, previous: FrozenQuestion[] = []): Pr
     rules: EXAM_RULES, phase: 'ready', paper,
     fingerprint: `LF-S-${(await sha256(JSON.stringify(paper))).slice(0, 16).toUpperCase()}`,
     index: 0, answers: [], deadlineAt: null, remainingMs: null, pauseStartedAt: null,
-    pauseUsedMs: 0, pauseReason: null, startedAt: null, completedAt: null,
+    pauseUsedMs: 0, pauseReason: null, integritySummary: { ...EMPTY_INTEGRITY_SUMMARY }, startedAt: null, completedAt: null,
     completionReason: 'answered', lastClock: now,
   }
 }
@@ -102,7 +104,7 @@ export function publicSnapshot(row: AttemptRow, state: ExamState, clientId: stri
       ? Math.max(0, (state.remainingMs ?? 0) - Math.max(0, now - state.pauseStartedAt - Math.max(0, state.rules.pauseBudgetMs - state.pauseUsedMs)))
       : state.remainingMs,
     pauseBudgetRemainingMs: Math.max(0, state.rules.pauseBudgetMs - state.pauseUsedMs - (state.pauseStartedAt === null ? 0 : now - state.pauseStartedAt)),
-    pauseReason: state.pauseReason, leaseExpiresAt: row.lease_until, ownsLease,
+    pauseReason: state.pauseReason, integritySummary: normalizeIntegritySummary(state.integritySummary), leaseExpiresAt: row.lease_until, ownsLease,
     // Explicit allowlist: never spread a private question into an API response.
     question: current ? { token: current.token, index: state.index, prompt: current.prompt, promptHi: current.promptHi, options: current.options, optionsHi: current.optionsHi } : null,
     result: state.phase === 'completed' ? {

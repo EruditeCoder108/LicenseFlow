@@ -233,6 +233,49 @@ describe('server clocks and a single active tab', () => {
     expect(second.data.attempt.pauseBudgetRemainingMs).toBe(0)
   })
 
+  it('keeps an explainable server summary of technical, attention and integrity events', async () => {
+    const user = client()
+    let attempt = await user.start()
+
+    const pauseAndResume = async (reason: string) => {
+      attempt = (await user.action(attempt, 'pause', { reason })).data.attempt
+      attempt = (await user.action(attempt, 'claim')).data.attempt
+      attempt = (await user.action(attempt, 'resume')).data.attempt
+    }
+
+    await pauseAndResume('network')
+    await pauseAndResume('visibility')
+    await pauseAndResume('no-face')
+    await pauseAndResume('multiple-faces')
+    expect(attempt.integritySummary).toEqual({
+      technicalInterruptions: 1,
+      attentionEvents: 2,
+      integrityObservations: 1,
+      manualPauses: 0,
+      simulatedEvents: 0,
+      status: 'review-recommended',
+      lastReason: 'multiple-faces',
+      lastSource: 'live',
+    })
+    const details = database.sqlite.prepare("SELECT detail FROM exam_events WHERE kind = 'PAUSED' ORDER BY rowid").all() as { detail: string }[]
+    expect(details).toHaveLength(4)
+    expect(details.every((row) => row.detail.includes('not an automatic cheating verdict'))).toBe(true)
+  })
+
+  it('stores a judge phone simulation separately from real integrity evidence', async () => {
+    const user = client()
+    let attempt = await user.start()
+    attempt = (await user.action(attempt, 'pause', { reason: 'phone', source: 'judge-simulation' })).data.attempt
+    expect(attempt.integritySummary).toMatchObject({
+      simulatedEvents: 1,
+      integrityObservations: 0,
+      status: 'clear',
+      lastSource: 'judge-simulation',
+    })
+    const detail = database.sqlite.prepare("SELECT detail FROM exam_events WHERE kind = 'PAUSED' ORDER BY rowid DESC").get() as { detail: string }
+    expect(detail.detail).toContain('stored this separately')
+  })
+
   it('expires an abandoned pause and eventually closes the attempt, preserving existing answers', async () => {
     const user = client(), attempt = await user.start()
     await user.action(attempt, 'answers', { questionToken: attempt.question!.token, optionIndex: 0 })

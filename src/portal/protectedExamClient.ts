@@ -1,4 +1,4 @@
-import type { ProtectedExamReview, ProtectedExamSnapshot, ProtectedPauseReason } from './protectedExamTypes'
+import type { ProtectedExamReview, ProtectedExamSnapshot, ProtectedObservationSource, ProtectedPauseReason } from './protectedExamTypes'
 
 type AnswerCommand = { attemptId: string; requestId: string; questionToken: string; optionIndex: number }
 type Envelope = { attempt: ProtectedExamSnapshot | null }
@@ -93,7 +93,9 @@ export class ProtectedExamClient {
   }
   open(attempt: ProtectedExamSnapshot) { return this.action(attempt, 'question') }
   resume(attempt: ProtectedExamSnapshot) { return this.action(attempt, 'resume') }
-  pause(attempt: ProtectedExamSnapshot, reason: ProtectedPauseReason, keepalive = false) { return this.action(attempt, 'pause', { reason }, keepalive) }
+  pause(attempt: ProtectedExamSnapshot, reason: ProtectedPauseReason, keepalive = false, source: ProtectedObservationSource = 'live') {
+    return this.action(attempt, 'pause', { reason, ...(source === 'live' ? {} : { source }) }, keepalive)
+  }
   review(attempt: ProtectedExamSnapshot) { return this.transport<ProtectedExamReview>(`/attempts/${attempt.attemptId}/result`) }
 }
 

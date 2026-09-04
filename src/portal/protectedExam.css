@@ -20,6 +20,15 @@
 .protected-exam-score span { display: block; font-size: 16px; font-weight: 400; }
 .protected-exam-metadata { display: flex; flex-wrap: wrap; gap: 10px; }
 .protected-exam-metadata span { background: #eef4fb; border-radius: 8px; padding: 8px 12px; }
+.protected-integrity-summary { margin-top: 22px; padding: 18px; border: 1px solid #c5d9ef; border-radius: 12px; background: #f7fbff; }
+.protected-integrity-summary__heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; color: #075a9c; }
+.protected-integrity-summary__heading .eyebrow { margin: 0 0 5px; font-size: 12px; }
+.protected-integrity-summary h2 { margin: 0; color: #071a34; font-size: 20px; }
+.protected-integrity-summary > p { margin: 10px 0 15px; color: #43566e; }
+.protected-integrity-summary dl { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin: 0; }
+.protected-integrity-summary dl div { padding: 12px; border: 1px solid #d7e3ef; border-radius: 9px; background: #fff; }
+.protected-integrity-summary dt { color: #43566e; font-size: 12px; line-height: 1.35; }
+.protected-integrity-summary dd { margin: 5px 0 0; color: #071a34; font-size: 24px; font-weight: 700; }
 .protected-exam-footnote { font-size: 14px; color: #43566e; margin-top: 24px; }
 .protected-exam-audit { margin-top: 24px; }
 .protected-exam-audit summary { padding: 12px 0; cursor: pointer; }
@@ -52,4 +61,5 @@
   .protected-exam-panel .button { width: 100%; }
   .protected-exam-preview { gap: 4px; }
   .protected-exam-preview small { font-size: 11px; flex-basis: 100%; }
+  .protected-integrity-summary dl { grid-template-columns: 1fr 1fr; }
 }

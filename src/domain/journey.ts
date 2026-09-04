@@ -23,6 +23,7 @@ export type InterruptionKind =
   | 'visibility'
   | 'camera'
   | 'multiple-faces'
+  | 'phone'
 
 export type EventKind =
   | 'JOURNEY_STARTED'
@@ -468,14 +469,14 @@ export function journeyReducer(
           secondsRemaining,
           questionDeadlineAt: undefined,
           integrityStatus:
-            action.kind === 'multiple-faces'
+            action.kind === 'multiple-faces' || action.kind === 'phone'
               ? 'observation-recorded'
               : 'technical-event-recovered',
         },
         events: appendEvent(
           state,
           'TEST_PAUSED',
-          action.kind === 'multiple-faces' ? 'Integrity observation paused the test' : 'Technical interruption paused the test',
+          action.kind === 'multiple-faces' || action.kind === 'phone' ? 'Integrity observation paused the test' : 'Technical interruption paused the test',
           action.detail,
           action.synthetic,
         ),

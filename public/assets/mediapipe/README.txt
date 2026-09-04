@@ -10,8 +10,16 @@ Model:
 - Name: MediaPipe Face Landmarker, float16 bundle, revision 1
 - Source: https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task
 
+Object model:
+- Name: EfficientDet-Lite0, uint8
+- Source: https://storage.googleapis.com/mediapipe-tasks/object_detector/efficientdet_lite0_uint8.tflite
+- Use: the general COCO detector is filtered to the "cell phone" category. Inference
+  stays in the browser, is throttled to reduce main-thread load, and produces an
+  observation rather than an automatic cheating verdict.
+
 SHA-256 checksums:
 - face_landmarker.task: 64184E229B263107BC2B804C6625DB1341FF2BB731874B0BCC2FE6544E0BC9FF
+- efficientdet_lite0_uint8.tflite: 2E04C53BFEAC0AC2A30C057C7E2A777594CE39BAAAC35A92F74FB1E8C4FC4E0B
 - vision_wasm_internal.js: E170EE67DD4E16C1A6FCD8840A206687E5A59B22C20E4A902BC445B095454D73
 - vision_wasm_internal.wasm: 8DA277A733926EACD0474B8704B36742D6EC3231C57A860C5B889DFF8F1DF886
 - vision_wasm_nosimd_internal.js: E81D715A3D42CC3373602EB2F7AFF795D164934DB680E32496B65DAB537F9658

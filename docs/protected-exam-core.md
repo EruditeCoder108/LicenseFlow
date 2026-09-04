@@ -1,6 +1,6 @@
 # Server-controlled assessment — first cheat-resistance slice
 
-Implemented on 2 September 2026; the owner approved public release on 3 September and will perform the human browser check personally. This document describes source behavior; successful deployment, rather than this document alone, confirms availability on the public Site.
+Implemented on 2 September 2026 and extended with an explainable integrity-event summary and on-device phone observation on 4 September 2026. The owner will perform the human browser check personally. This document describes source behavior; successful deployment, rather than this document alone, confirms availability on the public Site.
 
 ## What changed
 
@@ -16,9 +16,10 @@ The protected assessment has its own Worker endpoints, D1 tables and UI. The bro
 | Lost save response | Retry the exact command; it cannot create a second answer or apply an old token to another question |
 | Next question | Saving finishes in a `waiting` state. Only a separate question request starts the next timer, so a lost **save** response cannot spend time on an unseen next question |
 | Interruption | Confirmed pause preserves time within a two-minute cumulative allowance; excess pause duration consumes the current question's remaining time |
+| Integrity evidence | Sustained face/phone rules, tab visibility and fullscreen exits create categorized, server-timestamped events; the result keeps technical, attention, integrity, manual-pause and judge-simulation counts separate |
 | Concurrent tabs | One open attempt per anonymous session, one renewable 15-second tab lease; expiry permits reconnection without renewing the question timer |
 | Result | Server grades from its frozen marking key; review is owner-scoped and locked until completion |
-| Judge mode | Public sample fixtures and local scoring only; there is no server judge-pass route or request flag |
+| Judge mode | Public sample fixtures and local scoring only; there is no server judge-pass route. A labelled phone-event simulation exercises a real server pause but is stored outside real integrity evidence |
 
 ## Trust boundary
 
@@ -55,14 +56,18 @@ Answers are immutable once committed. The public result has no legal effect. A l
 - A slow save shows a reminder not to resubmit. Background heartbeat responses cannot replace the question while a foreground action is in progress. Failed next-question loading preserves the acknowledged checkpoint for recovery.
 - Session validation, owner-scoped attempt lookup and the existing command receipt are read together. An ordinary non-final answer, next-question open or heartbeat uses two database round trips: one read and one atomic write batch. Tests enforce that budget; it is not a claim about measured public-network latency. Contention retries, expiry and completed results may need additional calls.
 - Audit events are still written transactionally. Active snapshots omit history; the completed result retrieves it for review.
+- The monitoring rulebook distinguishes four categories: connection or stopped-camera failures are **technical**; sustained no-face, a hidden tab or exiting an entered fullscreen session are **attention** events; sustained multiple faces or a phone are **integrity observations**; and an applicant-requested pause is **manual**. An integrity observation recommends human review but never alters the knowledge score or becomes an automatic cheating verdict.
+- The camera applies temporal grace periods before acting: brief detector noise is ignored, guidance appears first, and only sustained no-face, multiple-face or phone conditions pause the assessment. The browser reports only the reason; the server supplies the event timestamp and categorized count. No image, video, audio or biometric template is added to the request.
+- A self-hosted EfficientDet-Lite0 model checks only the COCO `cell phone` category. It runs in the browser about once every 1.2 seconds, while face analysis keeps its existing cadence. Phone guidance begins after 1.2 seconds and a pause after 3 seconds. This is object detection, not device identity or proof of cheating. The official model source and SHA-256 are recorded in `public/assets/mediapipe/README.txt`.
+- **Simulate phone in frame** is available only in guided mode and while a protected question is active. It calls the real pause endpoint, preserves time and creates a server event, but its `judge-simulation` source increments a separate counter and cannot recommend review.
 - **Skip to result preview · judges** pauses and releases this tab’s server attempt before opening the existing local simulated result and demo-licence view. If a required pause fails, the shortcut does not silently proceed. No synthetic answer or pass is submitted to the server. The preview is labelled and links back to the full test; the existing pause allowance and attempt expiry still apply.
 
 ### What this does not yet solve
 
 - This is not a private content vault: the repository, its history and earlier published demo bundles contain the original question material. The new **runtime browser bundle** excludes the protected bank; a real confidential assessment would need unpublished content and its own access policy.
 - A candidate controlling their browser can still copy a visible question, falsify browser observations or reuse a client identifier. The lease prevents ordinary competing-tab writes; it is not physical-device attestation.
-- Camera signals are client-reported context, not server-verified liveness or identity. The existing guided camera simulation can demonstrate real server grading without opening hardware, and is labelled accordingly.
-- Phone/object detection, face-cover improvements, depth/liveness experiments, audio analysis, OS lockdown, signed result credentials, authenticated applicant admission, administrator review, and abuse controls across identities remain future work.
+- Camera and fullscreen signals are client-reported context, not server-verified device attestation, liveness or identity. The existing guided camera simulation can demonstrate real server grading without opening hardware, and is labelled accordingly.
+- Face-cover improvements, depth/liveness experiments, audio analysis, OS lockdown, signed result credentials, authenticated applicant admission, administrator review, and abuse controls across identities remain future work.
 - No online model, facial recognition, microphone transcription or prompt-injection watermark was added.
 - The protected bank currently contains English questions. The navigation/help controls support English and Hindi; the entry screen explicitly tells Hindi users about the question-language limitation.
 
@@ -75,6 +80,7 @@ Answers are immutable once committed. The public result has no legal effect. A l
 - `db/schema.ts`, `drizzle.config.ts`, `drizzle/*protected_exam_core.sql`: generated schema migration. The pre-existing `0000_reliability.sql` remains unchanged and outside the new Drizzle snapshot.
 - `src/portal/protectedExamClient.ts`: network boundary and pending-answer retry, with no local scoring fallback.
 - `src/portal/ProtectedExamPage.tsx`: current question, recovery, server result and separate review, reusing the existing assessment shell.
+- `src/domain/integrityPolicy.ts`: one shared classification rulebook and privacy-safe event descriptions for the browser/server boundary.
 - `src/portal/ProtectedExamStatus.tsx`: owner-scoped server progress on the application-status screen, separate from the walkthrough tracker.
 - `server/dev/`: local Node SQLite adapter; never bundled into the production Worker. Both dev and built-preview servers use the real API handlers.
 - `scripts/verify-exam-build.mjs`: verifies the packaged Worker and checks static output for protected bank leakage.
@@ -98,7 +104,7 @@ The Worker build disables Vite's public-directory copying: MediaPipe models, Web
 
 The migration tooling has a targeted override of `@esbuild-kit/core-utils`'s transitive esbuild to 0.25.12, removing GHSA-67mh-4wv8-2f99 from its older dependency chain. Migration generation and the build are verified with that override; no forced downgrade of Drizzle is used.
 
-Automated checks include owner isolation, blocked score/time/bypass inputs, early review rejection, concurrent duplicate and conflicting answers, rollback on SQL failure, reload leases, stale question tokens, cumulative pause budgets, full expiry, retest balance, completion grading, session cleanup, lost responses after reload, stale response ordering and unavailable storage. They use migrated SQLite and the actual API, not a pretend always-successful grading function.
+Automated checks include owner isolation, blocked score/time/bypass inputs, early review rejection, concurrent duplicate and conflicting answers, rollback on SQL failure, reload leases, stale question tokens, cumulative pause budgets, categorized integrity summaries, full expiry, retest balance, completion grading, session cleanup, lost responses after reload, stale response ordering and unavailable storage. They use migrated SQLite and the actual API, not a pretend always-successful grading function.
 
 ## Human browser check — owner requested
 
@@ -113,6 +119,7 @@ No browser automation or visual QA was run for this change; the owner asked to p
 7. Check the old Raahi walkthrough: demo fills, simulated camera, recovery preview, passing-result preview and demonstration downloads should still work separately.
 8. Check phone width and Hindi controls. The protected English-question notice should be visible in Hindi, not a silent translation claim.
 9. Try **Skip to result preview · judges** during a question. The result must say its score is simulated. **Return to full test** should return to the original server checkpoint, not a server-graded pass. Confirm that the footer and answer options remain reachable on a small screen.
+10. In a live-camera run, briefly move out of frame and return: it should guide before pausing. Sustain no-face, show a second face, or hold a phone in frame long enough to pause; then finish and confirm the result summary categorizes the event without changing the score. In guided mode, use **Simulate phone in frame** and confirm the paused screen and result count it only as a judge simulation. Once fullscreen has been entered, exit it and confirm the attempt pauses with an attention event rather than silently continuing.
 
 Older local judge papers are archived under their original storage prefix when their question IDs are retired. The sample test then restarts with an explanatory notice; form, mock payment and tutorial progress remain unchanged. Old answers are never attached to new questions and misgraded.
 
