@@ -519,7 +519,7 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
           <span><strong>{local(language, 'Full test', 'पूरी परीक्षा')}</strong><small>{local(language, 'The server chooses the paper, saves answers and calculates the score. Camera remains simulated for this demo.', 'सर्वर प्रश्नपत्र चुनता है, उत्तर सहेजता है और अंक गणना करता है। इस डेमो में कैमरा सिम्युलेटेड रहता है।')}</small></span>
         </label>
       </fieldset> : <div className="reference-banner"><ShieldCheck size={20} /><p>{local(language, 'Full test: answers, timing and scoring are controlled by the server. Your camera check runs on this device.', 'पूरी परीक्षा: उत्तर, समय और अंक सर्वर नियंत्रित करता है। कैमरा जाँच इसी डिवाइस पर चलती है।')}</p></div>}
-      <section className="test-instruction-grid">
+      <section className="test-instruction-grid" aria-label={local(language, 'Test summary', 'टेस्ट सारांश')}>
         <article>
           <span><FileText size={21} /></span>
           <div>
@@ -582,40 +582,42 @@ export function TestEntryPage({ applicationId, onStageChange, language }: { appl
           </p>
         </div>
       </div>
-      <div className="test-declaration">
-        <Info size={20} />
-        <p>{local(language, 'This browser prototype demonstrates device checks, monitoring signals and safe recovery. A production high-stakes test would still require a separately audited native secure-test companion for operating-system lockdown.', 'यह ब्राउज़र प्रोटोटाइप डिवाइस जाँच, निगरानी संकेत और सुरक्षित रिकवरी दिखाता है। वास्तविक उच्च-जोखिम परीक्षा में ऑपरेटिंग सिस्टम लॉकडाउन के लिए अलग से जाँचे गए नेटिव सुरक्षित-टेस्ट साथी की जरूरत होगी।')}</p>
-      </div>
-      {fresh ? (
-        <label className="consent-box" data-tour="test-entry-consent">
-          <input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} />
-          <span>
-            <strong>{local(language, 'I understand this is a demo test.', 'मैं समझता/समझती हूँ कि यह एक डेमो टेस्ट है।')}</strong>
-            <small>{local(language, 'No official licence or government record is created.', 'इससे कोई सरकारी रिकॉर्ड या आधिकारिक लाइसेंस नहीं बनता।')}</small>
-          </span>
-        </label>
-      ) : (
-        <div className="lf-success-note">
-          <RefreshCcw size={20} />
-          <div>
-            <strong>{local(language, 'A saved test session exists.', 'एक सहेजा गया टेस्ट सत्र मौजूद है।')}</strong>
-            <p>{local(language, 'You can resume from where you left off.', 'आप वहीं से शुरू कर सकते हैं जहाँ आपने छोड़ा था।')}</p>
-          </div>
-        </div>
-      )}
-      <div className="lf-actions">
+      <details className="test-entry-technical-details">
+        <summary>{local(language, 'How LicenceFlow protects this test', 'LicenceFlow इस टेस्ट को कैसे सुरक्षित रखता है')}</summary>
+        <p>{local(language, 'The browser demonstrates device checks, monitoring signals and safe recovery. A real high-stakes deployment would pair this journey with a separately audited secure-test companion for operating-system lockdown.', 'ब्राउज़र डिवाइस जाँच, निगरानी संकेत और सुरक्षित वापसी दिखाता है। वास्तविक परीक्षा में ऑपरेटिंग सिस्टम लॉकडाउन के लिए अलग से जाँचा गया सुरक्षित-टेस्ट साथी जोड़ा जाएगा।')}</p>
+      </details>
+      <div className="test-entry-action-dock">
         {fresh ? (
-          <button className="button button--primary" disabled={!accepted || (!guided && !preTestReady)} onClick={start} data-tour="test-entry-start">
-            {examMode === 'full' ? local(language, 'Open full test', 'पूरी परीक्षा खोलें') : local(language, 'Start judge walkthrough', 'जज वॉकथ्रू शुरू करें')} <ArrowRight size={18} />
-          </button>
+          <label className="consent-box" data-tour="test-entry-consent">
+            <input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} />
+            <span>
+              <strong>{local(language, 'I understand this is a demo test.', 'मैं समझता/समझती हूँ कि यह एक डेमो टेस्ट है।')}</strong>
+              <small>{local(language, 'No official licence or government record is created.', 'इससे कोई सरकारी रिकॉर्ड या आधिकारिक लाइसेंस नहीं बनता।')}</small>
+            </span>
+          </label>
         ) : (
-          <FlowLink className="button button--primary" href={routeForSession(applicationId, session)}>
-            {local(language, 'Resume saved test', 'सहेजा गया टेस्ट जारी रखें')} <ArrowRight size={18} />
-          </FlowLink>
+          <div className="lf-success-note">
+            <RefreshCcw size={20} />
+            <div>
+              <strong>{local(language, 'Your saved test is ready.', 'आपका सहेजा टेस्ट तैयार है।')}</strong>
+              <p>{local(language, 'Continue from where you stopped.', 'जहाँ आपने छोड़ा था, वहीं से आगे बढ़ें।')}</p>
+            </div>
+          </div>
         )}
-        <FlowLink href={`/mp/application/${applicationId}`} className="button button--secondary">
-          <ArrowLeft size={18} /> {local(language, 'Application status', 'आवेदन स्थिति')}
-        </FlowLink>
+        <div className="lf-actions">
+          {fresh ? (
+            <button className="button button--primary" disabled={!accepted || (!guided && !preTestReady)} onClick={start} data-tour="test-entry-start">
+              {examMode === 'full' ? local(language, 'Open full test', 'पूरी परीक्षा खोलें') : local(language, 'Start judge walkthrough', 'जज वॉकथ्रू शुरू करें')} <ArrowRight size={18} />
+            </button>
+          ) : (
+            <FlowLink className="button button--primary" href={routeForSession(applicationId, session)}>
+              {local(language, 'Resume test', 'टेस्ट जारी रखें')} <ArrowRight size={18} />
+            </FlowLink>
+          )}
+          <FlowLink href={`/mp/application/${applicationId}`} className="button button--secondary">
+            <ArrowLeft size={18} /> {local(language, 'Application status', 'आवेदन स्थिति')}
+          </FlowLink>
+        </div>
       </div>
       <JudgePassShortcut language={language} onActivate={previewPassingResult} />
     </>
@@ -1025,16 +1027,6 @@ export function TestPage({ applicationId, onStageChange, language }: { applicati
   )
 }
 
-function translatedInterruptionDetail(detail: string, language: Language): string {
-  let hindi = 'लाइव कैमरा संकेत एक दिखाई दे रहे चेहरे की पुष्टि नहीं कर सका।'
-  if (detail.includes('Demo network interruption')) hindi = 'प्रश्न 3 के बाद तैयार नेटवर्क बाधा; सहेजा उत्तर सुरक्षित रहा।'
-  else if (detail.includes('page became hidden')) hindi = 'परीक्षा पेज छिप गया; नवीनतम सहेजा उत्तर सुरक्षित है।'
-  else if (detail.includes('network loss')) hindi = 'ब्राउज़र ने वास्तविक नेटवर्क टूटने की सूचना दी।'
-  else if (detail.includes('More than one face')) hindi = 'कैमरे में एक से अधिक चेहरे लगातार दिखाई दिए।'
-  else if (detail.includes('A phone remained')) hindi = 'कैमरे में फ़ोन तय समय से अधिक देर तक दिखाई दिया।'
-  return local(language, detail, hindi)
-}
-
 export function InterruptionPage({ applicationId, onStageChange, language }: { applicationId: string; onStageChange: StageChange; language: Language }) {
   const progress = loadJourneyProgress(applicationId)
   const [state, setState] = useState(() => loadExamSession(applicationId, progress))
@@ -1055,6 +1047,13 @@ export function InterruptionPage({ applicationId, onStageChange, language }: { a
   }
 
   const integrity = state.exam.interruptionKind === 'multiple-faces' || state.exam.interruptionKind === 'phone'
+  const pauseGuidance = state.exam.interruptionKind === 'phone'
+    ? local(language, 'Move the phone out of camera view, then resume. Your answer and score are unchanged.', 'फ़ोन को कैमरे से बाहर रखें, फिर टेस्ट जारी रखें। आपका उत्तर और अंक नहीं बदले हैं।')
+    : state.exam.interruptionKind === 'multiple-faces'
+      ? local(language, 'Ask the other person to leave the camera view, then resume. Your score is unchanged.', 'दूसरे व्यक्ति को कैमरे से बाहर जाने दें, फिर टेस्ट जारी रखें। आपके अंक नहीं बदले हैं।')
+      : state.exam.interruptionKind === 'camera'
+        ? local(language, 'Reconnect your camera and make sure you are visible, then resume.', 'कैमरा फिर से जोड़ें और सुनिश्चित करें कि आप दिखाई दे रहे हैं, फिर टेस्ट जारी रखें।')
+        : local(language, 'Reconnect to the internet, then resume. Your latest saved answer is safe.', 'इंटरनेट फिर से जोड़ें, फिर टेस्ट जारी रखें। आपका अंतिम सहेजा उत्तर सुरक्षित है।')
   const resume = async () => {
     await enterFullscreen()
     const next = journeyReducer(state, { type: 'RESUME_EXAM' })
@@ -1077,7 +1076,7 @@ export function InterruptionPage({ applicationId, onStageChange, language }: { a
       bottomBar={
         <div className="focused-bottom-actions">
           <button type="button" className="button button--primary" onClick={resume} data-tour="interruption-resume">
-            {local(language, 'Return to focused mode and resume', 'फ़ोकस्ड मोड में लौटें और टेस्ट जारी रखें')}{' '}
+            {local(language, 'Resume test', 'टेस्ट जारी रखें')}{' '}
             <RefreshCcw size={17} />
           </button>
           <FlowLink className="button button--secondary" href={`/mp/application/${applicationId}`}>
@@ -1089,49 +1088,34 @@ export function InterruptionPage({ applicationId, onStageChange, language }: { a
       <div className="focused-workspace-container">
         <section className="interruption-card interruption-card--focused" data-tour="interruption-overview">
           <div className="interruption-card__checkpoint-hero">
-            <div className="interruption-card__checkpoint-img-wrap">
-              <img
-                src="/assets/recovery-checkpoint.png"
-                alt="Safe Recovery Checkpoint"
-                className="interruption-card__checkpoint-img"
-              />
-            </div>
             <div className="interruption-card__header-text">
               <span className="interruption-card__icon">
                 {integrity ? <Camera size={26} /> : <WifiOff size={26} />}
               </span>
               <p className="eyebrow">
                 {integrity
-                  ? local(language, 'Camera observation · Not a penalty', 'कैमरा संकेत · कोई पेनल्टी नहीं')
-                  : local(language, 'Technical checkpoint · Answers preserved', 'तकनीकी चेकपॉइंट · उत्तर सुरक्षित')}
+                  ? local(language, 'Test paused · Your score is unchanged', 'टेस्ट रुका · आपके अंक नहीं बदले')
+                  : local(language, 'Test paused · Your answers are safe', 'टेस्ट रुका · आपके उत्तर सुरक्षित हैं')}
               </p>
               <h1 tabIndex={-1}>
                 {integrity
                   ? state.exam.interruptionKind === 'phone'
-                    ? local(language, 'Phone detected · Session paused safely', 'फ़ोन दिखा · सत्र सुरक्षित रूप से रुका')
-                    : local(language, 'Multiple faces detected · Session paused safely', 'एक से अधिक चेहरे दिखे · सत्र सुरक्षित रूप से रुका')
-                  : local(language, 'The test paused safely without losing progress', 'आपकी प्रगति सुरक्षित रखकर परीक्षा रोकी गई')}
+                    ? local(language, 'Please move the phone out of view', 'कृपया फ़ोन को कैमरे से बाहर रखें')
+                    : local(language, 'Please make sure only you are in view', 'कृपया सुनिश्चित करें कि कैमरे में केवल आप हों')
+                  : local(language, 'Your test is paused', 'आपकी परीक्षा रुकी है')}
               </h1>
             </div>
           </div>
           <p className="interruption-card__detail">
-            {translatedInterruptionDetail(state.exam.interruptionDetail ?? '', language)}
+            {pauseGuidance}
           </p>
           <div className="recovery-facts">
             <div>
-              <span>{local(language, 'Latest answer', 'पिछला उत्तर')}</span>
-              <strong>{local(language, 'Saved in storage', 'मेमोरी में सुरक्षित')}</strong>
+              <span>{local(language, 'Your answers', 'आपके उत्तर')}</span>
+              <strong>{local(language, 'Saved', 'सुरक्षित')}</strong>
             </div>
             <div>
-              <span>{local(language, 'Payment', 'भुगतान')}</span>
-              <strong>{local(language, '₹250 Confirmed', '₹२५० पुष्ट')}</strong>
-            </div>
-            <div>
-              <span>{local(language, 'Test progress', 'प्रगति')}</span>
-              <strong>{local(language, '0 Answers lost', 'कोई उत्तर नष्ट नहीं')}</strong>
-            </div>
-            <div>
-              <span>{local(language, 'Resume checkpoint', 'यहाँ से जारी करें')}</span>
+              <span>{local(language, 'Continue from', 'यहाँ से जारी करें')}</span>
               <strong>
                 {local(
                   language,
@@ -1141,19 +1125,10 @@ export function InterruptionPage({ applicationId, onStageChange, language }: { a
               </strong>
             </div>
           </div>
-          <div className="interruption-card__principles">
-            <ShieldCheck size={19} />
-            <div>
-              <strong>{local(language, 'Fair Examination Assurance', 'निष्पक्ष परीक्षा का भरोसा')}</strong>
-              <p>
-                {local(
-                  language,
-                  'LicenceFlow treats network dips and temporary camera obstructions as technical pauses, not failures. Return to single-person framing and resume when ready.',
-                  'लाइसेंसफ्लो नेटवर्क रुकावटों को विफलता नहीं मानता। कैमरे के सामने अकेले आएं और तैयार होने पर जारी रखें।'
-                )}
-              </p>
-            </div>
-          </div>
+          <details className="interruption-card__principles">
+            <summary><ShieldCheck size={19} />{local(language, 'Why the test paused instead of failing', 'टेस्ट फेल होने के बजाय क्यों रुका')}</summary>
+            <p>{local(language, 'LicenceFlow keeps technical problems and camera observations separate from your knowledge score. Fix the condition shown above, then resume when ready.', 'LicenceFlow तकनीकी समस्या और कैमरा संकेतों को आपके ज्ञान अंक से अलग रखता है। ऊपर दी गई समस्या ठीक करें, फिर तैयार होने पर टेस्ट जारी रखें।')}</p>
+          </details>
         </section>
       </div>
     </FocusedAssessmentShell>

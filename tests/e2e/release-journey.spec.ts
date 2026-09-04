@@ -3,6 +3,8 @@ import { expect, test, type Page } from '@playwright/test'
 async function reachPayment(page: Page) {
   await page.goto('/mp/ll/start')
   await page.getByRole('button', { name: 'Load prepared review application' }).click()
+  await expect(page).toHaveURL(/\/readiness$/)
+  await expect(page.getByRole('heading', { name: 'Check your device before you pay' })).toBeVisible()
   await page.getByRole('button', { name: 'Use Demo Simulation' }).click()
   await page.getByRole('button', { name: 'Open demo question' }).click()
   await page.getByLabel('Signal and check for nearby road users').check()
@@ -87,9 +89,9 @@ test('prepared judge journey reaches a passing result and can reset cleanly', as
   test.setTimeout(isMobile ? 90_000 : 60_000)
   await reachTestEntry(page)
 
-  await expect(page.getByRole('heading', { name: 'Final system check before your 15-question demo test' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Before you start your test' })).toBeVisible()
   await page.getByRole('checkbox', { name: /I understand this is a demo test/ }).check()
-  await page.getByRole('button', { name: 'Enter focused mode and start 15-question test' }).click()
+  await page.getByRole('button', { name: 'Start judge walkthrough' }).click()
   await expect(page.getByRole('button', { name: 'Read question aloud' })).toBeVisible()
   const paperIds = await page.evaluate(() => {
     const raw = localStorage.getItem('mp-ll-exam-session-v1:MP-LL-DEMO-2408')
@@ -127,15 +129,15 @@ test('the synthetic interruption survives reload and resumes at question four', 
   test.skip(isMobile, 'Focused recovery case runs once on desktop Chrome.')
   await reachTestEntry(page)
   await page.getByRole('checkbox', { name: /I understand this is a demo test/ }).check()
-  await page.getByRole('button', { name: 'Enter focused mode and start 15-question test' }).click()
+  await page.getByRole('button', { name: 'Start judge walkthrough' }).click()
   for (let question = 0; question < 3; question += 1) {
     await page.getByRole('radio').first().check()
     await page.getByRole('button', { name: 'Lock answer and continue' }).click()
   }
-  await expect(page.getByRole('heading', { name: 'The test paused safely without losing progress' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Your test is paused' })).toBeVisible()
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'The test paused safely without losing progress' })).toBeVisible()
-  await page.getByRole('button', { name: 'Return to focused mode and resume' }).click()
+  await expect(page.getByRole('heading', { name: 'Your test is paused' })).toBeVisible()
+  await page.getByRole('button', { name: 'Resume test' }).click()
   await expect(page.getByText('Question 4 of 15', { exact: true }).first()).toBeVisible()
 })
 

@@ -6141,8 +6141,8 @@ main h1:focus { outline: none; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  width: 40px;
+  height: 40px;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.15);
@@ -6171,6 +6171,7 @@ main h1:focus { outline: none; }
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s ease;
+  min-height: 40px;
 }
 
 .focused-exit-btn:hover,
@@ -6293,7 +6294,7 @@ button.focused-status-cell {
 .focused-assessment-shell__body {
   flex: 1 1 auto;
   overflow-y: auto;
-  padding: 24px;
+  padding: clamp(14px, 2vw, 24px);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -6314,7 +6315,7 @@ button.focused-status-cell {
   max-width: 1120px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 300px;
-  gap: 24px;
+  gap: 18px;
   align-items: start;
 }
 
@@ -6323,7 +6324,7 @@ button.focused-status-cell {
   background: rgba(15, 23, 42, 0.75);
   border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 12px;
-  padding: 28px;
+  padding: clamp(18px, 2.2vw, 26px);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   display: flex;
@@ -6542,6 +6543,53 @@ button.focused-status-cell {
   gap: 14px;
 }
 
+.focused-obs-card--summary {
+  border-color: rgba(96, 165, 250, 0.35);
+  background: rgba(18, 43, 77, 0.9);
+}
+
+.focused-assessment-details {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(15, 23, 42, 0.72);
+  color: #cbd5e1;
+  overflow: hidden;
+}
+
+.focused-assessment-details summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 14px;
+  color: #bfdbfe;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.focused-assessment-details summary:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: -3px;
+}
+
+.focused-assessment-details__body {
+  display: grid;
+  gap: 12px;
+  padding: 2px 14px 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.focused-assessment-details__body p {
+  margin: 10px 0 0;
+  color: #cbd5e1;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.focused-assessment-details__action {
+  display: grid;
+  gap: 8px;
+}
+
 .focused-obs-card {
   background: rgba(15, 23, 42, 0.75);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -6757,6 +6805,10 @@ button.focused-status-cell {
   padding-bottom: 18px;
 }
 
+.interruption-card--focused .interruption-card__header-text {
+  width: 100%;
+}
+
 .interruption-card--focused .interruption-card__checkpoint-img-wrap {
   background: rgba(30, 41, 59, 0.7) !important;
   border: 1.5px solid rgba(255, 255, 255, 0.15) !important;
@@ -6793,7 +6845,7 @@ button.focused-status-cell {
 
 .interruption-card--focused .recovery-facts {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
   background: transparent !important;
   border: none !important;
@@ -6825,6 +6877,7 @@ button.focused-status-cell {
 }
 
 .interruption-card--focused .interruption-card__principles {
+  display: block;
   background: rgba(59, 130, 246, 0.15) !important;
   border: 1px solid rgba(59, 130, 246, 0.35) !important;
   border-left: 4px solid #3b82f6 !important;
@@ -6832,6 +6885,22 @@ button.focused-status-cell {
   border-radius: 8px;
   padding: 14px 18px;
   margin-top: 20px;
+}
+
+.interruption-card--focused .interruption-card__principles summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 32px;
+  color: #ffffff;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.interruption-card--focused .interruption-card__principles summary:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 3px;
 }
 
 .interruption-card--focused .interruption-card__principles svg {
@@ -7203,12 +7272,19 @@ button.focused-status-cell {
 
 @media (max-width: 600px) {
   .focused-assessment-shell__header {
-    padding: 8px 14px;
+    min-height: 50px;
+    padding: 6px 10px;
   }
 
   .focused-assessment-shell__title {
-    font-size: 0.92rem;
+    max-width: 132px;
+    font-size: 0.82rem;
+    line-height: 1.1;
   }
+
+  .focused-icon-btn { width: 44px; height: 44px; }
+
+  .focused-exit-btn { min-height: 44px; padding-inline: 10px; }
 
   .focused-assessment-shell__badge {
     display: none;
@@ -7219,35 +7295,65 @@ button.focused-status-cell {
   }
 
   .focused-assessment-shell__body {
-    padding: 16px 12px;
+    padding: 10px;
   }
 
   .focused-question-card {
-    padding: 18px 16px;
+    gap: 10px;
+    padding: 14px 12px;
   }
+
+  .focused-question-heading { gap: 4px; }
+
+  .focused-question-meta { justify-content: space-between; gap: 6px; }
+
+  .focused-question-pill,
+  .focused-question-card .eyebrow { font-size: 0.7rem; }
+
+  .focused-question-saved-pill { font-size: 0.68rem; }
 
   .focused-question-heading h2 {
     font-size: 1.15rem;
   }
 
+  .focused-question-heading h1 { margin: 7px 0; font-size: 1.18rem; line-height: 1.3; }
+
+  .focused-assessment-shell .question-speech-button { min-height: 40px; margin: 2px 0 4px; padding: 6px 10px; font-size: 0.78rem; }
+
+  .focused-option-grid { gap: 7px; }
+
   .focused-option-card {
-    padding: 12px 14px;
-    font-size: 0.95rem;
+    min-height: 48px;
+    gap: 9px;
+    padding: 8px 10px;
+    font-size: 0.9rem;
   }
 
+  .focused-option-card__badge { width: 28px; height: 28px; }
+
+  .focused-workspace-container--split { gap: 9px; }
+
+  .focused-observation-panel { gap: 8px; }
+
+  .focused-obs-card { padding: 10px 12px; }
+
+  .focused-obs-card--summary .focused-obs-card__body { display: none; }
+
+  .focused-assessment-details summary { min-height: 40px; font-size: 0.8rem; }
+
+  .focused-assessment-shell__status-bar { overflow-x: auto; padding: 6px 10px; scrollbar-width: thin; }
+
   .focused-status-map__grid {
+    min-width: 500px;
     gap: 3px;
   }
 
   .focused-status-cell {
-    height: 30px;
+    height: 32px;
     font-size: 0.72rem;
   }
 
-  .focused-bottom-actions {
-    flex-direction: column;
-    align-items: stretch;
-  }
+  .focused-assessment-shell__footer { padding: 8px 10px max(8px, env(safe-area-inset-bottom)); }
 
   .lf-review-cta-card {
     flex-direction: column;
@@ -7714,7 +7820,7 @@ button.focused-status-cell {
 }
 .test-entry-modes legend { margin-bottom: 12px; font-weight: 700; }
 .test-entry-modes label {
-  display: flex; gap: 12px; align-items: flex-start; min-width: 0; padding: 18px;
+  display: flex; gap: 12px; align-items: flex-start; min-width: 0; padding: 14px 16px;
   border: 1px solid #cbd8e8; border-radius: 12px; background: #fff; cursor: pointer;
   transition: background-color 160ms ease, border-color 160ms ease;
 }
@@ -7723,7 +7829,51 @@ button.focused-status-cell {
 .test-entry-modes input { flex: 0 0 auto; margin-top: 4px; accent-color: #176ab3; }
 .test-entry-modes strong, .test-entry-modes small { display: block; }
 .test-entry-modes small { margin-top: 6px; line-height: 1.5; color: #43566e; }
-@media (max-width: 600px) { .test-entry-modes { grid-template-columns: 1fr; } }
+.test-entry-technical-details {
+  margin: 14px 0;
+  border: 1px solid var(--slate-200);
+  border-radius: 10px;
+  background: #fff;
+}
+.test-entry-technical-details summary {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 8px 14px;
+  color: var(--blue-700);
+  font-weight: 700;
+  cursor: pointer;
+}
+.test-entry-technical-details p { margin: 0; padding: 0 14px 14px; color: var(--slate-600); font-size: .86rem; line-height: 1.5; }
+.test-entry-action-dock {
+  position: sticky;
+  bottom: 10px;
+  z-index: 30;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px 18px;
+  align-items: center;
+  margin: 14px 0;
+  padding: 12px 14px;
+  border: 1px solid var(--slate-200);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 12px 32px rgba(7, 26, 52, .16);
+  backdrop-filter: blur(12px);
+}
+.test-entry-action-dock .consent-box,
+.test-entry-action-dock .lf-success-note { margin: 0; }
+.test-entry-action-dock .lf-actions { flex-wrap: nowrap; margin: 0; }
+.test-entry-action-dock .button { min-height: 44px; white-space: nowrap; }
+@media (max-width: 600px) {
+  .test-entry-modes { grid-template-columns: 1fr; margin: 14px 0; }
+  .test-entry-modes label { padding: 12px; }
+  .test-entry-action-dock { bottom: 6px; grid-template-columns: 1fr; gap: 8px; padding: 10px; }
+  .test-entry-action-dock .consent-box { padding: 10px; }
+  .test-entry-action-dock .lf-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+  .test-entry-action-dock .button { width: auto; min-width: 0; padding-inline: 12px; }
+  .test-entry-action-dock .button--secondary { font-size: .82rem; }
+}
 @media (prefers-reduced-motion: reduce) { .test-entry-modes label { transition: none; } }
 
 @media (max-width: 860px) {

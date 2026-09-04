@@ -778,36 +778,36 @@ export function RehearsalPage({ language, applicationId, onStageChange }: { lang
               <li>
                 <Check size={18} aria-hidden="true" />
                 <div>
-                  <strong>{local(language, 'Question displayed correctly', 'प्रश्न सही तरीके से प्रदर्शित हुआ')}</strong>
-                  <small>{local(language, 'Text, prompt and choices rendered with complete clarity.', 'अक्षर और विकल्प स्पष्ट रूप से पढ़े जा सकते हैं।')}</small>
+                  <strong>{local(language, 'Question is easy to read', 'प्रश्न आसानी से पढ़ा जा सकता है')}</strong>
+                  <small>{local(language, 'The question and every choice appeared clearly.', 'प्रश्न और सभी विकल्प स्पष्ट दिखाई दिए।')}</small>
                 </div>
               </li>
               <li>
                 <Check size={18} aria-hidden="true" />
                 <div>
-                  <strong>{local(language, 'Answer controls responsive', 'उत्तर नियंत्रण सक्रिय और सुगम')}</strong>
-                  <small>{local(language, 'Touch, mouse and keyboard selection verified.', 'टच, माउस और कीबोर्ड चयन सुचारू रूप से कार्य कर रहा है।')}</small>
+                  <strong>{local(language, 'Answer selection works', 'उत्तर चुनना सही तरह काम करता है')}</strong>
+                  <small>{local(language, 'You can use touch, a mouse or a keyboard.', 'आप टच, माउस या कीबोर्ड का उपयोग कर सकते हैं।')}</small>
                 </div>
               </li>
               <li>
                 <Check size={18} aria-hidden="true" />
                 <div>
-                  <strong>{local(language, 'Response saved on this device', 'प्रतिक्रिया इस डिवाइस पर सहेजी गई')}</strong>
-                  <small>{local(language, 'Encrypted local checkpoint verified against simulated drops.', 'ब्राउज़र स्टोरेज में सुरक्षित चेकपॉइंट सत्यापित।')}</small>
+                  <strong>{local(language, 'Your answer was saved', 'आपका उत्तर सहेजा गया')}</strong>
+                  <small>{local(language, 'A refresh will not make you answer it again.', 'पेज रीफ़्रेश होने पर आपको दोबारा उत्तर नहीं देना होगा।')}</small>
                 </div>
               </li>
               <li>
                 <Check size={18} aria-hidden="true" />
                 <div>
-                  <strong>{local(language, 'Connection available', 'इंटरनेट कनेक्शन चालू')}</strong>
-                  <small>{local(language, 'Network baseline verified for smooth session delivery.', 'सत्र के लिए नेटवर्क क्षमता उपयुक्त है।')}</small>
+                  <strong>{local(language, 'Internet is connected', 'इंटरनेट जुड़ा हुआ है')}</strong>
+                  <small>{local(language, 'The test can exchange saved answers with the service.', 'टेस्ट सहेजे उत्तर सेवा तक पहुँचा सकता है।')}</small>
                 </div>
               </li>
               <li>
                 <Check size={18} aria-hidden="true" />
                 <div>
-                  <strong>{local(language, 'Camera and biometric readiness confirmed', 'कैमरा और बायोमेट्रिक तैयारी पुष्ट')}</strong>
-                  <small>{local(language, 'Private on-device face alignment and liveness check passed.', 'निजी ऑन-डिवाइस चेहरा संरेखण और जीवंतता जाँच पूर्ण।')}</small>
+                  <strong>{local(language, 'Camera check is complete', 'कैमरा जाँच पूरी हुई')}</strong>
+                  <small>{local(language, 'Your framing and head-turn check are ready for the test.', 'आपकी फ्रेमिंग और सिर घुमाने की जाँच टेस्ट के लिए तैयार है।')}</small>
                 </div>
               </li>
             </ul>
