@@ -55,7 +55,7 @@ function nextStep(context: LocalGuideContext) {
     return say(context, 'Choose one option and save it. This single demo question only confirms that this device can show a question and preserve your choice; it does not count as a test attempt.', 'एक विकल्प चुनकर सहेजें। यह एक डेमो सवाल केवल जाँचता है कि डिवाइस सवाल दिखा और आपका उत्तर सहेज सकता है; इसे टेस्ट प्रयास नहीं माना जाता।')
   }
   if (pathname.includes('/payment')) {
-    return say(context, 'Review the displayed fee and consent, then use the simulated payment gateway. No real money moves in LicenceFlow.', 'दिखाया गया शुल्क और सहमति देखें, फिर नकली भुगतान गेटवे चलाएँ। LicenceFlow में असली पैसे का लेन-देन नहीं होता।')
+    return say(context, 'Review the displayed fee and consent, then use the simulated payment gateway. LicenceFlow saves one sandbox attempt on the server and checks an uncertain result before retry; no real money moves.', 'दिखाया गया शुल्क और सहमति देखें, फिर नकली भुगतान गेटवे चलाएँ। LicenceFlow सर्वर पर एक सैंडबॉक्स प्रयास सहेजता है और दोबारा प्रयास से पहले अनिश्चित परिणाम जाँचता है; असली पैसे का लेन-देन नहीं होता।')
   }
   if (pathname.includes('/tutorial')) {
     return say(context, 'Complete the road-safety learning step. Progress is saved, and the judge-only shortcut is only there to avoid waiting during the hackathon demo.', 'सड़क-सुरक्षा सीखने का चरण पूरा करें। प्रगति सहेजी जाती है, और जज शॉर्टकट केवल हैकाथॉन डेमो में समय बचाने के लिए है।')
@@ -107,7 +107,7 @@ const topics: GuideTopic[] = [
   },
   {
     phrases: ['payment', 'charged twice', 'double charge', 'uncertain', 'failed payment', 'refund', 'money', 'fee', 'receipt', 'भुगतान', 'दो बार', 'पैसा', 'शुल्क', 'रसीद', 'रिफंड', 'स्थिति साफ'],
-    answer: (context) => say(context, 'LicenceFlow shows payment as not started, processing, successful, failed or uncertain, and keeps the application safe in every case. Duplicate-payment protection and receipt/status recovery are demonstrated, but no real fee is charged in this prototype.', 'LicenceFlow भुगतान को शुरू नहीं हुआ, चल रहा है, सफल, असफल या अनिश्चित रूप में दिखाता है और हर स्थिति में आवेदन सुरक्षित रखता है। दोहरे भुगतान से सुरक्षा और रसीद/स्थिति वापसी का डेमो है, लेकिन इस प्रोटोटाइप में असली शुल्क नहीं लगता।'),
+    answer: (context) => say(context, 'LicenceFlow shows payment as not started, processing, successful, failed or uncertain. The sandbox service creates one server-saved attempt and reference; if the return is uncertain, LicenceFlow checks that same attempt before allowing a retry. In this prototype, no real fee is charged.', 'LicenceFlow भुगतान को शुरू नहीं हुआ, चल रहा है, सफल, असफल या अनिश्चित रूप में दिखाता है। सैंडबॉक्स सेवा सर्वर पर एक प्रयास और संदर्भ बनाती है; परिणाम अनिश्चित होने पर दोबारा भुगतान से पहले उसी प्रयास की जाँच होती है। इस प्रोटोटाइप में असली शुल्क नहीं लगता।'),
   },
   {
     phrases: ['tutorial', 'learning video', 'watch video', 'skip video', 'road safety', 'ट्यूटोरियल', 'सीखने', 'वीडियो देखें', 'वीडियो छोड़', 'सड़क सुरक्षा'],

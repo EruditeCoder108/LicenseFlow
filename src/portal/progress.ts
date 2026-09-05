@@ -1,4 +1,5 @@
 import {
+  applyAuthoritativePayment,
   beginPayment,
   createPaymentState,
   isPaymentConfirmed,
@@ -186,6 +187,16 @@ export function reconcileSyntheticPayment(
   const payment = reconcilePayment(progress.payment, outcome, now)
   if (payment === progress.payment) return progress
   return { ...progress, payment, updatedAt: now }
+}
+
+export function applyServerPaymentSnapshot(
+  progress: LLJourneyProgress,
+  snapshot: Parameters<typeof applyAuthoritativePayment>[1],
+  reconciled = false,
+): LLJourneyProgress {
+  const payment = applyAuthoritativePayment(progress.payment, snapshot, reconciled)
+  if (payment === progress.payment) return progress
+  return { ...progress, payment, updatedAt: snapshot.updatedAt }
 }
 
 export function preparePaymentRetry(progress: LLJourneyProgress): LLJourneyProgress {

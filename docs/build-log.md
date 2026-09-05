@@ -1,5 +1,14 @@
 # LicenceFlow build log
 
+## 2026-09-05 — server-owned sandbox payment lifecycle completed
+
+- Replaced browser-declared payment results with D1-backed synthetic attempts created by the Sites Worker.
+- Added stable idempotency keys, server-issued references, conflict detection and immutable confirmed/declined/cancelled outcomes.
+- Made pending, timed-out and lost-return states block repayment until the same attempt is checked and reconciled.
+- Kept the boundary explicit: no payment credential is accepted, no money moves and no government entitlement is created.
+- Preserved the full Raahi walkthrough and old redirecting journeys while routing all new judge and manual attempts through the server.
+- Verified 182 unit/integration tests and 19 applicable desktop/mobile Playwright journeys, including failed and uncertain payment paths.
+
 ## 2026-08-23 — downloadable completion records added
 
 - Reworked the passed result into a clear process-complete state without adding presentation animation.

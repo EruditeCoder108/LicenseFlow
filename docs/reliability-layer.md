@@ -4,11 +4,12 @@
 
 LicenceFlow now has a small server-backed reliability boundary for the hackathon prototype. Browser storage remains the fast, offline-friendly working copy, while the deployed Site can also write non-personal journey milestones to Cloudflare D1.
 
-This is intentionally narrower than a production examination backend. It proves three concrete behaviors:
+This is intentionally narrower than a production licensing backend. It proves four concrete behaviors:
 
 1. **Append-only recovery checkpoints** — retries create idempotent milestones instead of silently replacing the only record.
-2. **Idempotent mock payment confirmation** — repeating the same payment key returns the same synthetic confirmation and cannot create a second record.
-3. **Honest degradation** — if the server or D1 is unavailable, the journey continues from browser cache and the result labels that state as a fallback rather than claiming server confirmation.
+2. **Server-owned sandbox payment attempts** — the Worker creates one attempt and one reference for a stable idempotency key; repeating the request returns the existing record.
+3. **Status-before-retry reconciliation** — a lost, pending or timed-out return blocks a second attempt until the same server record is reconciled. Confirmed, declined and cancelled outcomes cannot be rewritten.
+4. **Honest degradation** — ordinary journey checkpoints can continue from browser cache if D1 is unavailable, but a new payment attempt is not silently confirmed by the browser.
 
 ## Privacy boundary
 
@@ -37,7 +38,9 @@ Application / tutorial / exam reducer
               │
               ├── immediate browser checkpoint (full recoverable prototype state)
               │
-              └── debounced server checkpoint (minimal non-personal milestone)
+              ├── debounced server checkpoint (minimal non-personal milestone)
+              │
+              └── blocking sandbox payment command (attempt / resolve / check)
                               │
                               ├── Sites Worker validation
                               ├── append-only D1 checkpoint
@@ -51,7 +54,11 @@ The client never waits for the server before saving locally. A temporary network
 All routes are same-origin, JSON-only, size-bounded and return `Cache-Control: no-store`.
 
 - `POST /api/reliability/checkpoints` validates and appends an idempotent milestone.
-- `POST /api/reliability/payments/confirm` records or retrieves one synthetic confirmation by idempotency key.
+- `POST /api/reliability/payments/attempts` creates or retrieves one synthetic attempt by idempotency key. The server issues its reference.
+- `POST /api/reliability/payments/attempts/:key/resolve` applies a labelled sandbox outcome without allowing a final outcome to be rewritten.
+- `GET /api/reliability/payments/attempts/:key` returns the server's current status for the owning anonymous session.
+- `POST /api/reliability/payments/attempts/:key/reconcile` resolves only an uncertain attempt to confirmed or declined.
+- `POST /api/reliability/payments/confirm` remains only as a compatibility route for older browser-only demo receipts.
 - `GET /api/reliability/sessions/:sessionId` returns the latest minimal checkpoint and recovery-receipt count.
 
 Unknown fields are not persisted. Identifiers and enum values are allowlisted before reaching storage.
@@ -60,7 +67,7 @@ Unknown fields are not persisted. Identifiers and enum values are allowlisted be
 
 - Logical Sites D1 binding: `DB`
 - Type-level schema boundary: `db/schema.ts`
-- Persistent migration: `drizzle/0000_reliability.sql`
+- Persistent migrations: `drizzle/0000_reliability.sql` and `drizzle/20260905161500_sandbox_payment_attempts.sql`
 - Worker storage adapter and request handler: `server/reliability.js`
 - Browser synchronizer: `src/portal/reliability.ts`
 
@@ -68,5 +75,4 @@ The migration creates only indexes used by actual session and chronological-rece
 
 ## What remains future work
 
-A production licensing examination would still move question delivery, timer authority, scoring, attempt entitlement, identity binding and evidence review behind authenticated government services. This slice does not claim that browser state is tamper-proof and does not turn a synthetic application into an official record.
-
+A production licensing service would still need authenticated identity, a real gateway/treasury contract, signed callbacks, reconciliation jobs, refunds, operational audit access and government authorization. This slice moves no money, stores no payment credentials and creates no official entitlement. It demonstrates the lifecycle and failure rules against a real server record without pretending that the sandbox is a financial integration.

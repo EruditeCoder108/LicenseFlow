@@ -3,6 +3,7 @@ const SESSION_TTL_DAYS = 7
 const APPLICATION_ID = /^MP-LL-[A-Z0-9-]{4,24}$/i
 const OPAQUE_ID = /^[a-zA-Z0-9-]{8,80}$/
 const IDEMPOTENCY_KEY = /^MP-LL-[A-Z0-9-]{4,80}$/i
+const PAYMENT_ATTEMPT_ID = /^[a-zA-Z0-9-]{8,80}$/
 
 const allowed = {
   stage: new Set(['application', 'uploads', 'readiness', 'rehearsal', 'payment', 'tutorial', 'exam-intro', 'exam', 'interruption', 'result']),
@@ -12,7 +13,13 @@ const allowed = {
   tutorial: new Set(['not-started', 'in-progress', 'completed']),
   exam: new Set(['not-started', 'active', 'paused', 'completed']),
   integrity: new Set(['clear', 'technical-event-recovered', 'observation-recorded']),
+  paymentMethod: new Set(['upi', 'card', 'net-banking']),
+  paymentOutcome: new Set(['pending', 'confirmed', 'declined', 'cancelled', 'timed-out', 'unknown']),
+  reconciliationOutcome: new Set(['confirmed', 'declined']),
 }
+
+const uncertainPaymentStatuses = new Set(['pending', 'timed-out', 'unknown'])
+const terminalPaymentStatuses = new Set(['confirmed', 'declined', 'cancelled'])
 
 const json = (data, status = 200, extraHeaders = {}) => new Response(JSON.stringify(data), {
   status,
@@ -59,6 +66,40 @@ const validateIdentity = (body) => {
   if (!OPAQUE_ID.test(body?.sessionId || '') || !APPLICATION_ID.test(body?.applicationId || '')) return null
   return { sessionId: body.sessionId, applicationId: body.applicationId.toUpperCase() }
 }
+
+const paymentReferenceFor = (idempotencyKey) => {
+  let hash = 2166136261
+  for (const character of idempotencyKey) {
+    hash ^= character.charCodeAt(0)
+    hash = Math.imul(hash, 16777619)
+  }
+  const suffix = idempotencyKey.replace(/[^a-zA-Z0-9]/g, '').slice(-12).toUpperCase()
+  return `LFSBX-${suffix}${(hash >>> 0).toString(36).toUpperCase()}`.slice(0, 38)
+}
+
+const sanitizePaymentAttempt = (body) => {
+  const identity = validateIdentity(body)
+  if (!identity || !PAYMENT_ATTEMPT_ID.test(body?.attemptId || '') || !IDEMPOTENCY_KEY.test(body?.idempotencyKey || '')) return null
+  const amountPaise = cleanInteger(body.amountPaise, 1, 1_000_000, 0)
+  const method = cleanEnum(body.method, allowed.paymentMethod, '')
+  if (!amountPaise || !method) return null
+  return { ...identity, attemptId: body.attemptId, idempotencyKey: body.idempotencyKey, amountPaise, method }
+}
+
+const publicPaymentAttempt = (record) => record && ({
+  attemptId: record.attempt_id,
+  idempotencyKey: record.idempotency_key,
+  applicationId: record.application_id,
+  amountPaise: Number(record.amount_paise),
+  method: record.method,
+  status: record.status,
+  reference: record.reference,
+  createdAt: record.created_at,
+  updatedAt: record.updated_at,
+  resolvedAt: record.resolved_at || undefined,
+  canRetry: record.status === 'declined' || record.status === 'cancelled',
+  needsReconciliation: uncertainPaymentStatuses.has(record.status),
+})
 
 const sanitizeCheckpoint = (body, now) => {
   const identity = validateIdentity(body)
@@ -110,6 +151,15 @@ export function createD1ReliabilityStore(db) {
         received_at TEXT NOT NULL, FOREIGN KEY (session_id) REFERENCES reliability_sessions(session_id)
       )`),
       db.prepare('CREATE INDEX IF NOT EXISTS payment_confirmations_session_idx ON payment_confirmations (session_id)'),
+      db.prepare(`CREATE TABLE IF NOT EXISTS sandbox_payment_attempts (
+        idempotency_key TEXT PRIMARY KEY, session_id TEXT NOT NULL, application_id TEXT NOT NULL,
+        attempt_id TEXT NOT NULL, method TEXT NOT NULL, amount_paise INTEGER NOT NULL,
+        status TEXT NOT NULL, reference TEXT NOT NULL, created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL, resolved_at TEXT,
+        UNIQUE(session_id, application_id, attempt_id),
+        FOREIGN KEY (session_id) REFERENCES reliability_sessions(session_id)
+      )`),
+      db.prepare('CREATE INDEX IF NOT EXISTS sandbox_payment_attempts_session_idx ON sandbox_payment_attempts (session_id, updated_at DESC)'),
     ])
   }
 
@@ -128,6 +178,7 @@ export function createD1ReliabilityStore(db) {
       await db.batch([
         db.prepare('DELETE FROM reliability_checkpoints WHERE session_id IN (SELECT session_id FROM reliability_sessions WHERE expires_at < ?)').bind(now),
         db.prepare('DELETE FROM payment_confirmations WHERE session_id IN (SELECT session_id FROM reliability_sessions WHERE expires_at < ?)').bind(now),
+        db.prepare('DELETE FROM sandbox_payment_attempts WHERE session_id IN (SELECT session_id FROM reliability_sessions WHERE expires_at < ?)').bind(now),
         db.prepare('DELETE FROM reliability_sessions WHERE expires_at < ?').bind(now),
       ])
     },
@@ -157,6 +208,56 @@ export function createD1ReliabilityStore(db) {
       if (!record || record.session_id !== input.sessionId || record.application_id !== input.applicationId) return { conflict: true }
       return { conflict: false, record }
     },
+    async createPaymentAttempt(input) {
+      const session = await ensureSession(input)
+      if (!session || session.application_id !== input.applicationId) return { conflict: true }
+      const insert = await db.prepare(`INSERT OR IGNORE INTO sandbox_payment_attempts (
+        idempotency_key, session_id, application_id, attempt_id, method, amount_paise,
+        status, reference, created_at, updated_at, resolved_at
+      ) VALUES (?, ?, ?, ?, ?, ?, 'redirecting', ?, ?, ?, NULL)`)
+        .bind(input.idempotencyKey, input.sessionId, input.applicationId, input.attemptId,
+          input.method, input.amountPaise, input.reference, input.now, input.now).run()
+      const record = await db.prepare(`SELECT * FROM sandbox_payment_attempts WHERE idempotency_key = ?`)
+        .bind(input.idempotencyKey).first()
+      const mismatch = !record
+        || record.session_id !== input.sessionId
+        || record.application_id !== input.applicationId
+        || record.attempt_id !== input.attemptId
+        || record.method !== input.method
+        || Number(record.amount_paise) !== input.amountPaise
+      return mismatch ? { conflict: true } : { conflict: false, record, duplicate: !Boolean(insert?.meta?.changes) }
+    },
+    async getPaymentAttempt({ sessionId, applicationId, idempotencyKey }) {
+      const record = await db.prepare('SELECT * FROM sandbox_payment_attempts WHERE idempotency_key = ?')
+        .bind(idempotencyKey).first()
+      if (!record) return null
+      if (record.session_id !== sessionId || record.application_id !== applicationId) return { conflict: true }
+      return { conflict: false, record }
+    },
+    async resolvePaymentAttempt(input) {
+      const current = await this.getPaymentAttempt(input)
+      if (!current || current.conflict) return current
+      if (terminalPaymentStatuses.has(current.record.status)) return current
+      await db.prepare(`UPDATE sandbox_payment_attempts
+        SET status = ?, updated_at = ?, resolved_at = ?
+        WHERE idempotency_key = ? AND session_id = ? AND application_id = ?
+          AND status NOT IN ('confirmed', 'declined', 'cancelled')`)
+        .bind(input.outcome, input.now, terminalPaymentStatuses.has(input.outcome) ? input.now : null,
+          input.idempotencyKey, input.sessionId, input.applicationId).run()
+      return this.getPaymentAttempt(input)
+    },
+    async reconcilePaymentAttempt(input) {
+      const current = await this.getPaymentAttempt(input)
+      if (!current || current.conflict) return current
+      if (terminalPaymentStatuses.has(current.record.status)) return current
+      if (!uncertainPaymentStatuses.has(current.record.status)) return { invalidState: true, record: current.record }
+      await db.prepare(`UPDATE sandbox_payment_attempts
+        SET status = ?, updated_at = ?, resolved_at = ?
+        WHERE idempotency_key = ? AND session_id = ? AND application_id = ?
+          AND status IN ('pending', 'timed-out', 'unknown')`)
+        .bind(input.outcome, input.now, input.now, input.idempotencyKey, input.sessionId, input.applicationId).run()
+      return this.getPaymentAttempt(input)
+    },
     async getReceipt(sessionId) {
       const session = await db.prepare(`SELECT session_id, application_id, created_at, updated_at, expires_at
         FROM reliability_sessions WHERE session_id = ?`).bind(sessionId).first()
@@ -166,10 +267,12 @@ export function createD1ReliabilityStore(db) {
         interruption_recovered, integrity_status, client_updated_at, received_at
         FROM reliability_checkpoints WHERE session_id = ? ORDER BY client_updated_at DESC LIMIT 1`)
         .bind(sessionId).first()
-      const payment = await db.prepare(`SELECT idempotency_key, status, amount_paise, reference, received_at
+      const sandboxPayment = await db.prepare(`SELECT idempotency_key, status, amount_paise, reference, updated_at AS received_at
+        FROM sandbox_payment_attempts WHERE session_id = ? ORDER BY updated_at DESC LIMIT 1`).bind(sessionId).first()
+      const legacyPayment = sandboxPayment ? null : await db.prepare(`SELECT idempotency_key, status, amount_paise, reference, received_at
         FROM payment_confirmations WHERE session_id = ? ORDER BY received_at DESC LIMIT 1`).bind(sessionId).first()
       const count = await db.prepare('SELECT COUNT(*) AS total FROM reliability_checkpoints WHERE session_id = ?').bind(sessionId).first()
-      return { session, checkpoint, payment, checkpointCount: Number(count?.total || 0) }
+      return { session, checkpoint, payment: sandboxPayment || legacyPayment, checkpointCount: Number(count?.total || 0) }
     },
   }
 }
@@ -192,6 +295,19 @@ export async function handleReliabilityRequest(request, env, dependencies = {}) 
     return receipt
       ? json({ synthetic: true, durable: true, ...receipt })
       : json({ error: 'Session was not found.', code: 'session_not_found' }, 404)
+  }
+
+  if (request.method === 'GET' && url.pathname.startsWith('/api/reliability/payments/attempts/')) {
+    const idempotencyKey = decodeURIComponent(url.pathname.slice('/api/reliability/payments/attempts/'.length))
+    const sessionId = url.searchParams.get('sessionId') || ''
+    const applicationId = (url.searchParams.get('applicationId') || '').toUpperCase()
+    if (!IDEMPOTENCY_KEY.test(idempotencyKey) || !OPAQUE_ID.test(sessionId) || !APPLICATION_ID.test(applicationId)) {
+      return json({ error: 'Payment lookup fields are invalid.', code: 'invalid_payment_lookup' }, 400)
+    }
+    const result = await store.getPaymentAttempt({ sessionId, applicationId, idempotencyKey })
+    if (!result) return json({ error: 'Payment attempt was not found.', code: 'payment_not_found' }, 404)
+    if (result.conflict) return json({ error: 'Payment attempt does not belong to this session.', code: 'payment_conflict' }, 409)
+    return json({ synthetic: true, durable: true, authority: 'sandbox-payment-service', payment: publicPaymentAttempt(result.record) })
   }
 
   if (request.method !== 'POST') return json({ error: 'Method not allowed.', code: 'method_not_allowed' }, 405, { Allow: 'GET, POST' })
@@ -217,6 +333,40 @@ export async function handleReliabilityRequest(request, env, dependencies = {}) 
     const result = await store.confirmPayment({ ...identity, idempotencyKey, reference, amountPaise, now, expiresAt })
     if (result.conflict) return json({ error: 'Payment key or session conflicts with an existing record.', code: 'payment_conflict' }, 409)
     return json({ synthetic: true, durable: true, payment: result.record })
+  }
+
+
+  if (url.pathname === '/api/reliability/payments/attempts') {
+    const input = sanitizePaymentAttempt(parsed.body)
+    if (!input) return json({ error: 'Payment attempt fields are invalid.', code: 'invalid_payment_attempt' }, 400)
+    const result = await store.createPaymentAttempt({ ...input, reference: paymentReferenceFor(input.idempotencyKey), now, expiresAt })
+    if (result.conflict) return json({ error: 'This payment key conflicts with an existing attempt.', code: 'payment_conflict' }, 409)
+    return json({
+      synthetic: true,
+      durable: true,
+      authority: 'sandbox-payment-service',
+      duplicate: result.duplicate,
+      payment: publicPaymentAttempt(result.record),
+    }, result.duplicate ? 200 : 201)
+  }
+
+  const paymentAction = url.pathname.match(/^\/api\/reliability\/payments\/attempts\/([^/]+)\/(resolve|reconcile)$/)
+  if (paymentAction) {
+    const idempotencyKey = decodeURIComponent(paymentAction[1])
+    const identity = validateIdentity(parsed.body)
+    if (!identity || !IDEMPOTENCY_KEY.test(idempotencyKey)) {
+      return json({ error: 'Payment action fields are invalid.', code: 'invalid_payment_action' }, 400)
+    }
+    const action = paymentAction[2]
+    const validOutcomes = action === 'reconcile' ? allowed.reconciliationOutcome : allowed.paymentOutcome
+    const outcome = cleanEnum(parsed.body?.outcome, validOutcomes, '')
+    if (!outcome) return json({ error: 'Payment outcome is invalid.', code: 'invalid_payment_outcome' }, 400)
+    const operation = action === 'reconcile' ? 'reconcilePaymentAttempt' : 'resolvePaymentAttempt'
+    const result = await store[operation]({ ...identity, idempotencyKey, outcome, now })
+    if (!result) return json({ error: 'Payment attempt was not found.', code: 'payment_not_found' }, 404)
+    if (result.conflict) return json({ error: 'Payment attempt does not belong to this session.', code: 'payment_conflict' }, 409)
+    if (result.invalidState) return json({ error: 'This payment is not waiting for reconciliation.', code: 'invalid_payment_state' }, 409)
+    return json({ synthetic: true, durable: true, authority: 'sandbox-payment-service', payment: publicPaymentAttempt(result.record) })
   }
 
   return json({ error: 'Reliability route was not found.', code: 'not_found' }, 404)

@@ -1,12 +1,14 @@
 # LicenceFlow — latest code and future roadmap
 
 **Last updated:** 5 September 2026
-**Status:** Round 2: server-controlled assessment, on-device phone observation and judge recovery lab implemented and browser-verified
-**Immediate rule:** Focus only on cheat resistance, one feature at a time. Preserve the established judge journey. Whisper analysis, watermark traps and OS lockdown remain outside this slice. The YouTube tutorial remains unchanged.
+**Status:** Round 2: server-controlled assessment, on-device phone observation, judge recovery lab and server-owned sandbox payment lifecycle implemented and browser-verified
+**Immediate rule:** Preserve the established judge journey and finish one defensible subsystem at a time. Whisper analysis, watermark traps and OS lockdown remain outside the verified slice. The YouTube tutorial remains unchanged.
 
 ## Round 2 update — authoritative assessment first
 
 The previous plan to move questions, timers, answers and scoring to a server has now been implemented for a separate anonymous prototype assessment. It uses a server-only runtime bank, cryptographic paper/option selection, D1 transactions, idempotent answer retries, bounded pauses, a tab lease and server-locked post-test review. A self-hosted on-device object model observes sustained phone presence using the same coach-then-pause policy; its labelled judge simulation is stored separately from real evidence. A new judge-only recovery lab deliberately interrupts the real protected-test transport and proves four recovery properties: reconnection to the same attempt, exactly-once recovery after a lost save acknowledgement, reload recovery and blocking of a competing test client. Completed attempts translate server audit entries into a citizen-readable timeline and downloadable privacy-safe recovery record. Judge sample questions and passing shortcuts remain a separate local simulation and cannot change protected results.
+
+The sandbox payment lifecycle is also server-owned now. D1 stores one attempt for a stable idempotency key, the Worker issues the synthetic reference, final states are immutable, and an uncertain return blocks retry until the same attempt is checked and reconciled. The ordinary and Raahi judge journeys use this same boundary. It remains explicitly synthetic: no card/UPI secret is accepted, no money moves and no government payment entitlement is created.
 
 This replaces the Round 1 statements below that there is no exam server. It does **not** complete production applicant identity, official payment/entitlement, confidential question content, device attestation, server-verified camera evidence or secure native testing. The 50-question content is still present in repository history and earlier demo builds.
 
@@ -60,7 +62,7 @@ The current local build includes:
 - synthetic applicant photographs, signatures and documents in the application and generated demonstration records.
 - an optional built-in Raahi guide and reviewed deterministic help responses that do not require an API key;
 - a Sites Worker reliability API with same-origin and bounded-input validation;
-- append-only D1 checkpoint migrations and an idempotent synthetic-payment confirmation record;
+- append-only D1 checkpoint migrations and a server-owned sandbox payment-attempt record;
 - a visible result-page recovery receipt that distinguishes server confirmation from browser-cache fallback.
 
 ### Important current limitations
@@ -158,7 +160,8 @@ A deliberately small part of the former production architecture is now real:
 
 - journey milestones are mirrored to an append-only Sites D1 ledger when available;
 - duplicate checkpoint IDs are safe to retry;
-- synthetic payment confirmation uses the existing payment idempotency key and returns the original record on repetition;
+- sandbox payment creation uses the existing idempotency key and returns the original server-owned record on repetition;
+- uncertain payment returns block retry until the same record is checked and reconciled; final states cannot be rewritten;
 - the result page reports server checkpoint confirmation or an honest browser-cache fallback;
 - only broad stage/status metadata is persisted—never applicant data, documents, camera data, question content or selected answers;
 - the browser remains immediately recoverable if the network or D1 layer fails.
@@ -364,7 +367,7 @@ The record must say what was observed, for how long and what action followed. It
 
 ### 7.3 Production upgrade
 
-The hackathon build now demonstrates append-only minimal checkpoints and idempotent mock payment confirmation in D1. A real deployment would additionally keep question delivery, timer, answers, attempt entitlement, scoring and evidence review on an authenticated authoritative server. Short-lived question tokens, nonces and one active attempt per candidate can be added there. Client signatures alone must never be presented as making `localStorage` trustworthy.
+The hackathon build now demonstrates append-only minimal checkpoints, a server-owned sandbox payment lifecycle and a separate authoritative protected assessment in D1. A real deployment would still require authenticated citizen entitlement, gateway-signed payment callbacks, treasury reconciliation and independent evidence review. Client signatures alone must never be presented as making `localStorage` trustworthy.
 
 ## 8. Future Phase D — AI-aware assessment markers
 

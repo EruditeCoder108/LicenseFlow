@@ -17,6 +17,7 @@ Its practical goal is not merely to restyle a government form. It demonstrates h
 | Identity, government records, fee approval and issuance | Synthetic only; no department, UIDAI, bank or treasury connection |
 | Other transport and permanent-DL services | Discoverable directory/reference pages, not working transactions |
 | Judge walkthrough and reliability ledger | Local simulated journey plus minimal server-mirrored milestones; not authoritative grading |
+| Sandbox payment lifecycle | Server-created attempt, stable idempotency key, server-issued reference, immutable final state and status-before-retry reconciliation; no bank or real money |
 | Server-saved assessment | Separate D1-backed paper, timing, immutable answers, score and review; anonymous prototype session, not verified citizen identity |
 | Judge recovery lab | Labelled fault controls exercise the real protected-test transport and prove reconnection, exact answer recovery, reload recovery and single-client control |
 
@@ -38,7 +39,7 @@ The implementation boundary and state-extension seams are documented in [docs/im
 - fictional e-KYC, document, portrait and signature handling;
 - real browser camera/microphone/device checks plus a clearly labelled judge simulation;
 - one-question system rehearsal before the fee step;
-- synthetic payment gateway with explicit pending, failure, uncertain and confirmed states;
+- synthetic payment gateway with a server-owned attempt, explicit pending/failure/uncertain/confirmed states and status-before-retry reconciliation;
 - YouTube learning gate with sequential-watch enforcement and a judge-only time shortcut;
 - focused 15-question test interface with timer, narration and interruption recovery;
 - result, answer explanations, journey receipt and visibly invalid demonstration licence;
@@ -61,7 +62,8 @@ The implementation boundary and state-extension seams are documented in [docs/im
 - monitoring rules are deterministic and proportionate: observe, guide, pause, record—never auto-accuse;
 - MediaPipe model and WASM assets are self-hosted and camera inference stays on-device;
 - a Sites Worker can mirror **minimal, non-personal milestones** to an append-only D1 ledger;
-- repeated mock-payment confirmation uses the same idempotency key and returns the original receipt;
+- repeated sandbox-payment creation uses the same idempotency key and returns the original server-issued reference;
+- final payment outcomes are immutable, while uncertain returns block a new attempt until the sandbox service is checked;
 - the older milestone mirror reports a browser-cache fallback if unavailable;
 - the protected assessment **does not fall back to client scoring**: it offers reconnection, exact answer retries and a server-confirmed result;
 - an opt-in judge recovery lab deliberately drops one connection request, hides one successful save response, tries a competing client and reloads the page, then displays the actual recovered attempt, question, answer count and remaining time;
@@ -76,7 +78,8 @@ The legacy milestone layer excludes questions and selected answers. The **separa
 ```mermaid
 flowchart TD
     Citizen["Citizen journey<br/>React + TypeScript"]
-    State["Local demo recovery<br/>Application · payment · tutorial · judge test"]
+    State["Local demo recovery<br/>Application · tutorial · judge test"]
+    Payment["Sandbox payment API<br/>Idempotency · status · reconciliation"]
     Assessment["Protected assessment API<br/>Private runtime bank · timing · grading"]
     Vision["On-device readiness<br/>MediaPipe · no camera upload"]
     Worker["Sites Worker boundary<br/>Validation · size limits · same-origin writes"]
@@ -84,23 +87,26 @@ flowchart TD
 
     Citizen --> State
     Citizen --> Assessment
+    Citizen --> Payment
     Assessment --> Worker
     Citizen --> Vision
     State -. "Minimal debounced checkpoint" .-> Worker
+    Payment --> Worker
     Worker --> D1
     D1 -. "Recovery receipt" .-> Citizen
 ```
 
-Browser checkpoints remain non-authoritative. Protected exam answers and grades now come from D1 through the Worker, but production citizen authentication, government entitlement, payment authorization and independent evidence review remain unimplemented. The repository and earlier releases contain the original questions; excluding them from the new runtime browser bundle is not a claim that this open-source question content is secret.
+Browser checkpoints remain non-authoritative. Protected exam answers and grades, plus the synthetic payment-attempt lifecycle, now come from D1 through the Worker. The payment service is an engineering sandbox—not a bank, treasury or payment gateway—and moves no money. Production citizen authentication, government entitlement, real payment authorization and independent evidence review remain unimplemented. The repository and earlier releases contain the original questions; excluding them from the new runtime browser bundle is not a claim that this open-source question content is secret.
 
 ## Verified state
 
-Recovery-lab update, 5 September 2026:
+Recovery and sandbox-payment update, 5 September 2026:
 
-- **177 tests across 38 files pass**; the focused protected-exam suite has **35 passing tests**;
+- **182 tests across 38 files pass**; the focused protected-exam suite has **35 passing tests**;
 - automated API and client-adapter tests use migrated SQLite and real handlers, including races, expired leases, tampered requests and lost responses;
 - the production Worker is bundled separately and static output is checked for protected-bank leakage;
-- **18 applicable Playwright release journeys pass** across desktop and mobile profiles, with four intentionally inapplicable matrix cases skipped;
+- **19 applicable Playwright release journeys pass** across desktop and mobile profiles, with five intentionally inapplicable matrix cases skipped;
+- the payment journeys prove one server-created attempt, immutable confirmation, safe definitive failure and reconciliation of an uncertain return before retry;
 - the recovery lab received an additional desktop/mobile visual and overflow check;
 - [verification details and browser checklist](docs/protected-exam-core.md#browser-verification).
 

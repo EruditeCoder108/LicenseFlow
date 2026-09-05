@@ -54,6 +54,13 @@ export interface PaymentState {
   activity: PaymentActivity[]
 }
 
+export interface AuthoritativePaymentSnapshot {
+  status: PaymentStatus
+  reference: string
+  updatedAt: string
+  resolvedAt?: string
+}
+
 export const MP_LL_DEMO_FEE = {
   evidence: 'SYNTHETIC_PROTOTYPE' as const,
   items: [
@@ -236,6 +243,53 @@ export function reconcilePayment(payment: PaymentState, outcome: 'confirmed' | '
         'भुगतान स्थिति जाँची गई',
         outcome === 'confirmed' ? 'The earlier attempt is confirmed. No new payment is required.' : 'The earlier attempt was not charged. A new attempt is available.',
         outcome === 'confirmed' ? 'पहला प्रयास पुष्ट है। नया भुगतान आवश्यक नहीं है।' : 'पहले प्रयास में शुल्क नहीं लगा। नया प्रयास उपलब्ध है।',
+      ),
+    ],
+  }
+}
+
+export function applyAuthoritativePayment(
+  payment: PaymentState,
+  snapshot: AuthoritativePaymentSnapshot,
+  reconciled = false,
+): PaymentState {
+  if (!payment.attemptId || !payment.idempotencyKey) return payment
+  const changed = payment.status !== snapshot.status || payment.reference !== snapshot.reference
+  if (!changed && !reconciled) return { ...payment, updatedAt: snapshot.updatedAt }
+
+  if (snapshot.status === 'not-started' || snapshot.status === 'redirecting') {
+    return {
+      ...payment,
+      status: snapshot.status,
+      reference: snapshot.reference,
+      updatedAt: snapshot.updatedAt,
+    }
+  }
+
+  const resolved = resolvePayment(payment, snapshot.status as PaymentOutcome, snapshot.updatedAt)
+  const withServerReference = {
+    ...resolved,
+    status: snapshot.status,
+    reference: snapshot.reference,
+    updatedAt: snapshot.updatedAt,
+    confirmedAt: snapshot.status === 'confirmed' ? (snapshot.resolvedAt ?? snapshot.updatedAt) : undefined,
+  }
+  if (!reconciled) return withServerReference
+  return {
+    ...withServerReference,
+    activity: [
+      ...withServerReference.activity,
+      activity(
+        'STATUS_RECONCILED',
+        snapshot.updatedAt,
+        'Payment status checked with the sandbox service',
+        'सैंडबॉक्स सेवा से भुगतान स्थिति जाँची गई',
+        snapshot.status === 'confirmed'
+          ? 'The earlier attempt is confirmed. No new payment is required.'
+          : 'The earlier attempt was not charged. A new attempt is available.',
+        snapshot.status === 'confirmed'
+          ? 'पहला प्रयास पुष्ट है। नया भुगतान आवश्यक नहीं है।'
+          : 'पहले प्रयास में शुल्क नहीं लगा। नया प्रयास उपलब्ध है।',
       ),
     ],
   }

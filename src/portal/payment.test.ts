@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  applyAuthoritativePayment,
   beginPayment,
   createPaymentState,
   markGatewayRedirected,
@@ -27,6 +28,16 @@ describe('payment transaction model', () => {
     })).toBe(payment)
     const redirected = markGatewayRedirected(payment, '2026-08-23T10:00:30.000Z')
     expect(markGatewayRedirected(redirected, '2026-08-23T10:00:40.000Z')).toBe(redirected)
+  })
+
+  it('attaches a server reference while the prepared attempt is still redirecting', () => {
+    const payment = applyAuthoritativePayment(start(), {
+      status: 'redirecting',
+      reference: 'LFSBX-ATTEMPT1SERVER',
+      updatedAt: '2026-08-23T10:00:10.000Z',
+    })
+    expect(payment.status).toBe('redirecting')
+    expect(payment.reference).toBe('LFSBX-ATTEMPT1SERVER')
   })
 
   it('suppresses another attempt while confirmation is unknown', () => {

@@ -28,7 +28,7 @@ const randomId = () => {
   return `lf-${Date.now()}-${Math.random().toString(36).slice(2, 12)}`
 }
 
-const sessionIdFor = (applicationId: string) => {
+export const reliabilitySessionIdFor = (applicationId: string) => {
   const key = `${SESSION_PREFIX}${applicationId}`
   const existing = storageAvailable() ? localStorage.getItem(key) : null
   if (existing && /^[a-zA-Z0-9-]{8,80}$/.test(existing)) return existing
@@ -123,12 +123,15 @@ async function syncSnapshot(applicationId: string, snapshot: Snapshot) {
 
   const progress = snapshot.progress
   const exam = snapshot.exam
-  const sessionId = sessionIdFor(applicationId)
+  const sessionId = reliabilitySessionIdFor(applicationId)
   const checkpointId = randomId()
   recordStatus(applicationId, 'pending')
 
   try {
-    if (progress.payment.status === 'confirmed' && progress.payment.idempotencyKey && progress.payment.reference) {
+    // Older browser-only journeys used the legacy confirmation mirror. New
+    // LFSBX references are created and resolved by the authoritative sandbox
+    // payment service and must never be re-declared by the client.
+    if (progress.payment.status === 'confirmed' && progress.payment.idempotencyKey && progress.payment.reference?.startsWith('MP-SBX-')) {
       await postJson('/api/reliability/payments/confirm', {
         sessionId,
         applicationId,
@@ -179,7 +182,7 @@ export function queueExamReliabilityCheckpoint(applicationId: string, exam: Jour
 export async function refreshReliabilityReceipt(applicationId: string): Promise<ReliabilityStatus> {
   if (!import.meta.env.PROD) return loadReliabilityStatus(applicationId)
   try {
-    const response = await fetch(`/api/reliability/sessions/${encodeURIComponent(sessionIdFor(applicationId))}`, {
+    const response = await fetch(`/api/reliability/sessions/${encodeURIComponent(reliabilitySessionIdFor(applicationId))}`, {
       credentials: 'same-origin',
       headers: { Accept: 'application/json' },
     })

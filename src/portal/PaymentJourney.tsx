@@ -32,7 +32,7 @@ import {
   type PaymentStatus,
 } from './payment'
 import {
-  finishSyntheticPayment,
+  applyServerPaymentSnapshot,
   loadJourneyProgress,
   preparePaymentRetry,
   recordGatewayRedirect,
@@ -40,6 +40,11 @@ import {
   startSyntheticPayment,
   type LLJourneyProgress,
 } from './progress'
+import {
+  createSandboxPaymentAttempt,
+  getSandboxPaymentAttempt,
+  resolveSandboxPaymentAttempt,
+} from './sandboxPaymentClient'
 import { navigatePortal } from './router'
 import { localeFor, translate as local, type Language } from './i18n'
 
@@ -121,7 +126,7 @@ function UpiQrPreview({
       <div className="upi-qr-card__header">
         <div>
           <strong>{local(language, 'Scan with Any UPI App', 'किसी भी UPI ऐप से स्कैन करें')}</strong>
-          <small>{local(language, 'Instant demo settlement · Zero duplicate charge', 'त्वरित डेमो भुगतान · कोई दोहरा शुल्क नहीं')}</small>
+          <small>{local(language, 'Server-checked demo settlement · Safe retry rules', 'सर्वर-जाँचा डेमो भुगतान · सुरक्षित दोबारा प्रयास नियम')}</small>
         </div>
         <span className="upi-qr-card__badge"><QrCode size={13} /> UPI QR</span>
       </div>
@@ -210,6 +215,8 @@ export function PaymentPage({ language, applicationId }: { language: Language; a
   const [progress, setProgress] = useState<LLJourneyProgress>(() => loadJourneyProgress(applicationId))
   const [method, setMethod] = useState<PaymentMethod>('upi')
   const [confirmed, setConfirmed] = useState(false)
+  const [paymentBusy, setPaymentBusy] = useState(false)
+  const [serviceError, setServiceError] = useState('')
   const ready = progress.readiness.status === 'passed' && progress.rehearsal.status === 'completed'
 
   if (!ready) return readinessGuard(language, applicationId, progress)
@@ -262,23 +269,43 @@ export function PaymentPage({ language, applicationId }: { language: Language; a
     )
   }
 
-  const begin = () => {
+  const begin = async () => {
+    if (paymentBusy) return
+    setPaymentBusy(true)
+    setServiceError('')
     let current = progress
     if (current.payment.status === 'declined' || current.payment.status === 'cancelled') current = preparePaymentRetry(current)
-    const updated = startSyntheticPayment(current, method, paymentAttemptId())
-    saveJourneyProgress(updated)
-    setProgress(updated)
-    navigatePortal(`/mp/application/${applicationId}/payment/redirect`)
+    const started = startSyntheticPayment(current, method, paymentAttemptId())
+    try {
+      const serverPayment = await createSandboxPaymentAttempt(started)
+      const updated = applyServerPaymentSnapshot(started, serverPayment)
+      saveJourneyProgress(updated)
+      setProgress(updated)
+      navigatePortal(`/mp/application/${applicationId}/payment/redirect`)
+    } catch {
+      setServiceError(local(language, 'The sandbox payment service could not start this attempt. Nothing was charged. Please try again.', 'सैंडबॉक्स भुगतान सेवा यह प्रयास शुरू नहीं कर सकी। कोई शुल्क नहीं लगा। कृपया फिर कोशिश करें।'))
+      setPaymentBusy(false)
+    }
   }
 
-  const instantUpiPay = () => {
+  const instantUpiPay = async () => {
+    if (paymentBusy) return
+    setPaymentBusy(true)
+    setServiceError('')
     let current = progress
     if (current.payment.status === 'declined' || current.payment.status === 'cancelled') current = preparePaymentRetry(current)
     const started = startSyntheticPayment(current, 'upi', paymentAttemptId())
-    const completed = finishSyntheticPayment(started, 'confirmed')
-    saveJourneyProgress(completed)
-    setProgress(completed)
-    navigatePortal(`/mp/application/${applicationId}/payment/return`)
+    try {
+      await createSandboxPaymentAttempt(started)
+      const serverPayment = await resolveSandboxPaymentAttempt(started, 'confirmed')
+      const completed = applyServerPaymentSnapshot(started, serverPayment)
+      saveJourneyProgress(completed)
+      setProgress(completed)
+      navigatePortal(`/mp/application/${applicationId}/payment/return`)
+    } catch {
+      setServiceError(local(language, 'The sandbox service could not confirm this demo payment. Nothing was charged. Please try again.', 'सैंडबॉक्स सेवा इस डेमो भुगतान की पुष्टि नहीं कर सकी। कोई शुल्क नहीं लगा। कृपया फिर कोशिश करें।'))
+      setPaymentBusy(false)
+    }
   }
 
   const total = feeTotal()
@@ -335,13 +362,13 @@ export function PaymentPage({ language, applicationId }: { language: Language; a
             <div className="payment-security-guarantee__img-wrap">
               <img
                 src="/assets/payment-shield.png"
-                alt="SafePay Guarantee"
+                alt="Sandbox payment shield"
                 className="payment-security-guarantee__img"
               />
             </div>
             <div>
-              <strong>{local(language, 'Parivahan SafePay Guarantee', 'परिवहन सेफ़पे गारंटी')}</strong>
-              <small>{local(language, 'Protected against duplicate charges · Instant digital receipt · Device-verified', 'दोहरे शुल्क से सुरक्षा · तुरंत डिजिटल रसीद · डिवाइस सत्यापित')}</small>
+              <strong>{local(language, 'LicenceFlow sandbox payment safeguards', 'लाइसेंसफ्लो सैंडबॉक्स भुगतान सुरक्षा')}</strong>
+              <small>{local(language, 'One server-owned attempt · Status check before retry · Digital demo receipt', 'एक सर्वर-सहेजा प्रयास · दोबारा कोशिश से पहले स्थिति जाँच · डिजिटल डेमो रसीद')}</small>
             </div>
           </div>
         </section>
@@ -394,7 +421,7 @@ export function PaymentPage({ language, applicationId }: { language: Language; a
         <div className="journey-contract__shield-wrap">
           <img
             src="/assets/payment-shield.png"
-            alt="Payment Protection"
+            alt="Sandbox payment shield"
             className="journey-contract__shield-img"
           />
         </div>
@@ -408,8 +435,9 @@ export function PaymentPage({ language, applicationId }: { language: Language; a
         </div>
       </div>
       <div className="lf-actions">
-        <button className="button button--primary" disabled={!confirmed || paymentBlocksNewAttempt(progress.payment)} onClick={begin} data-tour="payment-start-gateway">
-          {local(language, 'Pay now via Gateway', 'गेटवे से भुगतान करें')} <ExternalLink size={18} />
+        {serviceError && <p className="field-error payment-service-error" role="alert">{serviceError}</p>}
+        <button className="button button--primary" disabled={!confirmed || paymentBlocksNewAttempt(progress.payment) || paymentBusy} onClick={() => void begin()} data-tour="payment-start-gateway">
+          {paymentBusy ? local(language, 'Creating safe payment attempt…', 'सुरक्षित भुगतान प्रयास बनाया जा रहा है…') : local(language, 'Pay now via Gateway', 'गेटवे से भुगतान करें')} <ExternalLink size={18} />
         </button>
         <FlowLink className="button button--secondary" href={`/mp/application/${applicationId}`}>
           <ArrowLeft size={18} /> {local(language, 'Back to application status', 'आवेदन स्थिति पर लौटें')}
@@ -459,24 +487,42 @@ export function GatewayPage({ language, applicationId }: { language: Language; a
   const [credential, setCredential] = useState(progress.payment.method === 'upi' ? 'demo@licenceflow' : progress.payment.method === 'card' ? '4242 4242 4242 4242' : 'LicenceFlow Demo Bank')
   const [outcome, setOutcome] = useState<PaymentOutcome>('confirmed')
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
-  const authorize = (event: FormEvent) => {
+  const authorize = async (event: FormEvent) => {
     event.preventDefault()
     if (credential.trim().length < 4) {
       setError(local(language, 'Enter a demo value to continue.', 'आगे बढ़ने के लिए डेमो मान दर्ज करें।'))
       return
     }
-    const updated = finishSyntheticPayment(progress, outcome)
-    saveJourneyProgress(updated)
-    setProgress(updated)
-    navigatePortal(`/mp/application/${applicationId}/payment/return`)
+    if (busy) return
+    setBusy(true)
+    try {
+      const serverPayment = await resolveSandboxPaymentAttempt(progress, outcome)
+      const updated = applyServerPaymentSnapshot(progress, serverPayment)
+      saveJourneyProgress(updated)
+      setProgress(updated)
+      navigatePortal(`/mp/application/${applicationId}/payment/return`)
+    } catch {
+      setError(local(language, 'We could not verify this demo payment. Do not start another attempt; please try this button again.', 'हम इस डेमो भुगतान की पुष्टि नहीं कर सके। नया प्रयास शुरू न करें; कृपया यही बटन फिर दबाएँ।'))
+      setBusy(false)
+    }
   }
 
-  const cancel = () => {
-    const updated = finishSyntheticPayment(progress, 'cancelled')
-    saveJourneyProgress(updated)
-    setProgress(updated)
-    navigatePortal(`/mp/application/${applicationId}/payment/return`)
+  const cancel = async () => {
+    if (busy) return
+    setBusy(true)
+    setError('')
+    try {
+      const serverPayment = await resolveSandboxPaymentAttempt(progress, 'cancelled')
+      const updated = applyServerPaymentSnapshot(progress, serverPayment)
+      saveJourneyProgress(updated)
+      setProgress(updated)
+      navigatePortal(`/mp/application/${applicationId}/payment/return`)
+    } catch {
+      setError(local(language, 'We could not close this sandbox attempt safely. Please try again.', 'हम इस सैंडबॉक्स प्रयास को सुरक्षित रूप से बंद नहीं कर सके। कृपया फिर कोशिश करें।'))
+      setBusy(false)
+    }
   }
 
   if (progress.payment.status !== 'redirecting') {
@@ -537,10 +583,10 @@ export function GatewayPage({ language, applicationId }: { language: Language; a
               <option value="unknown">{local(language, 'Status lost', 'स्थिति खो गई')}</option>
             </select>
           </details>
-          <button className="button button--primary button--full" type="submit" data-tour="gateway-complete">
-            {local(language, 'Complete demo payment', 'डेमो भुगतान पूरा करें')} <ArrowRight size={18} />
+          <button className="button button--primary button--full" type="submit" disabled={busy} data-tour="gateway-complete">
+            {busy ? local(language, 'Checking with sandbox service…', 'सैंडबॉक्स सेवा से जाँच हो रही है…') : local(language, 'Complete demo payment', 'डेमो भुगतान पूरा करें')} <ArrowRight size={18} />
           </button>
-          <button className="gateway-cancel" type="button" onClick={cancel}>
+          <button className="gateway-cancel" type="button" onClick={() => void cancel()} disabled={busy}>
             {local(language, 'Cancel and go back', 'रद्द करें और वापस जाएँ')}
           </button>
         </form>
@@ -569,6 +615,17 @@ export function PaymentReturnPage({ language, applicationId, onStageChange }: { 
     : uncertain
       ? local(language, 'Please do not pay again. We are checking your transaction.', 'कृपया दोबारा भुगतान न करें। हम आपके लेन-देन की जाँच कर रहे हैं।')
       : local(language, 'No money was deducted. Your application remains saved.', 'कोई शुल्क नहीं कटा। आपका आवेदन सुरक्षित है।')
+
+  useEffect(() => {
+    if (!progress.payment.idempotencyKey || !progress.payment.reference?.startsWith('LFSBX-')) return
+    void getSandboxPaymentAttempt(progress).then((serverPayment) => {
+      const updated = applyServerPaymentSnapshot(progress, serverPayment)
+      if (updated.payment !== progress.payment) {
+        saveJourneyProgress(updated)
+        setProgress(updated)
+      }
+    }).catch(() => undefined)
+  }, [applicationId])
 
   const retry = () => {
     const updated = preparePaymentRetry(progress)

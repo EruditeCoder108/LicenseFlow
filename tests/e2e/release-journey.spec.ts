@@ -159,6 +159,31 @@ test('a failed sandbox payment gives a safe retry path without a duplicate charg
   await expect(page.getByRole('button', { name: 'Try paying again' })).toBeVisible()
 })
 
+test('an uncertain sandbox payment is checked on the server before retry', async ({ page, isMobile }) => {
+  test.skip(isMobile, 'Focused payment reconciliation runs once on desktop Chrome.')
+  const createdAttempts: string[] = []
+  page.on('request', (request) => {
+    if (request.method() === 'POST' && new URL(request.url()).pathname === '/api/reliability/payments/attempts') {
+      createdAttempts.push(request.url())
+    }
+  })
+  await reachPayment(page)
+  await page.getByRole('checkbox', { name: /I have checked the fee and application details/ }).check()
+  await page.getByRole('button', { name: 'Pay now via Gateway' }).click()
+  await page.getByRole('button', { name: 'Continue to payment gateway' }).click()
+  await page.getByText('Demo test outcomes').click()
+  await page.getByLabel('Choose result to simulate').selectOption('unknown')
+  await page.getByRole('button', { name: 'Complete demo payment' }).click()
+  await expect(page.getByRole('heading', { name: 'Checking payment status' })).toBeVisible()
+  await page.getByRole('link', { name: 'Check payment status' }).click()
+  await expect(page.getByRole('heading', { name: 'Please wait — checking payment' })).toBeVisible()
+  await expect(page.getByText('Status checked against LicenceFlow’s sandbox payment service.')).toBeVisible()
+  await page.getByRole('button', { name: 'Simulate payment success' }).click()
+  await expect(page.getByRole('heading', { name: 'Payment successful' })).toBeVisible()
+  await expect(page.getByText(/^LFSBX-/)).toBeVisible()
+  expect(createdAttempts).toHaveLength(1)
+})
+
 test('the synthetic interruption survives reload and resumes at question four', async ({ page, isMobile }) => {
   test.skip(isMobile, 'Focused recovery case runs once on desktop Chrome.')
   await reachTestEntry(page)

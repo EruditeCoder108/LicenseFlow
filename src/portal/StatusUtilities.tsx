@@ -1,7 +1,8 @@
-import { useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
 import { ArrowLeft, ArrowRight, CheckCircle2, CircleAlert, Clock3, CreditCard, FileSearch, IndianRupee, Printer, ReceiptText, RefreshCw, Search, ShieldCheck, XCircle } from 'lucide-react'
 import { isPaymentConfirmed, paymentNeedsReconciliation } from './payment'
-import { loadJourneyProgress, reconcileSyntheticPayment, saveJourneyProgress } from './progress'
+import { applyServerPaymentSnapshot, loadJourneyProgress, reconcileSyntheticPayment, saveJourneyProgress } from './progress'
+import { getSandboxPaymentAttempt, reconcileSandboxPaymentAttempt } from './sandboxPaymentClient'
 import { navigatePortal } from './router'
 import { localeFor, translate as local, type Language } from './i18n'
 
@@ -144,18 +145,52 @@ export function FeeAndReceiptHub({ language, applicationId }: { language: Langua
 
 export function PaymentStatusPage({ language, applicationId }: { language: Language; applicationId: string }) {
   const [progress, setProgress] = useState(() => loadJourneyProgress(applicationId))
+  const [checking, setChecking] = useState(false)
+  const [serviceError, setServiceError] = useState('')
   const payment = progress.payment
+  const serverManaged = payment.reference?.startsWith('LFSBX-') === true
   const paid = isPaymentConfirmed(payment)
   const uncertain = paymentNeedsReconciliation(payment)
   const definitivelyUnpaid = payment.status === 'not-started' || payment.status === 'declined' || payment.status === 'cancelled'
   const Icon = paid ? CheckCircle2 : uncertain ? Clock3 : definitivelyUnpaid ? XCircle : CircleAlert
   const headline = paid ? local(language, 'Payment successful', 'भुगतान सफल रहा') : uncertain ? local(language, 'Please wait — checking payment', 'कृपया प्रतीक्षा करें — भुगतान जाँचा जा रहा है') : local(language, 'No confirmed payment found', 'कोई सफल भुगतान नहीं मिला')
   const explanation = paid ? local(language, 'This application has a confirmed payment receipt. No further payment is needed.', 'इस आवेदन का भुगतान सफल हो चुका है। दोबारा भुगतान करने की जरूरत नहीं है।') : uncertain ? local(language, 'Your previous payment may still be processing. Check its status before trying again.', 'आपका पिछला भुगतान अभी प्रोसेस हो रहा हो सकता है। दोबारा प्रयास से पहले स्थिति जाँच लें।') : local(language, 'You can complete device checks and proceed to payment review.', 'आप डिवाइस जाँच पूरी करके भुगतान पर आगे बढ़ सकते हैं।')
-  const reconcile = (outcome: 'confirmed' | 'declined') => {
-    const updated = reconcileSyntheticPayment(progress, outcome)
+  const applyServer = (serverPayment: Awaited<ReturnType<typeof getSandboxPaymentAttempt>>, reconciled = false) => {
+    const updated = applyServerPaymentSnapshot(progress, serverPayment, reconciled)
     saveJourneyProgress(updated)
     setProgress(updated)
   }
+  const checkStatus = async () => {
+    if (!serverManaged || !progress.payment.idempotencyKey || checking) return
+    setChecking(true)
+    setServiceError('')
+    try {
+      applyServer(await getSandboxPaymentAttempt(progress))
+    } catch {
+      setServiceError(local(language, 'We could not verify the earlier sandbox attempt. Do not start another payment yet; check again.', 'हम पिछले सैंडबॉक्स प्रयास की पुष्टि नहीं कर सके। अभी नया भुगतान शुरू न करें; फिर से जाँचें।'))
+    } finally {
+      setChecking(false)
+    }
+  }
+  const reconcile = async (outcome: 'confirmed' | 'declined') => {
+    if (checking) return
+    if (!serverManaged) {
+      const updated = reconcileSyntheticPayment(progress, outcome)
+      saveJourneyProgress(updated)
+      setProgress(updated)
+      return
+    }
+    setChecking(true)
+    setServiceError('')
+    try {
+      applyServer(await reconcileSandboxPaymentAttempt(progress, outcome), true)
+    } catch {
+      setServiceError(local(language, 'The sandbox service could not finish this status check. Please try again.', 'सैंडबॉक्स सेवा यह स्थिति जाँच पूरी नहीं कर सकी। कृपया फिर कोशिश करें।'))
+    } finally {
+      setChecking(false)
+    }
+  }
+  useEffect(() => { if (serverManaged) void checkStatus() }, [applicationId, serverManaged])
   return (
     <>
       <nav className="breadcrumbs" aria-label={local(language, 'Breadcrumb', 'स्थान पथ')}>
@@ -186,6 +221,13 @@ export function PaymentStatusPage({ language, applicationId }: { language: Langu
               <div><dt>{local(language, 'Updated', 'अपडेट')}</dt><dd>{payment.updatedAt ? new Date(payment.updatedAt).toLocaleString(localeFor(language)) : '—'}</dd></div>
             </dl>
           )}
+          {serverManaged && <p className="payment-authority-note"><ShieldCheck size={17} /> {local(language, 'Status checked against LicenceFlow’s sandbox payment service.', 'स्थिति लाइसेंसफ्लो की सैंडबॉक्स भुगतान सेवा से जाँची गई।')}</p>}
+          {serviceError && <p className="field-error" role="alert">{serviceError}</p>}
+          {serverManaged && payment.idempotencyKey && (
+            <button className="button button--secondary" disabled={checking} onClick={() => void checkStatus()}>
+              <RefreshCw size={17} /> {checking ? local(language, 'Checking…', 'जाँच हो रही है…') : local(language, 'Check again', 'फिर से जाँचें')}
+            </button>
+          )}
         </div>
       </section>
       {uncertain && (
@@ -196,10 +238,10 @@ export function PaymentStatusPage({ language, applicationId }: { language: Langu
             <p>{local(language, 'These test buttons simulate whether the bank confirmed or declined the payment.', 'ये बटन दिखाते हैं कि बैंक द्वारा भुगतान स्वीकार या अस्वीकार होने पर क्या होता है।')}</p>
           </div>
           <div className="lf-actions">
-            <button className="button button--primary" onClick={() => reconcile('confirmed')}>
+            <button className="button button--primary" disabled={checking} onClick={() => void reconcile('confirmed')}>
               {local(language, 'Simulate payment success', 'सफल भुगतान दिखाएँ')}
             </button>
-            <button className="button button--secondary" onClick={() => reconcile('declined')}>
+            <button className="button button--secondary" disabled={checking} onClick={() => void reconcile('declined')}>
               {local(language, 'Simulate payment failure', 'विफल भुगतान दिखाएँ')}
             </button>
           </div>

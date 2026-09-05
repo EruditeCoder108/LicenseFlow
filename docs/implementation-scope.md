@@ -22,7 +22,7 @@ LicenceFlow is an independent **Build What Moves India** hackathon prototype for
 - real browser camera, microphone, connection and lighting readiness checks;
 - on-device MediaPipe face-presence signals with no recording, recognition or biometric upload;
 - a pre-payment system rehearsal question;
-- an explicit mock gateway with success, failure, pending and uncertain outcomes;
+- an explicit sandbox gateway backed by a server-created, idempotent attempt with success, failure, pending and uncertain outcomes;
 - learning progress and sequential-watch behavior using temporary YouTube material;
 - separate server-saved assessment: balanced private-runtime paper selection, authoritative timing/answers/grading and post-completion review;
 - deterministic public sample papers and local result shortcuts for the judge walkthrough only;
@@ -43,7 +43,7 @@ The following never become real in this repository:
 - official test entitlement or legal attempt consumption;
 - official Learner's Licence issuance.
 
-The legacy D1 reliability layer stores minimal prototype milestones and synthetic payment idempotency. A separate protected-exam subsystem now stores its own frozen papers, selected answers, timers and grades under anonymous session ownership. It never trusts the legacy mirror's client-supplied score. Neither subsystem provides real applicant identity or official examination entitlement. See [protected-exam-core.md](protected-exam-core.md) for current local implementation and publication status.
+The D1 reliability layer stores minimal prototype milestones. Its sandbox payment subsystem owns attempt creation, synthetic references, final-state immutability and uncertain-state reconciliation; the browser cannot silently declare a new attempt successful. A separate protected-exam subsystem stores its own frozen papers, selected answers, timers and grades under anonymous session ownership. Neither subsystem provides real applicant identity, financial authorization or official examination entitlement. See [reliability-layer.md](reliability-layer.md) and [protected-exam-core.md](protected-exam-core.md) for the exact boundaries.
 
 ## Directory-only surfaces
 
