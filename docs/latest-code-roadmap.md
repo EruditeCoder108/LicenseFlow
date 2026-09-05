@@ -1,16 +1,16 @@
 # LicenceFlow — latest code and future roadmap
 
-**Last updated:** 4 September 2026
-**Status:** Round 2: server-controlled assessment and first on-device phone-observation milestone implemented; browser check remains owner-run
+**Last updated:** 5 September 2026
+**Status:** Round 2: server-controlled assessment, on-device phone observation and judge recovery lab implemented and browser-verified
 **Immediate rule:** Focus only on cheat resistance, one feature at a time. Preserve the established judge journey. Whisper analysis, watermark traps and OS lockdown remain outside this slice. The YouTube tutorial remains unchanged.
 
 ## Round 2 update — authoritative assessment first
 
-The previous plan to move questions, timers, answers and scoring to a server has now been implemented for a separate anonymous prototype assessment. It uses a server-only runtime bank, cryptographic paper/option selection, D1 transactions, idempotent answer retries, bounded pauses, a tab lease and server-locked post-test review. A self-hosted on-device object model now observes sustained phone presence using the same coach-then-pause policy; its labelled judge simulation is stored separately from real evidence. Judge sample questions and passing shortcuts remain a separate local simulation and cannot change protected results.
+The previous plan to move questions, timers, answers and scoring to a server has now been implemented for a separate anonymous prototype assessment. It uses a server-only runtime bank, cryptographic paper/option selection, D1 transactions, idempotent answer retries, bounded pauses, a tab lease and server-locked post-test review. A self-hosted on-device object model observes sustained phone presence using the same coach-then-pause policy; its labelled judge simulation is stored separately from real evidence. A new judge-only recovery lab deliberately interrupts the real protected-test transport and proves four recovery properties: reconnection to the same attempt, exactly-once recovery after a lost save acknowledgement, reload recovery and blocking of a competing test client. Completed attempts translate server audit entries into a citizen-readable timeline and downloadable privacy-safe recovery record. Judge sample questions and passing shortcuts remain a separate local simulation and cannot change protected results.
 
 This replaces the Round 1 statements below that there is no exam server. It does **not** complete production applicant identity, official payment/entitlement, confidential question content, device attestation, server-verified camera evidence or secure native testing. The 50-question content is still present in repository history and earlier demo builds.
 
-Read [protected-exam-core.md](protected-exam-core.md) for exact behavior, data retention, timing limits, automated proof and the owner's manual check list. The owner approved public release on 3 September and chose to perform browser checks personally; do not claim those checks have passed without their confirmation. The dated Round 1 baseline and finish-line decisions below remain historical context, not the new work queue.
+Read [protected-exam-core.md](protected-exam-core.md) for exact behavior, data retention, timing limits and automated proof. The release matrix and a human-style desktop/mobile inspection now cover the recovery controls; camera-hardware checks still require the owner because automation must not grant real device permissions. The dated Round 1 baseline and finish-line decisions below remain historical context, not the new work queue.
 
 This roadmap consolidates the latest repository state and the recent product decisions about exam integrity, retesting, question quality, Safe Exam Browser, AI-assisted cheating and production hardening. Older planning documents remain useful historical context, but future work in these areas should follow this file.
 

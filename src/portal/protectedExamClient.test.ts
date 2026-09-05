@@ -3,6 +3,7 @@ import { openLocalDatabase } from '../../server/dev/database'
 import { handleExamRequest } from '../../server/exam/api'
 import { ProtectedExamClient, ExamServiceError, acceptExamSnapshot, displayedSeconds, type ExamTransport } from './protectedExamClient'
 import { EXAM_RULES } from '../../server/exam/paper'
+import { createRecoveryFaultController } from './resilience/faultInjection'
 
 const APP = 'MP-LL-CLIENT-1000'
 let database: ReturnType<typeof openLocalDatabase>
@@ -120,6 +121,26 @@ describe('protected exam browser adapter against real SQL transitions', () => {
     const retried = calls.filter((call) => call.path.endsWith('/answers')).at(-1)!.body!
     expect(retried.requestId).toBe(command!.requestId)
     expect(retried.questionToken).toBe(command!.questionToken)
+    expect(database.sqlite.prepare('SELECT COUNT(*) AS n FROM exam_answers').get()!.n).toBe(1)
+  })
+
+  it('uses the labelled recovery seam without changing the server answer or attempt', async () => {
+    const faults = createRecoveryFaultController(true)
+    const client = new ProtectedExamClient(APP, faults.wrap(transport), storage)
+    const attempt = await client.open(await client.connect(await client.create()))
+
+    faults.arm('exam-connection-loss')
+    await expect(client.action(attempt, 'heartbeat')).rejects.toMatchObject({ code: 'connection_lost' })
+    const reconnected = await client.connect(attempt)
+    expect(reconnected).toMatchObject({ attemptId: attempt.attemptId, currentIndex: 0, answers: {} })
+
+    faults.arm('exam-lost-answer-response')
+    await expect(client.answer(reconnected, 2)).rejects.toMatchObject({ code: 'connection_lost' })
+    expect(client.hasPendingAnswer).toBe(true)
+    const recovered = await client.connect(reconnected)
+    expect(recovered.attemptId).toBe(attempt.attemptId)
+    expect(recovered.answers).toEqual({ 0: 2 })
+    expect(recovered.currentIndex).toBe(1)
     expect(database.sqlite.prepare('SELECT COUNT(*) AS n FROM exam_answers').get()!.n).toBe(1)
   })
 

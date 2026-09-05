@@ -1,6 +1,6 @@
 # Server-controlled assessment — first cheat-resistance slice
 
-Implemented on 2 September 2026 and extended with an explainable integrity-event summary and on-device phone observation on 4 September 2026. The owner will perform the human browser check personally. This document describes source behavior; successful deployment, rather than this document alone, confirms availability on the public Site.
+Implemented on 2 September 2026, extended with explainable integrity events and on-device phone observation on 4 September, and with a judge recovery lab on 5 September. This document describes source behavior; successful deployment, rather than this document alone, confirms availability on the public Site.
 
 ## What changed
 
@@ -20,6 +20,8 @@ The protected assessment has its own Worker endpoints, D1 tables and UI. The bro
 | Concurrent tabs | One open attempt per anonymous session, one renewable 15-second tab lease; expiry permits reconnection without renewing the question timer |
 | Result | Server grades from its frozen marking key; review is owner-scoped and locked until completion |
 | Judge mode | Public sample fixtures and local scoring only; there is no server judge-pass route. A labelled phone-event simulation exercises a real server pause but is stored outside real integrity evidence |
+| Judge recovery lab | An explicit guided-mode query gate can drop one heartbeat, hide one successful answer acknowledgement, reload the page or attempt a competing client; every proof reconnects to real server state and reports the preserved attempt facts |
+| Recovery record | Completed server attempts show a plain-language event timeline and generate a local PDF without identity, media, question text or selected answers; raw audit wording remains available only under technical details |
 
 ## Trust boundary
 
@@ -61,6 +63,8 @@ Answers are immutable once committed. The public result has no legal effect. A l
 - A self-hosted EfficientDet-Lite0 model checks only the COCO `cell phone` category. It runs in the browser about once every 1.2 seconds, while face analysis keeps its existing cadence. Phone guidance begins after 1.2 seconds and a pause after 3 seconds. This is object detection, not device identity or proof of cheating. The official model source and SHA-256 are recorded in `public/assets/mediapipe/README.txt`.
 - **Simulate phone in frame** is available only in guided mode and while a protected question is active. It calls the real pause endpoint, preserves time and creates a server event, but its `judge-simulation` source increments a separate counter and cannot recommend review.
 - **Skip to result preview · judges** pauses and releases this tab’s server attempt before opening the existing local simulated result and demo-licence view. If a required pause fails, the shortcut does not silently proceed. No synthetic answer or pass is submitted to the server. The preview is labelled and links back to the full test; the existing pause allowance and attempt expiry still apply.
+- **Open the judge recovery lab** is available only from the camera-free guided path with the explicit `resilience=1` flag. Its connection fault fails before the request reaches the server. Its lost-acknowledgement fault lets the answer transaction commit, hides that one response, then reconnects and retries the same command receipt. Its competing-client check uses a fresh client identifier against the real lease, and its reload check performs a real page reload. The UI reports only facts returned by the recovered server snapshot.
+- The completed result’s main timeline converts server event kinds to plain citizen language. Raw event detail is secondary. The downloadable recovery record deliberately excludes identity, camera images, audio, question text and selected answers.
 
 ### What this does not yet solve
 
@@ -80,6 +84,8 @@ Answers are immutable once committed. The public result has no legal effect. A l
 - `db/schema.ts`, `drizzle.config.ts`, `drizzle/*protected_exam_core.sql`: generated schema migration. The pre-existing `0000_reliability.sql` remains unchanged and outside the new Drizzle snapshot.
 - `src/portal/protectedExamClient.ts`: network boundary and pending-answer retry, with no local scoring fallback.
 - `src/portal/ProtectedExamPage.tsx`: current question, recovery, server result and separate review, reusing the existing assessment shell.
+- `src/portal/resilience/faultInjection.ts`: judge-gated one-shot transport faults; disabled in the ordinary citizen path.
+- `src/portal/resilience/recoveryRecord.ts`: privacy-safe, citizen-facing labels for server events.
 - `src/domain/integrityPolicy.ts`: one shared classification rulebook and privacy-safe event descriptions for the browser/server boundary.
 - `src/portal/ProtectedExamStatus.tsx`: owner-scoped server progress on the application-status screen, separate from the walkthrough tracker.
 - `server/dev/`: local Node SQLite adapter; never bundled into the production Worker. Both dev and built-preview servers use the real API handlers.
@@ -104,11 +110,11 @@ The Worker build disables Vite's public-directory copying: MediaPipe models, Web
 
 The migration tooling has a targeted override of `@esbuild-kit/core-utils`'s transitive esbuild to 0.25.12, removing GHSA-67mh-4wv8-2f99 from its older dependency chain. Migration generation and the build are verified with that override; no forced downgrade of Drizzle is used.
 
-Automated checks include owner isolation, blocked score/time/bypass inputs, early review rejection, concurrent duplicate and conflicting answers, rollback on SQL failure, reload leases, stale question tokens, cumulative pause budgets, categorized integrity summaries, full expiry, retest balance, completion grading, session cleanup, lost responses after reload, stale response ordering and unavailable storage. They use migrated SQLite and the actual API, not a pretend always-successful grading function.
+Automated checks include owner isolation, blocked score/time/bypass inputs, early review rejection, concurrent duplicate and conflicting answers, rollback on SQL failure, reload leases, stale question tokens, cumulative pause budgets, categorized integrity summaries, full expiry, retest balance, completion grading, session cleanup, lost responses after reload, stale response ordering and unavailable storage. The recovery-lab browser journey additionally exercises one-shot connection failure, a committed answer with a lost acknowledgement, competing-client rejection and a real reload. These checks use migrated SQLite and the actual API, not a pretend always-successful grading function.
 
-## Human browser check — owner requested
+## Browser verification
 
-No browser automation or visual QA was run for this change; the owner asked to perform it personally.
+The release matrix now exercises the protected recovery lab on desktop Chromium and keeps hardware-permission checks owner-run. The full release suite also covers the judge journey on desktop and mobile; the recovery dialog received a separate small-viewport fit, focus and horizontal-overflow inspection. Use the checklist below for final public-deployment smoke testing.
 
 1. On test entry choose **Full test**, then **Open full test**. In the existing judge camera simulation, it should explicitly say no camera is opened while answers/grades use the server.
 2. Accept the anonymous answer-storage notice and start. Select an answer and lock it: the next question should appear smoothly, without showing correctness.

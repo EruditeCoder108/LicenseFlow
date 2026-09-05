@@ -18,6 +18,7 @@ Its practical goal is not merely to restyle a government form. It demonstrates h
 | Other transport and permanent-DL services | Discoverable directory/reference pages, not working transactions |
 | Judge walkthrough and reliability ledger | Local simulated journey plus minimal server-mirrored milestones; not authoritative grading |
 | Server-saved assessment | Separate D1-backed paper, timing, immutable answers, score and review; anonymous prototype session, not verified citizen identity |
+| Judge recovery lab | Labelled fault controls exercise the real protected-test transport and prove reconnection, exact answer recovery, reload recovery and single-client control |
 
 The implementation boundary and state-extension seams are documented in [docs/implementation-scope.md](docs/implementation-scope.md).
 
@@ -27,7 +28,7 @@ The implementation boundary and state-extension seams are documented in [docs/im
 - Optional walkthrough: choose **Full Judge Walkthrough** on the homepage.
 - Manual route: Driving licence services → Start new application.
 - Judge-only shortcuts are visibly labelled and never presented as citizen rules.
-- On test entry choose **Full test**, then **Open full test**, for the protected assessment. **Judge walkthrough** keeps Raahi’s camera-free sample journey. The full test also offers a labelled simulated-result preview that cannot award a server pass. The owner performs browser checks personally.
+- On test entry choose **Full test**, then **Open full test**, for the protected assessment. **Judge walkthrough** keeps Raahi’s camera-free sample journey. In that guided path, choose **Open the judge recovery lab** to interrupt the real protected-test path without changing its paper, timer or marking rules.
 
 ## What is implemented
 
@@ -63,8 +64,10 @@ The implementation boundary and state-extension seams are documented in [docs/im
 - repeated mock-payment confirmation uses the same idempotency key and returns the original receipt;
 - the older milestone mirror reports a browser-cache fallback if unavailable;
 - the protected assessment **does not fall back to client scoring**: it offers reconnection, exact answer retries and a server-confirmed result;
+- an opt-in judge recovery lab deliberately drops one connection request, hides one successful save response, tries a competing client and reloads the page, then displays the actual recovered attempt, question, answer count and remaining time;
 - one active attempt and a renewable tab lease per anonymous session; refresh cannot reset a question's timer;
 - a two-minute cumulative confirmed-pause allowance and a 30-minute attempt lifetime, clearly disclosed before starting.
+- completed protected attempts include a plain-language, downloadable recovery record that excludes identity, camera images, audio, question content and selected answers.
 
 The legacy milestone layer excludes questions and selected answers. The **separate protected exam tables** store the paper, answers, scoring and server events, but no applicant identity details, documents, camera frames or audio. Session access expires after seven days; cleanup is opportunistic, not a guaranteed deletion scheduler. See [exam data and recovery boundaries](docs/protected-exam-core.md).
 
@@ -92,13 +95,14 @@ Browser checkpoints remain non-authoritative. Protected exam answers and grades 
 
 ## Verified state
 
-Server-core update, 2 September 2026:
+Recovery-lab update, 5 September 2026:
 
-- **155 tests across 35 files pass**; TypeScript and the production build pass;
+- **177 tests across 38 files pass**; the focused protected-exam suite has **35 passing tests**;
 - automated API and client-adapter tests use migrated SQLite and real handlers, including races, expired leases, tampered requests and lost responses;
 - the production Worker is bundled separately and static output is checked for protected-bank leakage;
-- **human browser checks remain owner-run**; public release was approved on 3 September, independently of those checks;
-- [verification commands and manual checklist](docs/protected-exam-core.md#human-browser-check--owner-requested).
+- **18 applicable Playwright release journeys pass** across desktop and mobile profiles, with four intentionally inapplicable matrix cases skipped;
+- the recovery lab received an additional desktop/mobile visual and overflow check;
+- [verification details and browser checklist](docs/protected-exam-core.md#browser-verification).
 
 Historical release baseline, 28 August 2026 (not a claim about browser QA of the new server mode):
 

@@ -1,5 +1,6 @@
 import type { JourneyEvent } from '../domain/journey'
 import { localeFor, type Language } from './i18n'
+import type { RecoveryRecordEvent } from './resilience/recoveryRecord'
 
 export type DocumentLanguage = Language
 
@@ -25,6 +26,19 @@ export type JourneyReceiptData = DemonstrationLicenceData & {
   interruptionRecovered: boolean
   integrityStatus: string
   events: JourneyEvent[]
+}
+
+export type ProtectedRecoveryRecordData = {
+  applicationId: string
+  attemptId: string
+  attemptNumber: number
+  fingerprint: string
+  score: number
+  totalQuestions: number
+  passMark: number
+  passed: boolean
+  completedAt: number
+  events: RecoveryRecordEvent[]
 }
 
 const encoder = new TextEncoder()
@@ -351,6 +365,74 @@ function drawReceipt(data: JourneyReceiptData, language: DocumentLanguage): HTML
   return canvas
 }
 
+function drawProtectedRecoveryRecord(data: ProtectedRecoveryRecordData, language: DocumentLanguage): HTMLCanvasElement {
+  const height = Math.max(1500, 760 + data.events.length * 92)
+  const { canvas, context } = createCanvas(1240, height)
+  context.fillStyle = '#ffffff'
+  context.fillRect(0, 0, canvas.width, canvas.height)
+  context.fillStyle = '#0d2854'
+  context.fillRect(0, 0, canvas.width, 230)
+  context.fillStyle = '#ffffff'
+  context.font = '800 46px "Nirmala UI", Arial, sans-serif'
+  context.fillText(language === 'hi' ? 'LicenceFlow टेस्ट रिकवरी रिकॉर्ड' : 'LicenceFlow Test Recovery Record', 68, 96)
+  context.font = '500 23px "Nirmala UI", Arial, sans-serif'
+  context.fillText(language === 'hi' ? 'सर्वर द्वारा दर्ज प्रोटोटाइप परीक्षा सारांश' : 'SERVER-RECORDED PROTOTYPE ASSESSMENT SUMMARY', 68, 153)
+
+  context.fillStyle = '#f3f6fa'
+  context.fillRect(55, 275, 1130, 250)
+  drawField(context, language === 'hi' ? 'आवेदन' : 'Application', data.applicationId, 84, 325, 320)
+  drawField(context, language === 'hi' ? 'प्रयास' : 'Attempt', `${data.attemptNumber} · ${data.attemptId.slice(0, 8).toUpperCase()}`, 450, 325, 300)
+  drawField(context, language === 'hi' ? 'परिणाम' : 'Result', `${data.score}/${data.totalQuestions} · ${data.passed ? 'Passed' : 'Not passed'}`, 820, 325, 300)
+  drawField(context, language === 'hi' ? 'पास अंक' : 'Pass mark', String(data.passMark), 84, 435, 320)
+  drawField(context, language === 'hi' ? 'प्रश्नपत्र संदर्भ' : 'Paper reference', data.fingerprint, 450, 435, 300)
+  drawField(context, language === 'hi' ? 'समाप्ति' : 'Completed', new Date(data.completedAt).toLocaleString(localeFor(language)), 820, 435, 300)
+
+  context.fillStyle = '#0d2854'
+  context.font = '800 34px "Nirmala UI", Arial, sans-serif'
+  context.fillText(language === 'hi' ? 'क्या सहेजा और वापस पाया गया' : 'What was saved and recovered', 68, 605)
+  context.fillStyle = '#415a77'
+  context.font = '500 20px "Nirmala UI", Arial, sans-serif'
+  drawWrappedText(
+    context,
+    language === 'hi'
+      ? 'यह रिकॉर्ड प्रश्न या उत्तर दिखाए बिना सर्वर द्वारा पुष्ट टेस्ट चरणों को सरल भाषा में समझाता है।'
+      : 'This record explains server-confirmed test steps in plain language without exposing question or answer content.',
+    68, 646, 1090, 28, 2,
+  )
+
+  let y = 730
+  for (const event of data.events) {
+    context.fillStyle = '#0b6bcb'
+    context.beginPath()
+    context.arc(82, y - 8, 10, 0, Math.PI * 2)
+    context.fill()
+    context.fillStyle = '#071c38'
+    context.font = '700 24px "Nirmala UI", Arial, sans-serif'
+    context.fillText(event.title, 115, y)
+    context.fillStyle = '#415a77'
+    context.font = '500 19px "Nirmala UI", Arial, sans-serif'
+    drawWrappedText(context, event.detail, 115, y + 31, 870, 24, 2)
+    context.fillStyle = '#64748b'
+    context.font = '500 17px Arial, sans-serif'
+    context.fillText(new Date(event.at).toLocaleString(localeFor(language)), 1000, y)
+    y += 92
+  }
+
+  context.fillStyle = '#8f1d14'
+  context.font = '800 22px "Nirmala UI", Arial, sans-serif'
+  drawWrappedText(
+    context,
+    language === 'hi'
+      ? 'प्रोटोटाइप रिकॉर्ड · सरकारी टेस्ट परिणाम या लाइसेंस का प्रमाण नहीं'
+      : 'PROTOTYPE RECORD · NOT PROOF OF A GOVERNMENT TEST RESULT OR LICENCE',
+    68, canvas.height - 105, 1090, 28, 2,
+  )
+  context.fillStyle = '#415a77'
+  context.font = '500 18px "Nirmala UI", Arial, sans-serif'
+  context.fillText(language === 'hi' ? 'इसमें पहचान, कैमरा चित्र, ऑडियो, प्रश्न या चुने गए उत्तर शामिल नहीं हैं।' : 'Contains no identity, camera images, audio, questions or selected answers.', 68, canvas.height - 48)
+  return canvas
+}
+
 function canvasJpeg(canvas: HTMLCanvasElement): Promise<Uint8Array> {
   return new Promise((resolve, reject) => {
     canvas.toBlob(async (blob) => {
@@ -372,6 +454,10 @@ export async function createDemonstrationLicencePdf(data: DemonstrationLicenceDa
 
 export async function createJourneyReceiptPdf(data: JourneyReceiptData, language: DocumentLanguage): Promise<Blob> {
   return canvasPdf(drawReceipt(data, language), 595)
+}
+
+export async function createProtectedRecoveryRecordPdf(data: ProtectedRecoveryRecordData, language: DocumentLanguage): Promise<Blob> {
+  return canvasPdf(drawProtectedRecoveryRecord(data, language), 595)
 }
 
 export function downloadPdf(blob: Blob, filename: string): void {

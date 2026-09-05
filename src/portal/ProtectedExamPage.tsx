@@ -1,21 +1,37 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ArrowLeft, ArrowRight, CheckCircle2, FastForward, LockKeyhole, RefreshCcw, ShieldCheck, Volume2, VolumeX } from 'lucide-react'
+import { ArrowLeft, ArrowRight, CheckCircle2, CloudOff, FastForward, FileDown, FlaskConical, LockKeyhole, RefreshCcw, Save, ShieldCheck, SquareStack, Volume2, VolumeX } from 'lucide-react'
 import { FocusedAssessmentShell, QuestionStatusMap, useFocusedFullscreen } from './FocusedAssessmentShell'
-import { ProtectedExamClient, ExamServiceError, acceptExamSnapshot, displayedSeconds } from './protectedExamClient'
+import { ProtectedExamClient, ExamServiceError, acceptExamSnapshot, displayedSeconds, requestExam } from './protectedExamClient'
 import type { ProtectedExamReview, ProtectedExamSnapshot } from './protectedExamTypes'
 import { loadJourneyProgress } from './progress'
 import { createPassingJudgeExamSession } from './examSession'
 import { navigatePortal } from './router'
 import { translate as copy, type Language } from './i18n'
 import { stopAllMediaTracks, useDeviceReadiness } from '../hooks/useDeviceReadiness'
+import { createRecoveryFaultController, recoveryLabEnabled } from './resilience/faultInjection'
+import { recoveryRecordEvents } from './resilience/recoveryRecord'
+import { createProtectedRecoveryRecordPdf, downloadPdf } from './downloadDocuments'
 import './protectedExam.css'
 
 function pendingStorage() { try { return window.sessionStorage } catch { return undefined } }
 
+type RecoveryProof = {
+  kind: 'connection' | 'answer' | 'refresh' | 'second-tab'
+  attemptPreserved: boolean
+  questionNumber: number
+  savedAnswers: number
+  remainingSeconds?: number
+}
+
+const refreshProofKey = (applicationId: string) => `lf-recovery-refresh:${applicationId}`
+const answerCount = (snapshot: ProtectedExamSnapshot) => Object.keys(snapshot.answers).length
+
 // Deliberately separate from TestJourney's locally scripted judge demonstration.
 // Rendering cached browser state is never enough to unlock a result here.
 export function ProtectedExamPage({ applicationId, language }: { applicationId: string; language: Language }) {
-  const [client] = useState(() => new ProtectedExamClient(applicationId, undefined, pendingStorage()))
+  const [guided] = useState(() => loadJourneyProgress(applicationId).readiness.mode === 'guided-signals')
+  const [recoveryLab] = useState(() => createRecoveryFaultController(recoveryLabEnabled(window.location.search, guided)))
+  const [client] = useState(() => new ProtectedExamClient(applicationId, recoveryLab.wrap(requestExam), pendingStorage()))
   const [attempt, setAttempt] = useState<ProtectedExamSnapshot | null>(null)
   const [review, setReview] = useState<ProtectedExamReview | null>(null)
   const [reviewIndex, setReviewIndex] = useState(0)
@@ -30,13 +46,16 @@ export function ProtectedExamPage({ applicationId, language }: { applicationId: 
   const [elapsed, setElapsed] = useState(0)
   const [speaking, setSpeaking] = useState(false)
   const [accepted, setAccepted] = useState(false)
-  const [guided] = useState(() => loadJourneyProgress(applicationId).readiness.mode === 'guided-signals')
+  const [recoveryProof, setRecoveryProof] = useState<RecoveryProof | null>(null)
+  const [recoveryLabOpen, setRecoveryLabOpen] = useState(false)
+  const [recoveryDownload, setRecoveryDownload] = useState<'idle' | 'creating' | 'ready' | 'error'>('idle')
   const latest = useRef(attempt)
   const receivedAt = useRef(performance.now())
   const busyRef = useRef(false)
   const errorRef = useRef(error)
   const mounted = useRef(true)
   const heading = useRef<HTMLHeadingElement>(null)
+  const recoveryDialog = useRef<HTMLDialogElement>(null)
   const fullscreenEntered = useRef(false)
   const media = useDeviceReadiness()
   const { enterFullscreen, exitFullscreen } = useFocusedFullscreen()
@@ -81,14 +100,39 @@ export function ProtectedExamPage({ applicationId, language }: { applicationId: 
   useEffect(() => {
     mounted.current = true
     let cancelled = false
-    client.status().then((saved) => { if (!cancelled && saved) accept(saved) }).catch((cause: unknown) => {
+    client.status().then((saved) => {
+      if (cancelled || !saved) return
+      accept(saved)
+      if (!recoveryLab.enabled) return
+      try {
+        const stored = JSON.parse(sessionStorage.getItem(refreshProofKey(applicationId)) ?? 'null') as { attemptId?: string } | null
+        if (stored?.attemptId) {
+          setRecoveryProof({
+            kind: 'refresh',
+            attemptPreserved: stored.attemptId === saved.attemptId,
+            questionNumber: saved.currentIndex + 1,
+            savedAnswers: answerCount(saved),
+            remainingSeconds: saved.deadlineAt ? displayedSeconds(saved, 0) : saved.remainingMs === null ? undefined : Math.ceil(saved.remainingMs / 1000),
+          })
+          sessionStorage.removeItem(refreshProofKey(applicationId))
+          setRecoveryLabOpen(true)
+        }
+      } catch { sessionStorage.removeItem(refreshProofKey(applicationId)) }
+    }).catch((cause: unknown) => {
       if (!cancelled) {
         const problem = cause instanceof ExamServiceError ? cause : new ExamServiceError('exam_unavailable', 'Could not load the server checkpoint.')
         setError(problem); errorRef.current = problem
       }
     }).finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true; mounted.current = false }
-  }, [client, accept])
+  }, [client, accept, recoveryLab.enabled, applicationId])
+
+  useEffect(() => {
+    const dialog = recoveryDialog.current
+    if (!dialog) return
+    if (recoveryLabOpen && !dialog.open) dialog.showModal()
+    if (!recoveryLabOpen && dialog.open) dialog.close()
+  }, [recoveryLabOpen])
 
   useEffect(() => {
     const interval = window.setInterval(() => setElapsed(performance.now() - receivedAt.current), 250)
@@ -204,6 +248,82 @@ export function ProtectedExamPage({ applicationId, language }: { applicationId: 
       }
     }).finally(() => { if (mounted.current) setAnswerStage(null) })
   }
+  const proveConnectionRecovery = () => {
+    if (!attempt || !active || busyRef.current) return
+    const before = attempt
+    void perform(async () => {
+      recoveryLab.arm('exam-connection-loss')
+      try {
+        await client.action(before, 'heartbeat')
+        throw new ExamServiceError('simulation_failed', 'The recovery simulation did not interrupt the request.')
+      } catch (cause) {
+        if (!(cause instanceof ExamServiceError) || cause.code !== 'connection_lost') throw cause
+      }
+      const recovered = await client.connect(before)
+      setRecoveryProof({
+        kind: 'connection',
+        attemptPreserved: recovered.attemptId === before.attemptId,
+        questionNumber: recovered.currentIndex + 1,
+        savedAnswers: answerCount(recovered),
+        remainingSeconds: displayedSeconds(recovered, 0),
+      })
+      return recovered
+    })
+  }
+  const proveLostAnswerRecovery = () => {
+    if (!attempt || !active || selected === null || busyRef.current) return
+    const before = attempt
+    void perform(async () => {
+      recoveryLab.arm('exam-lost-answer-response')
+      try {
+        await client.answer(before, selected)
+        throw new ExamServiceError('simulation_failed', 'The recovery simulation did not hide the acknowledgement.')
+      } catch (cause) {
+        if (!(cause instanceof ExamServiceError) || cause.code !== 'connection_lost') throw cause
+      }
+      let recovered = await client.connect(before)
+      setRecoveryProof({
+        kind: 'answer',
+        attemptPreserved: recovered.attemptId === before.attemptId,
+        questionNumber: recovered.currentIndex + 1,
+        savedAnswers: answerCount(recovered),
+      })
+      if (recovered.phase === 'waiting' && !document.hidden) recovered = await client.open(recovered)
+      return recovered
+    })
+  }
+  const proveRefreshRecovery = () => {
+    if (!attempt || !active || busyRef.current) return
+    sessionStorage.setItem(refreshProofKey(applicationId), JSON.stringify({ attemptId: attempt.attemptId }))
+    window.location.reload()
+  }
+  const proveSingleTabControl = () => {
+    if (!attempt || !active || busyRef.current) return
+    const before = attempt
+    void perform(async () => {
+      const competingClient = new ProtectedExamClient(applicationId, requestExam)
+      try {
+        await competingClient.connect(before)
+        throw new ExamServiceError('simulation_failed', 'The second test client was not blocked.')
+      } catch (cause) {
+        if (!(cause instanceof ExamServiceError) || cause.code !== 'lease_conflict') throw cause
+      }
+      const current = await client.action(before, 'heartbeat')
+      setRecoveryProof({
+        kind: 'second-tab',
+        attemptPreserved: current.attemptId === before.attemptId,
+        questionNumber: current.currentIndex + 1,
+        savedAnswers: answerCount(current),
+        remainingSeconds: displayedSeconds(current, 0),
+      })
+      return current
+    })
+  }
+  const enableRecoveryLab = () => {
+    const url = new URL(window.location.href)
+    url.searchParams.set('resilience', '1')
+    window.location.assign(url)
+  }
   const previewResult = async () => {
     if (busyRef.current || loading || error) return
     if (latest.current?.ownsLease && latest.current.phase !== 'completed') {
@@ -243,7 +363,30 @@ export function ProtectedExamPage({ applicationId, language }: { applicationId: 
   }
   const result = attempt?.result
   const integritySummary = attempt?.integritySummary
+  const citizenRecoveryEvents = attempt ? recoveryRecordEvents(attempt, language) : []
   const reviewItem = review?.review[reviewIndex]
+  const downloadRecoveryRecord = async () => {
+    if (!attempt?.result || recoveryDownload === 'creating') return
+    setRecoveryDownload('creating')
+    try {
+      const pdf = await createProtectedRecoveryRecordPdf({
+        applicationId,
+        attemptId: attempt.attemptId,
+        attemptNumber: attempt.attemptNumber,
+        fingerprint: attempt.fingerprint,
+        score: attempt.result.score,
+        totalQuestions: attempt.totalQuestions,
+        passMark: attempt.passMark,
+        passed: attempt.result.passed,
+        completedAt: attempt.result.completedAt,
+        events: citizenRecoveryEvents,
+      }, language)
+      downloadPdf(pdf, `LicenceFlow-${applicationId}-test-recovery-record.pdf`)
+      setRecoveryDownload('ready')
+    } catch {
+      setRecoveryDownload('error')
+    }
+  }
   const pauseGuidance = attempt?.phase === 'paused' ? (() => {
     if (attempt.pauseReason === 'phone') return attempt.integritySummary.lastSource === 'judge-simulation'
       ? copy(language, 'Phone-pause demonstration complete. Your answers and time are safe. Choose Resume test to continue.', 'फ़ोन-विराम डेमो पूरा हुआ। आपके उत्तर और समय सुरक्षित हैं। आगे बढ़ने के लिए टेस्ट जारी रखें चुनें।')
@@ -279,11 +422,34 @@ export function ProtectedExamPage({ applicationId, language }: { applicationId: 
           {copy(language, 'Pause test', 'टेस्ट रोकें')}
         </button>
       </div>}
-      {attempt?.phase !== 'completed' && <div className="protected-exam-preview">
+      {attempt?.phase !== 'completed' && !recoveryLab.enabled && <div className="protected-exam-preview">
         <button type="button" disabled={busy || loading || Boolean(error)} onClick={() => void previewResult()}><FastForward size={16} />{copy(language, 'Skip to result preview · judges', 'परिणाम पूर्वावलोकन देखें · जज')}</button>
         <small>{copy(language, 'Simulated result and demo licence only. This does not pass your server test.', 'केवल सिम्युलेटेड परिणाम और डेमो लाइसेंस। इससे सर्वर परीक्षा पास नहीं होती।')}</small>
       </div>}
+      {guided && recoveryLab.enabled && attempt?.phase !== 'completed' && <div className="protected-exam-lab-entry">
+        <button type="button" onClick={() => setRecoveryLabOpen(true)}><FlaskConical size={16} />{copy(language, 'Open recovery lab', 'रिकवरी लैब खोलें')}</button>
+      </div>}
       </div>}>
+      {recoveryLab.enabled && <dialog ref={recoveryDialog} className="protected-recovery-dialog" onClose={() => setRecoveryLabOpen(false)} aria-labelledby="protected-recovery-title">
+        <form method="dialog" className="protected-recovery-dialog__heading">
+          <div><p className="eyebrow">{copy(language, 'Judge simulation', 'जज सिमुलेशन')}</p><h2 id="protected-recovery-title">{copy(language, 'Test recovery lab', 'टेस्ट रिकवरी लैब')}</h2></div>
+          <button type="submit" aria-label={copy(language, 'Close recovery lab', 'रिकवरी लैब बंद करें')}>×</button>
+        </form>
+        <p>{copy(language, 'These controls interrupt the real protected-test path. They cannot change the paper, timer rules or marking.', 'ये नियंत्रण वास्तविक सुरक्षित टेस्ट प्रक्रिया में रुकावट दिखाते हैं। ये प्रश्नपत्र, समय के नियम या अंक नहीं बदल सकते।')}</p>
+        <div className="protected-recovery-actions">
+          <button type="button" disabled={!active || busy} onClick={proveConnectionRecovery}><CloudOff size={18} /><span><strong>{copy(language, 'Interrupt connection', 'कनेक्शन रोकें')}</strong><small>{copy(language, 'One request fails, then the same test reconnects.', 'एक अनुरोध विफल होगा, फिर वही टेस्ट दोबारा जुड़ेगा।')}</small></span></button>
+          <button type="button" disabled={!active || selected === null || busy} onClick={proveLostAnswerRecovery}><Save size={18} /><span><strong>{copy(language, 'Lose save acknowledgement', 'सेव की पुष्टि खोएँ')}</strong><small>{selected === null ? copy(language, 'Select an answer first.', 'पहले एक उत्तर चुनें।') : copy(language, 'The server saves your choice; the browser misses the reply.', 'सर्वर आपका उत्तर सहेजता है; ब्राउज़र को जवाब नहीं मिलता।')}</small></span></button>
+          <button type="button" disabled={!active || busy} onClick={proveSingleTabControl}><SquareStack size={18} /><span><strong>{copy(language, 'Try a second test client', 'दूसरा टेस्ट क्लाइंट आज़माएँ')}</strong><small>{copy(language, 'A separate client tries to take control of this attempt.', 'एक अलग क्लाइंट इस प्रयास को नियंत्रित करने की कोशिश करता है।')}</small></span></button>
+          <button type="button" disabled={!active || busy} onClick={proveRefreshRecovery}><RefreshCcw size={18} /><span><strong>{copy(language, 'Reload during question', 'प्रश्न के बीच रीलोड करें')}</strong><small>{copy(language, 'Reload this page and recover the same server attempt.', 'पेज रीलोड करें और वही सर्वर प्रयास वापस पाएँ।')}</small></span></button>
+        </div>
+        {recoveryProof && <section className="protected-recovery-proof" role="status" aria-live="polite">
+          <CheckCircle2 size={21} aria-hidden="true" />
+          <div><strong>{recoveryProof.kind === 'answer' ? copy(language, 'The selected answer was saved once.', 'चुना गया उत्तर एक बार सहेजा गया।') : recoveryProof.kind === 'refresh' ? copy(language, 'The page reloaded without creating a new attempt.', 'नया प्रयास बनाए बिना पेज रीलोड हुआ।') : recoveryProof.kind === 'second-tab' ? copy(language, 'The second client was blocked.', 'दूसरा क्लाइंट रोक दिया गया।') : copy(language, 'The same test reconnected.', 'वही टेस्ट दोबारा जुड़ गया।')}</strong>
+            <p>{copy(language, `${recoveryProof.attemptPreserved ? 'Same attempt' : 'Attempt changed'} · Question ${recoveryProof.questionNumber} · ${recoveryProof.savedAnswers} confirmed answer${recoveryProof.savedAnswers === 1 ? '' : 's'}${recoveryProof.remainingSeconds === undefined ? '' : ` · ${recoveryProof.remainingSeconds}s remaining`}`, `${recoveryProof.attemptPreserved ? 'वही प्रयास' : 'प्रयास बदला'} · प्रश्न ${recoveryProof.questionNumber} · ${recoveryProof.savedAnswers} पुष्ट उत्तर${recoveryProof.remainingSeconds === undefined ? '' : ` · ${recoveryProof.remainingSeconds} सेकंड शेष`}`)}</p>
+          </div>
+        </section>}
+        <p className="protected-recovery-dialog__note">{copy(language, 'Simulation is available only in the labelled judge journey.', 'सिमुलेशन केवल चिह्नित जज यात्रा में उपलब्ध है।')}</p>
+      </dialog>}
       {active && question ? (
         <div className="focused-workspace-container focused-workspace-container--split">
           <section className="focused-question-card protected-exam-question" key={question.token} aria-busy={Boolean(answerStage)}>
@@ -349,7 +515,17 @@ export function ProtectedExamPage({ applicationId, language }: { applicationId: 
                 </dl>
               </section></details>}
               <div className="lf-actions"><button className="button button--primary" disabled={busy} onClick={() => void perform(async () => { const data = await client.review(attempt!); setReview(data); setReviewIndex(0); return data.attempt })}>{copy(language, 'Review answers and explanations', 'उत्तर और व्याख्या देखें')}<ArrowRight size={17} /></button><button className="button button--secondary" disabled={busy || attempt!.attemptNumber >= 5} onClick={() => { setAccepted(false); void perform(() => client.create(attempt!.attemptId)) }}><RefreshCcw size={17} />{copy(language, 'Try a new balanced paper', 'नया संतुलित प्रश्नपत्र आज़माएँ')}</button></div>
-              <details className="protected-exam-audit"><summary>{copy(language, 'Exam activity recorded by the server', 'सर्वर पर दर्ज परीक्षा गतिविधि')}</summary><ol>{attempt!.events.map((event) => <li key={event.id}><time>{new Date(event.at).toLocaleTimeString(language === 'hi' ? 'hi-IN' : 'en-IN')}</time><span>{event.detail}</span></li>)}</ol></details>
+              <section className="protected-recovery-record" aria-labelledby="protected-recovery-record-title">
+                <div className="protected-recovery-record__heading">
+                  <div><p className="eyebrow">{copy(language, 'Citizen recovery record', 'नागरिक रिकवरी रिकॉर्ड')}</p><h2 id="protected-recovery-record-title">{copy(language, 'What the test saved', 'टेस्ट ने क्या सुरक्षित रखा')}</h2></div>
+                  <button type="button" className="button button--secondary" disabled={recoveryDownload === 'creating'} onClick={() => void downloadRecoveryRecord()}><FileDown size={17} />{recoveryDownload === 'creating' ? copy(language, 'Creating PDF…', 'PDF बन रही है…') : copy(language, 'Download record', 'रिकॉर्ड डाउनलोड करें')}</button>
+                </div>
+                <p>{copy(language, 'This plain-language timeline comes from the assessment service. It includes no identity, camera images, audio, question text or selected answers.', 'यह सरल समयरेखा परीक्षा सेवा से आती है। इसमें पहचान, कैमरा चित्र, ऑडियो, प्रश्न या चुने गए उत्तर शामिल नहीं हैं।')}</p>
+                {recoveryDownload === 'ready' && <p className="protected-recovery-record__status" role="status">{copy(language, 'Recovery record downloaded.', 'रिकवरी रिकॉर्ड डाउनलोड हो गया।')}</p>}
+                {recoveryDownload === 'error' && <p className="protected-recovery-record__error" role="alert">{copy(language, 'The PDF could not be created. The record remains visible below.', 'PDF नहीं बन सकी। रिकॉर्ड नीचे उपलब्ध है।')}</p>}
+                <ol>{citizenRecoveryEvents.map((event) => <li key={event.id}><span aria-hidden="true" /><div><strong>{event.title}</strong><p>{event.detail}</p><time>{new Date(event.at).toLocaleTimeString(language === 'hi' ? 'hi-IN' : 'en-IN')}</time></div></li>)}</ol>
+              </section>
+              <details className="protected-exam-audit"><summary>{copy(language, 'Technical audit details', 'तकनीकी ऑडिट विवरण')}</summary><ol>{attempt!.events.map((event) => <li key={event.id}><time>{new Date(event.at).toLocaleTimeString(language === 'hi' ? 'hi-IN' : 'en-IN')}</time><span>{event.detail}</span></li>)}</ol></details>
             </> : <>
               <p className="eyebrow"><ShieldCheck size={17} />{copy(language, 'Test readiness', 'परीक्षा की तैयारी')}</p>
               <h1 ref={heading} tabIndex={-1}>{attempt?.phase === 'paused' ? copy(language, 'Your test is paused', 'आपकी परीक्षा रुकी है') : needsConnection ? copy(language, 'Return to your saved test', 'अपनी सहेजी परीक्षा पर लौटें') : attempt?.phase === 'waiting' ? copy(language, 'Answer saved. Continue when ready.', 'उत्तर सहेजा गया। तैयार होने पर आगे बढ़ें।') : copy(language, 'Ready to begin?', 'शुरू करने के लिए तैयार हैं?')}</h1>
@@ -359,6 +535,7 @@ export function ProtectedExamPage({ applicationId, language }: { applicationId: 
               {!attempt && <label className="consent-box"><input type="checkbox" checked={accepted} onChange={(event) => setAccepted(event.target.checked)} /><span><strong>{copy(language, 'I understand this is a prototype test.', 'मैं समझता/समझती हूँ कि यह एक प्रोटोटाइप टेस्ट है।')}</strong><small>{copy(language, 'No identity document, video or audio is uploaded.', 'कोई पहचान दस्तावेज़, वीडियो या ऑडियो अपलोड नहीं होता।')}</small></span></label>}
               {language === 'hi' && <p>इस प्रश्न बैंक के प्रश्न अभी अंग्रेज़ी में हैं। परीक्षा के नियंत्रण और सहायता हिन्दी में उपलब्ध हैं।</p>}
               <div className="lf-actions"><button className="button button--primary" disabled={busy || hidden || !cameraReady || (!attempt && !accepted)} onClick={reconnect}>{busy ? copy(language, 'Getting your test ready…', 'आपकी परीक्षा तैयार की जा रही है…') : attempt ? copy(language, 'Resume test', 'टेस्ट जारी रखें') : copy(language, 'Start test', 'टेस्ट शुरू करें')}<ArrowRight size={17} /></button></div>
+              {guided && !recoveryLab.enabled && <button type="button" className="protected-recovery-opt-in" onClick={enableRecoveryLab}><FlaskConical size={17} />{copy(language, 'Open the judge recovery lab', 'जज रिकवरी लैब खोलें')}</button>}
               <details className="protected-exam-details"><summary>{copy(language, 'Privacy and technical details', 'गोपनीयता और तकनीकी जानकारी')}</summary><p>{copy(language, 'Only one tab can control this session. Pauses share a two-minute allowance, and the whole attempt expires after 30 minutes. Answers and the result use an anonymous session that expires after seven days.', 'एक समय में केवल एक टैब इस सत्र को नियंत्रित कर सकता है। विराम के लिए कुल दो मिनट हैं और पूरा प्रयास 30 मिनट बाद समाप्त होता है। उत्तर और परिणाम बिना नाम वाले सत्र में रहते हैं, जो सात दिन बाद समाप्त होता है।')}</p>{attempt && <p>{copy(language, `Paper reference: ${attempt.fingerprint}`, `प्रश्नपत्र संदर्भ: ${attempt.fingerprint}`)}</p>}</details>
             </>}
           {error && <div className="protected-exam-error" role="alert"><strong>{copy(language, 'We could not confirm that action', 'हम उस कार्रवाई की पुष्टि नहीं कर सके')}</strong><p>{copy(language, 'Check your connection, then choose Resume test. Your last confirmed answer is safe.', 'अपना इंटरनेट जाँचें, फिर टेस्ट जारी रखें चुनें। आपका अंतिम पुष्ट उत्तर सुरक्षित है।')}{error.retryAfter > 0 ? ` ${copy(language, `Try again in ${error.retryAfter} seconds.`, `${error.retryAfter} सेकंड बाद फिर प्रयास करें।`)}` : ''}</p>{client.hasPendingAnswer && <p>{copy(language, 'Your last choice will be checked once. It will not be submitted twice.', 'आपका अंतिम उत्तर एक बार जाँचा जाएगा। वह दो बार जमा नहीं होगा।')}</p>}</div>}
